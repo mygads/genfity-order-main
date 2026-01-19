@@ -25,27 +25,28 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         );
     }
 
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-        where: { userId: context.userId },
-        include: { 
-            merchant: {
-                include: {
-                    subscription: true,
-                    merchantBalance: true,
-                },
-            },
+    if (!context.merchantId) {
+        return NextResponse.json(
+            { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+            { status: 400 }
+        );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+        where: { id: context.merchantId },
+        include: {
+            subscription: true,
+            merchantBalance: true,
         },
     });
 
-    if (!merchantUser || !merchantUser.merchant) {
+    if (!merchant) {
         return NextResponse.json(
             { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
             { status: 404 }
         );
     }
 
-    const merchant = merchantUser.merchant;
     const merchantId = merchant.id;
     const merchantCurrency = merchant.currency;
 

@@ -15,6 +15,23 @@ export class MerchantRepository {
     const result = await prisma.merchant.findUnique({
       where: { id },
       include: {
+        parentMerchant: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+          },
+        },
+        branches: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+            isActive: true,
+          },
+        },
         openingHours: {
           orderBy: {
             dayOfWeek: 'asc',
@@ -56,6 +73,23 @@ export class MerchantRepository {
         },
       },
       include: {
+        parentMerchant: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+          },
+        },
+        branches: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+            isActive: true,
+          },
+        },
         openingHours: {
           orderBy: {
             dayOfWeek: 'asc',
@@ -73,6 +107,23 @@ export class MerchantRepository {
     const results = await prisma.merchant.findMany({
       where: activeOnly ? { isActive: true } : {},
       include: {
+        parentMerchant: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+          },
+        },
+        branches: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            branchType: true,
+            isActive: true,
+          },
+        },
         openingHours: {
           orderBy: {
             dayOfWeek: 'asc',

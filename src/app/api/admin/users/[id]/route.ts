@@ -66,8 +66,52 @@ async function getUserHandler(
   if (!user) {
     throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
   }
+  const merchantLinks = user.merchantUsers ?? [];
+  const merchantGroups = new Map<string, { main: Record<string, unknown>; branches: Record<string, unknown>[] }>();
 
-  return successResponse({ user }, 'User retrieved successfully', 200);
+  merchantLinks.forEach((link) => {
+    const merchant = link.merchant as Record<string, unknown> & {
+      id: bigint;
+      name?: string;
+      code?: string;
+      branchType?: string;
+      parentMerchantId?: bigint | null;
+      parentMerchant?: { id: bigint; name?: string; code?: string } | null;
+    };
+
+    const mainId = merchant.parentMerchantId ? merchant.parentMerchantId.toString() : merchant.id.toString();
+    const group = merchantGroups.get(mainId) || { main: {}, branches: [] };
+
+    const merchantPayload = {
+      id: merchant.id.toString(),
+      name: merchant.name,
+      code: merchant.code,
+      branchType: merchant.branchType,
+      parentMerchantId: merchant.parentMerchantId ? merchant.parentMerchantId.toString() : null,
+      parentMerchantName: merchant.parentMerchant?.name || null,
+    };
+
+    if (!merchant.parentMerchantId || merchant.branchType === 'MAIN') {
+      group.main = merchantPayload;
+    } else {
+      group.branches.push(merchantPayload);
+    }
+
+    merchantGroups.set(mainId, group);
+  });
+
+  const userPayload = {
+    id: user.id.toString(),
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    role: user.role,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    merchantGroups: Array.from(merchantGroups.values()),
+  };
+
+  return successResponse({ user: userPayload }, 'User retrieved successfully', 200);
 }
 
 /**

@@ -12,11 +12,6 @@ import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { requireBigIntRouteParam } from '@/lib/utils/routeContext';
 
-async function getMerchantIdForUser(userId: bigint): Promise<bigint | null> {
-  const merchantUser = await prisma.merchantUser.findFirst({ where: { userId } });
-  return merchantUser?.merchantId ?? null;
-}
-
 async function handlePut(req: NextRequest, context: AuthContext, routeContext: { params: Promise<Record<string, string>> }) {
   try {
     const templateParam = await requireBigIntRouteParam(routeContext, 'id');
@@ -29,9 +24,9 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: {
       return NextResponse.json(codeParam.body, { status: codeParam.status });
     }
 
-    const merchantId = await getMerchantIdForUser(context.userId);
+    const merchantId = context.merchantId;
     if (!merchantId) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templateId = templateParam.value;
@@ -94,9 +89,9 @@ async function handleDelete(_req: NextRequest, context: AuthContext, routeContex
       return NextResponse.json(codeParam.body, { status: codeParam.status });
     }
 
-    const merchantId = await getMerchantIdForUser(context.userId);
+    const merchantId = context.merchantId;
     if (!merchantId) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templateId = templateParam.value;

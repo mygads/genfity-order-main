@@ -25,6 +25,22 @@ interface Merchant {
   ownerId?: string;
 }
 
+interface MerchantGroupItem {
+  main?: {
+    id: string;
+    name?: string;
+    code?: string;
+    branchType?: string;
+  };
+  branches: Array<{
+    id: string;
+    name?: string;
+    code?: string;
+    branchType?: string;
+    parentMerchantName?: string | null;
+  }>;
+}
+
 interface User {
   id: string;
   name: string;
@@ -47,6 +63,10 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
   const [showPassword, setShowPassword] = useState(false);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [loadingMerchants, setLoadingMerchants] = useState(false);
+  const [userDetail, setUserDetail] = useState<{
+    merchantGroups?: MerchantGroupItem[];
+  } | null>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -69,8 +89,33 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
         merchantId: user.merchantId || '',
       });
       fetchMerchants();
+      fetchUserDetail(user.id);
     }
   }, [isOpen, user]);
+
+  const fetchUserDetail = async (userId: string) => {
+    setLoadingDetails(true);
+    try {
+      const token = getAdminToken();
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setUserDetail({
+          merchantGroups: data.data?.user?.merchantGroups || [],
+        });
+      } else {
+        setUserDetail(null);
+      }
+    } catch {
+      setUserDetail(null);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
 
   /**
    * Fetch all merchants for dropdown
@@ -366,6 +411,46 @@ export default function EditUserModal({ isOpen, onClose, onSuccess, user }: Edit
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Only merchants without owners are available. To change owner, go to /dashboard/merchants page.
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Merchant Groups (read-only) */}
+          {userDetail?.merchantGroups && userDetail.merchantGroups.length > 0 && (
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+              <div className="mb-2 font-semibold text-gray-800 dark:text-white/90">
+                Merchant Groups
+              </div>
+              {loadingDetails ? (
+                <div className="text-xs text-gray-500 dark:text-gray-400">Loading merchant groups...</div>
+              ) : (
+                <div className="space-y-3">
+                  {userDetail.merchantGroups.map((group, index) => (
+                    <div key={`${group.main?.id || 'group'}-${index}`}>
+                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Main Merchant</div>
+                      <div className="mt-1 font-semibold text-gray-800 dark:text-white/90">
+                        {group.main?.name || '-'} {group.main?.code ? `(${group.main.code})` : ''}
+                      </div>
+                      {group.branches.length > 0 ? (
+                        <div className="mt-2">
+                          <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Branches</div>
+                          <ul className="mt-1 space-y-1 text-xs">
+                            {group.branches.map((branch) => (
+                              <li key={branch.id} className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-brand-500" />
+                                <span>
+                                  {branch.name || '-'} {branch.code ? `(${branch.code})` : ''}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : (
+                        <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">No branches</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           )}

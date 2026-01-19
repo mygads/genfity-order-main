@@ -28,11 +28,20 @@ async function handleGet(
 
         const specialPriceId = specialPriceIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -42,7 +51,7 @@ async function handleGet(
         const specialPrice = await prisma.specialPrice.findFirst({
             where: {
                 id: specialPriceId,
-                merchantId: merchantUser.merchantId
+                merchantId
             },
             include: {
                 menuBook: {
@@ -94,11 +103,20 @@ async function handlePut(
 
         const specialPriceId = specialPriceIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -108,7 +126,7 @@ async function handlePut(
         const existing = await prisma.specialPrice.findFirst({
             where: {
                 id: specialPriceId,
-                merchantId: merchantUser.merchantId
+                merchantId
             }
         });
 
@@ -198,11 +216,20 @@ async function handleDelete(
 
         const specialPriceId = specialPriceIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -212,7 +239,7 @@ async function handleDelete(
         const existing = await prisma.specialPrice.findFirst({
             where: {
                 id: specialPriceId,
-                merchantId: merchantUser.merchantId
+                merchantId
             }
         });
 

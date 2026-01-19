@@ -105,12 +105,21 @@ export const GET = withMerchant(async (
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || 'month';
+    const scope = searchParams.get('scope') || 'merchant';
+    const includeGroup = scope === 'group';
     const customStart = searchParams.get('startDate');
     const customEnd = searchParams.get('endDate');
     const orderTypeFilters = searchParams.get('orderType')?.split(',').map((value) => value.trim()).filter(Boolean);
     const statuses = searchParams.get('status')?.split(',').map((value) => value.trim()).filter(Boolean);
     const paymentMethodsFilter = searchParams.get('paymentMethod')?.split(',').map((value) => value.trim()).filter(Boolean);
     const scheduledOnly = searchParams.get('scheduledOnly') === 'true';
+
+    if (includeGroup && context.role !== 'MERCHANT_OWNER') {
+      return NextResponse.json(
+        { success: false, error: 'FORBIDDEN', message: 'Owner access required for group analytics' },
+        { status: 403 }
+      );
+    }
 
     const validOrderTypes = new Set(Object.values(OrderType));
     const normalizedOrderTypes = orderTypeFilters?.filter((value): value is OrderType => validOrderTypes.has(value as OrderType));
@@ -159,10 +168,29 @@ export const GET = withMerchant(async (
 
     const merchant = await prisma.merchant.findUnique({
       where: { id: context.merchantId },
-      select: { timezone: true },
+      select: { id: true, parentMerchantId: true, timezone: true },
     });
 
-    const timezone = merchant?.timezone || 'Asia/Jakarta';
+    if (!merchant) {
+      return NextResponse.json(
+        { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
+        { status: 404 }
+      );
+    }
+
+    const mainMerchantId = merchant.parentMerchantId ?? merchant.id;
+    const groupMerchants = includeGroup
+      ? await prisma.merchant.findMany({
+          where: {
+            OR: [{ id: mainMerchantId }, { parentMerchantId: mainMerchantId }],
+          },
+          select: { id: true, timezone: true },
+        })
+      : [{ id: merchant.id, timezone: merchant.timezone }];
+
+    const merchantIds = groupMerchants.map((item) => item.id);
+    const mainTimezone = groupMerchants.find((item) => item.id === mainMerchantId)?.timezone;
+    const timezone = mainTimezone || merchant.timezone || 'Asia/Jakarta';
 
     // Fetch all orders in date range
     const orderInclude = {
@@ -183,7 +211,7 @@ export const GET = withMerchant(async (
 
     const orders: OrderWithRelations[] = await prisma.order.findMany({
       where: {
-        merchantId: context.merchantId,
+        merchantId: { in: merchantIds },
         placedAt: {
           gte: startDate,
           lte: endDate,
@@ -242,7 +270,7 @@ export const GET = withMerchant(async (
       ? await prisma.order.groupBy({
           by: ['customerId'],
           where: {
-            merchantId: context.merchantId,
+            merchantId: { in: merchantIds },
             customerId: { in: customerIds },
             status: 'COMPLETED',
           },
@@ -274,7 +302,7 @@ export const GET = withMerchant(async (
     const cohortStart = new Date(endDate.getTime() - 365 * 24 * 60 * 60 * 1000);
     const cohortOrders = await prisma.order.findMany({
       where: {
-        merchantId: context.merchantId,
+        merchantId: { in: merchantIds },
         placedAt: { gte: cohortStart, lte: endDate },
         status: 'COMPLETED',
       },
@@ -508,6 +536,7 @@ export const GET = withMerchant(async (
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         timezone,
+        scope: includeGroup ? 'group' : 'merchant',
       },
     });
   } catch (error) {

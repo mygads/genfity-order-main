@@ -26,12 +26,20 @@ async function handlePost(
     routeContext: RouteContext
 ) {
     try {
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -58,7 +66,7 @@ async function handlePost(
 
         const updatedRequest = await paymentRequestService.confirmPayment(
             requestId,
-            merchantUser.merchantId,
+            merchantId,
             transferNotes,
             transferProofUrl
         );

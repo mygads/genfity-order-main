@@ -21,20 +21,16 @@ async function handlePatch(
   contextParams: RouteContext
 ) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -46,7 +42,7 @@ async function handlePatch(
 
     const category = await addonService.toggleAddonCategoryActive(
       categoryId,
-      merchantUser.merchantId
+      merchantId
     );
 
     return NextResponse.json({

@@ -8,6 +8,8 @@ import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import subscriptionService from '@/lib/services/SubscriptionService';
 import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import userNotificationService from '@/lib/services/UserNotificationService';
+import prisma from '@/lib/db/client';
+import { AuthorizationError, ERROR_CODES, NotFoundError, ValidationError } from '@/lib/constants/errors';
 
 export interface BalanceInfo {
     balance: number;
@@ -208,6 +210,83 @@ class BalanceService {
                 }
             }
         }
+    }
+
+    /**
+     * Transfer balance between branches in the same group (owner-only)
+     */
+    async transferBalance(input: {
+        ownerUserId: bigint;
+        fromMerchantId: bigint;
+        toMerchantId: bigint;
+        amount: number;
+        note?: string;
+    }): Promise<void> {
+        const { ownerUserId, fromMerchantId, toMerchantId, amount, note } = input;
+
+        if (!(Number.isFinite(amount) && amount > 0)) {
+            throw new ValidationError('Amount must be greater than zero', ERROR_CODES.VALIDATION_FAILED);
+        }
+
+        if (fromMerchantId === toMerchantId) {
+            throw new ValidationError('Source and destination must be different', ERROR_CODES.VALIDATION_FAILED);
+        }
+
+        const merchants = await prisma.merchant.findMany({
+            where: { id: { in: [fromMerchantId, toMerchantId] } },
+            select: {
+                id: true,
+                name: true,
+                code: true,
+                parentMerchantId: true,
+                currency: true,
+            },
+        });
+
+        const fromMerchant = merchants.find((merchant) => merchant.id === fromMerchantId);
+        const toMerchant = merchants.find((merchant) => merchant.id === toMerchantId);
+
+        if (!fromMerchant || !toMerchant) {
+            throw new NotFoundError('Merchant not found');
+        }
+
+        const fromMainId = fromMerchant.parentMerchantId ?? fromMerchant.id;
+        const toMainId = toMerchant.parentMerchantId ?? toMerchant.id;
+
+        if (fromMainId !== toMainId) {
+            throw new ValidationError('Branches must be in the same group', ERROR_CODES.VALIDATION_FAILED);
+        }
+
+        const ownerLink = await prisma.merchantUser.findFirst({
+            where: {
+                userId: ownerUserId,
+                role: 'OWNER',
+                isActive: true,
+                merchantId: { in: [fromMainId, fromMerchantId, toMerchantId] },
+            },
+            select: { id: true },
+        });
+
+        if (!ownerLink) {
+            throw new AuthorizationError('You do not have access to this merchant group', ERROR_CODES.FORBIDDEN);
+        }
+
+        if (fromMerchant.currency !== toMerchant.currency) {
+            throw new ValidationError('Branch currencies must match', ERROR_CODES.VALIDATION_FAILED);
+        }
+
+        const noteSuffix = note ? ` (${note})` : '';
+        const descriptionFrom = `Transfer to ${toMerchant.name}${noteSuffix}`;
+        const descriptionTo = `Transfer from ${fromMerchant.name}${noteSuffix}`;
+
+        await balanceRepository.transferBalance({
+            fromMerchantId,
+            toMerchantId,
+            amount,
+            descriptionFrom,
+            descriptionTo,
+            createdByUserId: ownerUserId,
+        });
     }
 
     /**

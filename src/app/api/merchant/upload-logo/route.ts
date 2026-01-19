@@ -15,13 +15,24 @@ import { BlobService } from '@/lib/services/BlobService';
  */
 async function handlePost(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    if (!authContext.merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: authContext.merchantId },
+      select: { id: true, code: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -62,7 +73,7 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
       );
     }
 
-    const merchantCode = merchantUser.merchant.code;
+    const merchantCode = merchant.code;
 
     // Delete old logo before uploading a new one
     await BlobService.deleteOldMerchantLogo(merchantCode);
@@ -72,7 +83,7 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
 
     // Update merchant logo URL in database
     await prisma.merchant.update({
-      where: { id: merchantUser.merchantId },
+      where: { id: merchant.id },
       data: { logoUrl: result.url },
     });
 

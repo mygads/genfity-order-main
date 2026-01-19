@@ -27,15 +27,24 @@ async function handleGet(
     }
     const categoryId = categoryIdResult.value;
 
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
     // Verify category belongs to merchant
     const category = await prisma.menuCategory.findFirst({
       where: {
         id: categoryId,
-        merchant: {
-          merchantUsers: {
-            some: { userId: context.userId },
-          },
-        },
+        merchantId,
       },
     });
 
@@ -114,20 +123,16 @@ async function handlePost(
     
     const menuId = BigInt(body.menuId);
 
-    // Get merchant
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -135,7 +140,7 @@ async function handlePost(
     const category = await prisma.menuCategory.findFirst({
       where: {
         id: categoryId,
-        merchantId: merchantUser.merchantId,
+        merchantId,
       },
     });
 
@@ -155,7 +160,7 @@ async function handlePost(
     const menu = await prisma.menu.findFirst({
       where: {
         id: menuId,
-        merchantId: merchantUser.merchantId,
+        merchantId,
       },
     });
 

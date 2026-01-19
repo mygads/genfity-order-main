@@ -121,13 +121,26 @@ function MerchantSelectionModal({
                   )}
 
                   {/* Role Badge */}
-                  <div className="mt-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${merchant.role === 'OWNER'
                       ? 'bg-purple-100 text-purple-700'
                       : 'bg-blue-100 text-blue-700'
                       }`}>
                       {merchant.role === 'OWNER' ? t('admin.staff.owner') : t('admin.staff.staffRole')}
                     </span>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${merchant.branchType === 'BRANCH'
+                      ? 'bg-orange-100 text-orange-700'
+                      : 'bg-emerald-100 text-emerald-700'
+                      }`}>
+                      {merchant.branchType === 'BRANCH'
+                        ? t('admin.login.selectMerchant.branch')
+                        : t('admin.login.selectMerchant.main')}
+                    </span>
+                    {merchant.branchType === 'BRANCH' && merchant.parentMerchantName && (
+                      <span className="text-xs text-gray-500">
+                        {t('admin.login.selectMerchant.branchOf', { name: merchant.parentMerchantName })}
+                      </span>
+                    )}
                   </div>
                 </div>
 

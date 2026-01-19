@@ -39,16 +39,11 @@ interface TransactionItem {
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        // Get merchant from user's merchant_users relationship
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
-        });
-
-        if (!merchantUser) {
+        const merchantId = context.merchantId;
+        if (!merchantId) {
             return NextResponse.json(
-                { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
-                { status: 404 }
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
             );
         }
 
@@ -63,7 +58,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
         // Get balance record
         const balance = await prisma.merchantBalance.findUnique({
-            where: { merchantId: merchantUser.merchantId },
+            where: { merchantId },
         });
 
         // Build where clause for transactions
@@ -118,7 +113,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         if (includePending && offset === 0) {
             // Build where clause for payment requests
             const paymentRequestWhere: Prisma.PaymentRequestWhereInput = {
-                merchantId: merchantUser.merchantId,
+                merchantId,
                 status: { in: ['PENDING', 'CONFIRMED', 'REJECTED'] },
             };
 

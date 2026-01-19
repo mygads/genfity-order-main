@@ -28,11 +28,20 @@ async function handleGet(
 
         const menuBookId = menuBookIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -42,7 +51,7 @@ async function handleGet(
         const menuBook = await prisma.menuBook.findFirst({
             where: {
                 id: menuBookId,
-                merchantId: merchantUser.merchantId
+                merchantId
             },
             include: {
                 items: {
@@ -92,11 +101,20 @@ async function handlePut(
 
         const menuBookId = menuBookIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -106,7 +124,7 @@ async function handlePut(
         const existing = await prisma.menuBook.findFirst({
             where: {
                 id: menuBookId,
-                merchantId: merchantUser.merchantId
+                merchantId
             }
         });
 
@@ -187,11 +205,20 @@ async function handleDelete(
 
         const menuBookId = menuBookIdResult.value;
 
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, message: 'Merchant not found' },
                 { status: 404 }
@@ -201,7 +228,7 @@ async function handleDelete(
         const existing = await prisma.menuBook.findFirst({
             where: {
                 id: menuBookId,
-                merchantId: merchantUser.merchantId
+                merchantId
             },
             include: { _count: { select: { specialPrices: true } } }
         });

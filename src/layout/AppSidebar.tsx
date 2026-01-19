@@ -50,6 +50,7 @@ import {
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus";
+import { getAdminAuth, getUserMerchants, saveAdminAuth } from "../lib/utils/adminAuth";
 
 type NavItem = {
   nameKey: TranslationKeys; // Translation key for name
@@ -377,6 +378,12 @@ const merchantNavGroups: NavGroup[] = [
         roles: ["MERCHANT_OWNER", "MERCHANT_STAFF"],
         permission: STAFF_PERMISSIONS.SUBSCRIPTION,
       },
+      {
+        icon: <FaExchangeAlt />,
+        nameKey: "admin.nav.groupBilling",
+        path: "/admin/dashboard/subscription/group",
+        roles: ["MERCHANT_OWNER"],
+      },
     ],
   },
   {
@@ -428,6 +435,9 @@ const AppSidebar: React.FC = () => {
   const [merchantIsActive, setMerchantIsActive] = React.useState<boolean | null>(null);
   const [showScrollIndicator, setShowScrollIndicator] = useState(false);
   const [pendingReservationCount, setPendingReservationCount] = useState<number | null>(null);
+  const [merchantOptions, setMerchantOptions] = useState<ReturnType<typeof getUserMerchants>>([]);
+  const [currentMerchantId, setCurrentMerchantId] = useState<string | null>(null);
+  const [isSwitchingMerchant, setIsSwitchingMerchant] = useState(false);
 
   const { isSuspended: isSubscriptionSuspended } = useSubscriptionStatus();
 
@@ -467,6 +477,60 @@ const AppSidebar: React.FC = () => {
       setMerchantIsActive(null);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user || (user.role !== 'MERCHANT_OWNER' && user.role !== 'MERCHANT_STAFF')) {
+      setMerchantOptions([]);
+      setCurrentMerchantId(null);
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+
+    setMerchantOptions(getUserMerchants() || []);
+    setCurrentMerchantId(localStorage.getItem('merchantId'));
+  }, [user]);
+
+  const handleSwitchMerchant = async (merchantId: string) => {
+    if (!merchantId || merchantId === currentMerchantId || isSwitchingMerchant) return;
+
+    setIsSwitchingMerchant(true);
+    try {
+      const auth = getAdminAuth({ skipRedirect: true, allowExpired: true });
+      if (!auth?.accessToken) return;
+
+      const response = await fetch('/api/auth/switch-merchant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${auth.accessToken}`,
+        },
+        body: JSON.stringify({ merchantId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        return;
+      }
+
+      saveAdminAuth({
+        ...auth,
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken || auth.refreshToken,
+        user: {
+          ...auth.user,
+          merchantId,
+        },
+        permissions: data.data.permissions,
+        merchantRole: data.data.merchantRole,
+      });
+
+      setCurrentMerchantId(merchantId);
+      window.location.href = '/admin/dashboard';
+    } finally {
+      setIsSwitchingMerchant(false);
+    }
+  };
 
   const isMerchantUser = user?.role === "MERCHANT_OWNER" || user?.role === "MERCHANT_STAFF";
   const isMerchantLocked = Boolean(
@@ -687,6 +751,30 @@ const AppSidebar: React.FC = () => {
           <MerchantBanner
             isExpanded={isExpanded || isHovered || isMobileOpen}
           />
+          {merchantOptions && merchantOptions.length > 1 && (isExpanded || isHovered || isMobileOpen) && (
+            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
+              <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {t('admin.sidebar.switchMerchant')}
+              </label>
+              <select
+                value={currentMerchantId || ''}
+                onChange={(e) => handleSwitchMerchant(e.target.value)}
+                disabled={isSwitchingMerchant}
+                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-800 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200"
+              >
+                {merchantOptions.map((merchant) => (
+                  <option key={merchant.merchantId} value={merchant.merchantId}>
+                    {merchant.merchantName}{merchant.branchType === 'BRANCH' && merchant.parentMerchantName ? ` — ${merchant.parentMerchantName}` : ''}
+                  </option>
+                ))}
+              </select>
+              {isSwitchingMerchant && (
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  {t('admin.sidebar.switchMerchantLoading')}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

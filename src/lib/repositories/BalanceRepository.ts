@@ -382,6 +382,98 @@ class BalanceRepository {
     }
 
     /**
+     * Transfer balance between merchants (owner-only)
+     */
+    async transferBalance(params: {
+        fromMerchantId: bigint;
+        toMerchantId: bigint;
+        amount: number;
+        descriptionFrom: string;
+        descriptionTo: string;
+        createdByUserId?: bigint;
+    }) {
+        const {
+            fromMerchantId,
+            toMerchantId,
+            amount,
+            descriptionFrom,
+            descriptionTo,
+            createdByUserId,
+        } = params;
+
+        return prisma.$transaction(async (tx) => {
+            let fromBalance = await tx.merchantBalance.findUnique({
+                where: { merchantId: fromMerchantId },
+            });
+
+            if (!fromBalance) {
+                fromBalance = await tx.merchantBalance.create({
+                    data: { merchantId: fromMerchantId, balance: 0 },
+                });
+            }
+
+            let toBalance = await tx.merchantBalance.findUnique({
+                where: { merchantId: toMerchantId },
+            });
+
+            if (!toBalance) {
+                toBalance = await tx.merchantBalance.create({
+                    data: { merchantId: toMerchantId, balance: 0 },
+                });
+            }
+
+            const fromBefore = Number(fromBalance.balance);
+            const toBefore = Number(toBalance.balance);
+
+            if (fromBefore < amount) {
+                throw new Error('Insufficient balance');
+            }
+
+            const fromAfter = fromBefore - amount;
+            const toAfter = toBefore + amount;
+
+            await tx.merchantBalance.update({
+                where: { merchantId: fromMerchantId },
+                data: { balance: fromAfter },
+            });
+
+            await tx.merchantBalance.update({
+                where: { merchantId: toMerchantId },
+                data: { balance: toAfter },
+            });
+
+            await tx.balanceTransaction.create({
+                data: {
+                    balanceId: fromBalance.id,
+                    type: 'ADJUSTMENT',
+                    amount: -amount,
+                    balanceBefore: fromBefore,
+                    balanceAfter: fromAfter,
+                    description: descriptionFrom,
+                    createdByUserId,
+                },
+            });
+
+            await tx.balanceTransaction.create({
+                data: {
+                    balanceId: toBalance.id,
+                    type: 'ADJUSTMENT',
+                    amount,
+                    balanceBefore: toBefore,
+                    balanceAfter: toAfter,
+                    description: descriptionTo,
+                    createdByUserId,
+                },
+            });
+
+            return {
+                fromBalance: { balanceBefore: fromBefore, balanceAfter: fromAfter },
+                toBalance: { balanceBefore: toBefore, balanceAfter: toAfter },
+            };
+        });
+    }
+
+    /**
      * Get balance transactions
      */
     async getTransactions(

@@ -214,13 +214,24 @@ async function handleDelete(
       );
     }
 
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, deletePin: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -230,8 +241,6 @@ async function handleDelete(
         { status: 404 }
       );
     }
-
-    const merchant = merchantUser.merchant;
 
     // Check if merchant has delete PIN set
     if (!merchant.deletePin) {

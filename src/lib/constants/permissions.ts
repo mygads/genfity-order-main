@@ -244,6 +244,7 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
 export const OWNER_ONLY_DASHBOARD_PATH_PREFIXES = [
   '/admin/dashboard/drivers',
   '/admin/dashboard/staff',
+  '/admin/dashboard/subscription/group',
 ] as const;
 
 export function isOwnerOnlyDashboardPath(path: string): boolean {

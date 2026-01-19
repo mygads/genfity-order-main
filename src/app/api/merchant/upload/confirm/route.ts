@@ -39,19 +39,26 @@ async function handlePost(request: NextRequest, context: AuthContext) {
       );
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    if (!context.merchantId) {
+      return NextResponse.json(
+        { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required', statusCode: 400 },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: context.merchantId },
+      select: { id: true, code: true, logoUrl: true, bannerUrl: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found', statusCode: 404 },
         { status: 404 }
       );
     }
 
-    const merchantCode = merchantUser.merchant.code.toLowerCase();
+    const merchantCode = merchant.code.toLowerCase();
     const lowerUrl = publicUrl.toLowerCase();
 
     if (!lowerUrl.includes(`/merchants/${merchantCode}/`)) {
@@ -62,24 +69,20 @@ async function handlePost(request: NextRequest, context: AuthContext) {
     }
 
     const updateData: { logoUrl?: string; bannerUrl?: string } = {};
-    const existing = await prisma.merchant.findUnique({
-      where: { id: merchantUser.merchantId },
-      select: { logoUrl: true, bannerUrl: true },
-    });
 
     if (type === 'logo') {
-      if (existing?.logoUrl) {
+      if (merchant.logoUrl) {
         try {
-          await BlobService.deleteFile(existing.logoUrl);
+          await BlobService.deleteFile(merchant.logoUrl);
         } catch {
           // ignore cleanup errors
         }
       }
       updateData.logoUrl = publicUrl;
     } else {
-      if (existing?.bannerUrl) {
+      if (merchant.bannerUrl) {
         try {
-          await BlobService.deleteFile(existing.bannerUrl);
+          await BlobService.deleteFile(merchant.bannerUrl);
         } catch {
           // ignore cleanup errors
         }
@@ -88,7 +91,7 @@ async function handlePost(request: NextRequest, context: AuthContext) {
     }
 
     await prisma.merchant.update({
-      where: { id: merchantUser.merchantId },
+      where: { id: merchant.id },
       data: updateData,
     });
 

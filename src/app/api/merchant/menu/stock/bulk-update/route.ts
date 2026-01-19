@@ -52,30 +52,19 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authUser.id;
+    const merchantId = authUser.merchantId;
 
-    // Get merchant for current user
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: {
-        userId: userId,
-      },
-      include: {
-        merchant: true,
-      },
-    });
-
-    if (!merchantUser) {
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant tidak ditemukan',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID tidak ditemukan',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
-
-    const merchantId = merchantUser.merchantId;
 
     // Parse and validate request body
     const body = await request.json();

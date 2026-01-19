@@ -50,17 +50,22 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       return jsonError(400, 'POS_SETTINGS_INVALID', 'Invalid POS settings payload');
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return jsonError(400, 'MERCHANT_ID_REQUIRED', 'Merchant ID is required');
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, currency: true, features: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return jsonError(404, 'MERCHANT_NOT_FOUND', 'Merchant not found for this user');
     }
 
-    const existingFeatures = (merchantUser.merchant as any)?.features;
-    const currency = (merchantUser.merchant as any)?.currency || 'IDR';
+    const existingFeatures = (merchant as any)?.features;
+    const currency = (merchant as any)?.currency || 'IDR';
 
     // Merge + normalize
     const nextFeatures = mergePosCustomItemsFeatures({
@@ -80,7 +85,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
     });
 
     const updated = await prisma.merchant.update({
-      where: { id: merchantUser.merchantId },
+      where: { id: merchant.id },
       data: {
         features: nextFeaturesWithEditOrder,
       },
@@ -118,17 +123,22 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
 
 async function handleGet(_req: NextRequest, authContext: AuthContext) {
   try {
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return jsonError(400, 'MERCHANT_ID_REQUIRED', 'Merchant ID is required');
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, currency: true, features: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return jsonError(404, 'MERCHANT_NOT_FOUND', 'Merchant not found for this user');
     }
 
-    const currency = (merchantUser.merchant as any)?.currency || 'IDR';
-    const features = (merchantUser.merchant as any)?.features;
+    const currency = (merchant as any)?.currency || 'IDR';
+    const features = (merchant as any)?.features;
 
     const normalized = getPosCustomItemsSettings({
       features,
@@ -142,7 +152,7 @@ async function handleGet(_req: NextRequest, authContext: AuthContext) {
     return NextResponse.json({
       success: true,
       data: serializeBigInt({
-        merchantId: merchantUser.merchantId,
+        merchantId: merchant.id,
         customItems: normalized,
         editOrder: editOrderSettings,
       }),

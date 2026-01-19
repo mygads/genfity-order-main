@@ -16,12 +16,20 @@ import { serializeBigInt } from '@/lib/utils/serializer';
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -29,7 +37,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         }
 
         const menuBooks = await prisma.menuBook.findMany({
-            where: { merchantId: merchantUser.merchantId },
+            where: { merchantId },
             include: {
                 items: {
                     include: {
@@ -64,12 +72,20 @@ async function handleGet(req: NextRequest, context: AuthContext) {
  */
 async function handlePost(req: NextRequest, context: AuthContext) {
     try {
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -88,7 +104,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
         const menuBook = await prisma.menuBook.create({
             data: {
-                merchantId: merchantUser.merchantId,
+                merchantId,
                 name: name.trim(),
                 description: description?.trim() || null,
                 isActive: true,

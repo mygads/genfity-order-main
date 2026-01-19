@@ -87,6 +87,9 @@ export interface ExtendedAdminAuth extends AdminAuth {
     isOpen: boolean;
     role: string;
     permissions: string[];
+    branchType?: 'MAIN' | 'BRANCH';
+    parentMerchantId?: string | null;
+    parentMerchantName?: string | null;
   }>;
 }
 

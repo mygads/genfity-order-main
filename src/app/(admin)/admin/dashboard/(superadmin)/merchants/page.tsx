@@ -57,6 +57,10 @@ interface Merchant {
     type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY';
     status: 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
   } | null;
+  branchType?: 'MAIN' | 'BRANCH';
+  parentMerchantId?: string | null;
+  parentMerchantName?: string | null;
+  branchesCount?: number;
 }
 
 interface MerchantsApiResponse {
@@ -403,6 +407,9 @@ export default function MerchantsPage() {
                     <th className="w-40 min-w-40 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Merchant Name
                     </th>
+                    <th className="w-40 min-w-40 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
+                      Branch
+                    </th>
                     <th className="w-50 min-w-50 px-4 py-3 text-start text-xs font-medium text-gray-500 dark:text-gray-400">
                       Email
                     </th>
@@ -432,7 +439,7 @@ export default function MerchantsPage() {
                 <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                   {merchants.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="py-10 text-center">
+                      <td colSpan={12} className="py-10 text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400">No merchants found</p>
                         <button
                           onClick={() => router.push("/admin/dashboard/merchants/create")}
@@ -474,6 +481,23 @@ export default function MerchantsPage() {
                             <p className="text-sm font-medium text-gray-800 dark:text-white/90 truncate" title={merchant.name}>
                               {merchant.name}
                             </p>
+                          </td>
+                          <td className="w-40 min-w-40 px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                            {merchant.branchType === 'BRANCH' ? (
+                              <span className="inline-flex flex-col">
+                                <span className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Branch</span>
+                                <span className="truncate" title={merchant.parentMerchantName || undefined}>
+                                  {merchant.parentMerchantName || '-'}
+                                </span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex flex-col">
+                                <span className="text-xs uppercase tracking-wide text-gray-400 dark:text-gray-500">Main</span>
+                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                  {merchant.branchesCount ? `${merchant.branchesCount} branches` : 'No branches'}
+                                </span>
+                              </span>
+                            )}
                           </td>
                           <td className="w-50 min-w-50 px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                             <span className="truncate block" title={merchant.email}>{merchant.email}</span>

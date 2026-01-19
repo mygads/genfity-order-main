@@ -18,10 +18,12 @@
  * ```
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRConfiguration, KeyedMutator } from 'swr';
 import { clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
+import { tOr, useTranslation } from '@/lib/i18n/useTranslation';
+import type { ApiErrorResponse } from '@/lib/types/api';
 
 // Custom error class with additional info
 interface FetchError extends Error {
@@ -164,6 +166,7 @@ export function useSWRWithAuth<T = unknown>(
   options?: UseSWRWithAuthOptions<T>
 ): UseSWRWithAuthReturn<T> {
   const router = useRouter();
+  const { t } = useTranslation();
   const [isMounted, setIsMounted] = useState(false);
   const [hasToken, setHasToken] = useState(true);
 
@@ -213,6 +216,23 @@ export function useSWRWithAuth<T = unknown>(
     }
   );
 
+  const localizedError = useMemo(() => {
+    if (!error) return undefined;
+
+    const errorInfo = (error as FetchError).info as ApiErrorResponse | undefined;
+    if (!errorInfo?.i18nKey) return error;
+
+    const fallbackMessage = errorInfo.message
+      || error.message
+      || 'An error occurred while fetching the data.';
+    const localizedMessage = tOr(t, errorInfo.i18nKey, fallbackMessage);
+
+    const nextError: FetchError = new Error(localizedMessage);
+    Object.assign(nextError, error);
+    nextError.message = localizedMessage;
+    return nextError;
+  }, [error, t]);
+
   // Refresh function
   const refresh = useCallback(async () => {
     return mutate();
@@ -220,7 +240,7 @@ export function useSWRWithAuth<T = unknown>(
 
   return {
     data,
-    error,
+    error: localizedError,
     isLoading: !isMounted || isLoading,
     isValidating,
     isMounted,

@@ -124,12 +124,19 @@ async function handlePost(request: NextRequest, context: AuthContext) {
       );
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    if (!context.merchantId) {
+      return NextResponse.json(
+        { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required', statusCode: 400 },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: context.merchantId },
+      select: { id: true, code: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found', statusCode: 404 },
         { status: 404 }
@@ -148,7 +155,7 @@ async function handlePost(request: NextRequest, context: AuthContext) {
       }
 
       const menu = await prisma.menu.findFirst({
-        where: { id: menuIdValue, merchantId: merchantUser.merchantId },
+        where: { id: menuIdValue, merchantId: merchant.id },
         select: { id: true },
       });
 
@@ -163,7 +170,7 @@ async function handlePost(request: NextRequest, context: AuthContext) {
     const extension = TYPE_EXTENSION_MAP[contentType] || 'bin';
     const objectKey = buildObjectKey({
       type,
-      merchantCode: merchantUser.merchant.code,
+      merchantCode: merchant.code,
       menuId: menuId ? String(menuId) : undefined,
       extension,
     });

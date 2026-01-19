@@ -20,13 +20,7 @@ import { BlobService } from '@/lib/services/BlobService';
  */
 async function handleGet(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
-    });
-
-    if (!merchantUser) {
+    if (!authContext.merchantId) {
       return NextResponse.json(
         {
           success: false,
@@ -39,7 +33,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
     }
 
     // Get merchant details with opening hours
-    const merchant = await merchantService.getMerchantById(merchantUser.merchantId);
+    const merchant = await merchantService.getMerchantById(authContext.merchantId);
 
     if (!merchant) {
       return NextResponse.json(
@@ -55,7 +49,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
 
     // Team summary (read-only): enough to render view pages without calling /api/merchant/users
     const merchantUsers = await prisma.merchantUser.findMany({
-      where: { merchantId: merchantUser.merchantId },
+      where: { merchantId: authContext.merchantId },
       include: {
         user: {
           select: {
@@ -129,9 +123,25 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
  */
 async function handlePut(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
+    if (!authContext.merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_NOT_FOUND',
+          message: 'Merchant not found for this user',
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    const merchantUser = await prisma.merchantUser.findUnique({
+      where: {
+        merchantId_userId: {
+          merchantId: authContext.merchantId,
+          userId: authContext.userId,
+        },
+      },
       include: { merchant: true },
     });
 
@@ -200,7 +210,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
 
     // Update merchant (isActive is excluded - only super admin can change it)
     const updatedMerchant = await merchantService.updateMerchant(
-      merchantUser.merchantId,
+      authContext.merchantId,
       {
         name: body.name,
         description: body.description,

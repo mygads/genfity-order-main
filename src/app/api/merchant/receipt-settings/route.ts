@@ -97,16 +97,21 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       return jsonError(400, 'RECEIPT_SETTINGS_INVALID', 'Invalid receipt settings payload');
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return jsonError(400, 'MERCHANT_ID_REQUIRED', 'Merchant ID is required');
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, currency: true, receiptSettings: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return jsonError(404, 'MERCHANT_NOT_FOUND', 'Merchant not found for this user');
     }
 
-    const current = (merchantUser.merchant as any)?.receiptSettings as Partial<ReceiptSettings> | null | undefined;
+    const current = (merchant as any)?.receiptSettings as Partial<ReceiptSettings> | null | undefined;
 
     const nextMerged: ReceiptSettings = {
       ...DEFAULT_RECEIPT_SETTINGS,
@@ -125,7 +130,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
     // Server-side enforcement for paid completed-order email toggle.
     // This prevents API bypass (even if UI gating fails).
     if (nextMerged.sendCompletedOrderEmailToCustomer) {
-      const merchantCurrency = (merchantUser.merchant as any)?.currency || 'IDR';
+      const merchantCurrency = (merchant as any)?.currency || 'IDR';
       const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
       const completedEmailFee = pricing.completedOrderEmailFee;
 
@@ -141,7 +146,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       }
 
       const balanceRecord = await prisma.merchantBalance.findUnique({
-        where: { merchantId: merchantUser.merchantId },
+        where: { merchantId },
         select: { balance: true },
       });
 
@@ -158,7 +163,7 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
     }
 
     const updated = await prisma.merchant.update({
-      where: { id: merchantUser.merchantId },
+      where: { id: merchant.id },
       data: {
         receiptSettings: toPrismaInputJsonValue(nextMerged),
       },
@@ -181,26 +186,31 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
 
 async function handleGet(_req: NextRequest, authContext: AuthContext) {
   try {
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return jsonError(400, 'MERCHANT_ID_REQUIRED', 'Merchant ID is required');
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, currency: true, receiptSettings: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return jsonError(404, 'MERCHANT_NOT_FOUND', 'Merchant not found for this user');
     }
 
-    const current = (merchantUser.merchant as any)?.receiptSettings as Partial<ReceiptSettings> | null | undefined;
+    const current = (merchant as any)?.receiptSettings as Partial<ReceiptSettings> | null | undefined;
     const merged: ReceiptSettings = {
       ...DEFAULT_RECEIPT_SETTINGS,
       ...(current || {}),
     };
 
-    const merchantCurrency = (merchantUser.merchant as any)?.currency || 'IDR';
+    const merchantCurrency = (merchant as any)?.currency || 'IDR';
     const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
 
     const balanceRecord = await prisma.merchantBalance.findUnique({
-      where: { merchantId: merchantUser.merchantId },
+      where: { merchantId },
       select: { balance: true },
     });
 

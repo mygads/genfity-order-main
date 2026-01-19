@@ -106,7 +106,17 @@ export async function fetchJsonWithAuth<T = unknown>(
   
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(errorData.message || `HTTP ${response.status}`);
+    const error = new Error(errorData.message || `HTTP ${response.status}`) as Error & {
+      status?: number;
+      info?: unknown;
+      i18nKey?: string;
+    };
+    error.status = response.status;
+    error.info = errorData;
+    if (errorData?.i18nKey) {
+      error.i18nKey = errorData.i18nKey;
+    }
+    throw error;
   }
 
   return response.json();

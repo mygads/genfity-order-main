@@ -27,6 +27,15 @@ export class UserRepository {
                 city: true,
                 isOpen: true,
                 isActive: true,
+                branchType: true,
+                parentMerchantId: true,
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -54,6 +63,15 @@ export class UserRepository {
                 city: true,
                 isOpen: true,
                 isActive: true,
+                branchType: true,
+                parentMerchantId: true,
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -135,6 +153,15 @@ export class UserRepository {
                 city: true,
                 isOpen: true,
                 isActive: true,
+                branchType: true,
+                parentMerchantId: true,
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -181,7 +208,17 @@ export class UserRepository {
       include: {
         merchantUsers: {
           include: {
-            merchant: true,
+            merchant: {
+              include: {
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -206,7 +243,17 @@ export class UserRepository {
             merchantId,
           },
           include: {
-            merchant: true,
+            merchant: {
+              include: {
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -224,7 +271,17 @@ export class UserRepository {
       include: {
         merchantUsers: {
           include: {
-            merchant: true,
+            merchant: {
+              include: {
+                parentMerchant: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

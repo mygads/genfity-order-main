@@ -83,19 +83,18 @@ function startOfYearInTz(now: Date, timeZone: string): Date {
   return zonedTimeToUtc({ year: p.year, month: 1, day: 1, hour: 0, minute: 0, second: 0 }, timeZone);
 }
 
-async function getMerchantForUser(userId: bigint): Promise<{ merchantId: bigint; timezone: string } | null> {
-  const merchantUser = await prisma.merchantUser.findFirst({
-    where: { userId },
-    include: { merchant: { select: { id: true, timezone: true } } },
-  });
-
-  if (!merchantUser?.merchant) return null;
-  return { merchantId: merchantUser.merchant.id, timezone: merchantUser.merchant.timezone };
-}
-
 export const GET = withMerchant(async (req: NextRequest, context: AuthContext) => {
   try {
-    const merchant = await getMerchantForUser(context.userId);
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, timezone: true },
+    });
+
     if (!merchant) {
       return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
     }
@@ -131,7 +130,7 @@ export const GET = withMerchant(async (req: NextRequest, context: AuthContext) =
     }
 
     const baseWhere: Prisma.OrderDiscountWhereInput = {
-      merchantId: merchant.merchantId,
+      merchantId: merchant.id,
       voucherTemplateId: { not: null },
       order: {
         placedAt: {
@@ -169,7 +168,7 @@ export const GET = withMerchant(async (req: NextRequest, context: AuthContext) =
       .filter((x): x is bigint => typeof x === 'bigint');
 
     const templates = await prisma.orderVoucherTemplate.findMany({
-      where: { merchantId: merchant.merchantId, id: { in: templateIds } },
+      where: { merchantId: merchant.id, id: { in: templateIds } },
       select: { id: true, name: true, audience: true, reportCategory: true },
     });
 

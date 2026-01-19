@@ -21,6 +21,7 @@ import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import { formatCurrency } from '@/lib/utils/format';
+import { getAdminAuth } from '@/lib/utils/adminAuth';
 
 // Dynamic import for ApexCharts (SSR safe)
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
@@ -102,6 +103,8 @@ export default function SalesAnalyticsPage() {
   const [analytics, setAnalytics] = useState<SalesAnalytics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [period, setPeriod] = useState<PeriodType>('month');
+  const [scope, setScope] = useState<'merchant' | 'group'>('merchant');
+  const [isOwner, setIsOwner] = useState(false);
   const [currency, setCurrency] = useState('AUD');
   const [timezone, setTimezone] = useState('Asia/Jakarta');
   const [startDate, setStartDate] = useState(() => {
@@ -119,6 +122,15 @@ export default function SalesAnalyticsPage() {
   const [presets, setPresets] = useState<Array<{ id: string; name: string; filters: Record<string, unknown> }>>([]);
 
   const presetsStorageKey = 'genfity_sales_analytics_presets';
+
+  useEffect(() => {
+    const auth = getAdminAuth({ skipRedirect: true });
+    const owner = auth?.user?.role === 'MERCHANT_OWNER';
+    setIsOwner(owner);
+    if (owner) {
+      setScope('group');
+    }
+  }, []);
 
   // Fetch analytics data
   const fetchAnalytics = useCallback(async () => {
@@ -146,6 +158,7 @@ export default function SalesAnalyticsPage() {
         params.append('startDate', startDate);
         params.append('endDate', endDate);
       }
+      if (scope === 'group') params.append('scope', 'group');
       if (orderType) params.append('orderType', orderType);
       if (status) params.append('status', status);
       if (paymentMethod) params.append('paymentMethod', paymentMethod);
@@ -169,7 +182,7 @@ export default function SalesAnalyticsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [period, router, startDate, endDate, orderType, status, paymentMethod, scheduledOnly]);
+  }, [period, scope, router, startDate, endDate, orderType, status, paymentMethod, scheduledOnly]);
 
   useEffect(() => {
     fetchAnalytics();
@@ -436,6 +449,21 @@ export default function SalesAnalyticsPage() {
 
       {/* Filters */}
       <div className="mb-6 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        {isOwner && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              {t('admin.analytics.scopeLabel')}
+            </span>
+            <select
+              value={scope}
+              onChange={(e) => setScope(e.target.value as 'merchant' | 'group')}
+              className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-800 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+            >
+              <option value="merchant">{t('admin.analytics.scope.merchant')}</option>
+              <option value="group">{t('admin.analytics.scope.group')}</option>
+            </select>
+          </div>
+        )}
         {period === 'custom' && (
           <div className="flex items-center gap-2">
             <input

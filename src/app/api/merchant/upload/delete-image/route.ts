@@ -32,13 +32,24 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             );
         }
 
-        // Get merchant to verify ownership
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        if (!context.merchantId) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: context.merchantId },
+            select: { id: true, code: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 {
                     success: false,
@@ -53,7 +64,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         // Check if the image/thumbnail is used by any menu item (to prevent deleting active images)
         const menuWithImage = await prisma.menu.findFirst({
             where: {
-                merchantId: merchantUser.merchantId,
+                merchantId: merchant.id,
                 OR: [
                     { imageUrl: imageUrl },
                     ...(imageThumbUrl ? [{ imageThumbUrl: imageThumbUrl }] : []),
@@ -71,7 +82,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         }
 
         // Verify the URL(s) belong to this merchant's blob storage
-        const merchantCode = merchantUser.merchant.code;
+        const merchantCode = merchant.code;
         const merchantCodeLower = merchantCode.toLowerCase();
         const urlsToDelete = [imageUrl, imageThumbUrl, imageThumb2xUrl].filter(Boolean) as string[];
 

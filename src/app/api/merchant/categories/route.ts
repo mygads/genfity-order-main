@@ -18,12 +18,25 @@ import prisma from '@/lib/db/client';
  */
 async function handleGet(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -38,7 +51,7 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
     // Get categories with menu count
     const categories = await prisma.menuCategory.findMany({
       where: { 
-        merchantId: merchantUser.merchantId,
+        merchantId,
         deletedAt: null, // Filter out soft-deleted categories
       },
       include: {
@@ -79,12 +92,25 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
  */
 async function handlePost(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -99,7 +125,7 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
     const body = await req.json();
 
     const category = await menuService.createCategory({
-      merchantId: merchantUser.merchantId,
+      merchantId,
       name: body.name,
       description: body.description,
       sortOrder: body.sortOrder,

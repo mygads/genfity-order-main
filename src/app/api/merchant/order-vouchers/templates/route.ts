@@ -95,16 +95,11 @@ function normalizeBigIntIdArray(value: unknown): bigint[] {
   return Array.from(uniq).map((s) => BigInt(s));
 }
 
-async function getMerchantIdForUser(userId: bigint): Promise<bigint | null> {
-  const merchantUser = await prisma.merchantUser.findFirst({ where: { userId } });
-  return merchantUser?.merchantId ?? null;
-}
-
 async function handleGet(_req: NextRequest, context: AuthContext) {
   try {
-    const merchantId = await getMerchantIdForUser(context.userId);
+    const merchantId = context.merchantId;
     if (!merchantId) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templates = await prisma.orderVoucherTemplate.findMany({
@@ -130,9 +125,9 @@ async function handleGet(_req: NextRequest, context: AuthContext) {
 
 async function handlePost(req: NextRequest, context: AuthContext) {
   try {
-    const merchantId = await getMerchantIdForUser(context.userId);
+    const merchantId = context.merchantId;
     if (!merchantId) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const body = (await req.json()) as CreateTemplateBody;

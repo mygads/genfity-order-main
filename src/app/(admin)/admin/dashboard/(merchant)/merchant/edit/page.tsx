@@ -15,6 +15,7 @@ import {
   FaChair,
   FaLock,
   FaTag,
+  FaCodeBranch,
   FaExclamationTriangle,
 } from "react-icons/fa";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
@@ -44,6 +45,7 @@ import OpeningHoursTabComponent from "@/components/merchants/merchant-edit/tabs/
 import TableSettingsTabComponent from "@/components/merchants/merchant-edit/tabs/TableSettingsTab";
 import FeesTabComponent from "@/components/merchants/merchant-edit/tabs/FeesTab";
 import PinTab from "@/components/merchants/merchant-edit/tabs/PinTab";
+import BranchesTab from "@/components/merchants/merchant-edit/tabs/BranchesTab";
 import type { MerchantFormData, OpeningHour } from "@/components/merchants/merchant-edit/types";
 import { hasMerchantUnsavedChanges } from "@/components/merchants/merchant-edit/utils/unsavedChanges";
 import type { PerDayModeScheduleHandle } from "@/components/merchants/PerDayModeSchedule";
@@ -211,6 +213,7 @@ export default function EditMerchantPage() {
       'basic',
       'location',
       'hours',
+      'branches',
       'sale-modes',
       'features',
       'delivery',
@@ -1393,6 +1396,14 @@ export default function EditMerchantPage() {
             }}
           />
         );
+      case "branches":
+        return (
+          <BranchesTab
+            t={t}
+            showSuccess={showSuccess}
+            showError={showError}
+          />
+        );
       case "pin":
         return (
           <PinTab
@@ -1469,6 +1480,12 @@ export default function EditMerchantPage() {
           label: t('admin.merchant.openingHours'),
           description: tOr(t, 'admin.merchantEdit.nav.hoursDesc', 'Weekly hours and schedule overrides'),
           icon: <FaClock className="h-4 w-4" />,
+        },
+        {
+          id: 'branches',
+          label: tOr(t, 'admin.merchantEdit.branches.navLabel', 'Branches'),
+          description: tOr(t, 'admin.merchantEdit.branches.navDesc', 'Create and manage outlets'),
+          icon: <FaCodeBranch className="h-4 w-4" />,
         },
       ],
     },

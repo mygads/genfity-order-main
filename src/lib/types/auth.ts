@@ -29,6 +29,9 @@ export interface MerchantInfo {
   role: string;
   permissions: string[];
   isActive: boolean;
+  branchType?: 'MAIN' | 'BRANCH';
+  parentMerchantId?: string | null;
+  parentMerchantName?: string | null;
 }
 
 export interface LoginResponse {

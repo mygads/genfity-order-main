@@ -27,20 +27,16 @@ async function handleGet(
     }
     const categoryId = categoryIdResult.value;
 
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -48,7 +44,7 @@ async function handleGet(
     const category = await prisma.menuCategory.findFirst({
       where: {
         id: categoryId,
-        merchantId: merchantUser.merchantId,
+        merchantId,
         deletedAt: null,
       },
       include: {

@@ -22,13 +22,25 @@ interface OpeningHourInput {
  */
 async function handlePut(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -70,13 +82,13 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
 
     // Delete existing opening hours
     await prisma.merchantOpeningHour.deleteMany({
-      where: { merchantId: merchantUser.merchantId },
+      where: { merchantId },
     });
 
     // Create new opening hours
     await prisma.merchantOpeningHour.createMany({
       data: openingHours.map((hour: OpeningHourInput) => ({
-        merchantId: merchantUser.merchantId,
+        merchantId,
         dayOfWeek: hour.dayOfWeek,
         openTime: hour.isClosed ? '00:00' : hour.openTime,
         closeTime: hour.isClosed ? '00:00' : hour.closeTime,

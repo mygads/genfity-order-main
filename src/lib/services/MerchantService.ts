@@ -14,6 +14,7 @@ import {
   ValidationError,
   ConflictError,
   NotFoundError,
+  AuthorizationError,
   ERROR_CODES,
 } from '@/lib/constants/errors';
 import { DEFAULT_RECEIPT_SETTINGS, type ReceiptSettings } from '@/lib/types/receiptSettings';
@@ -51,6 +52,25 @@ export interface CreateMerchantInput {
   ownerEmail: string;
   ownerPhone?: string;
   ownerPassword: string; // Password set by admin
+}
+
+/**
+ * Branch/outlet creation input (merchant owner)
+ */
+export interface CreateBranchInput {
+  name: string;
+  code: string;
+  description?: string;
+  address?: string;
+  phoneNumber?: string;
+  email?: string;
+  isOpen?: boolean;
+  country?: string;
+  currency?: string;
+  timezone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  parentMerchantId?: bigint;
 }
 
 /**
@@ -262,8 +282,7 @@ class MerchantService {
     };
 
     // Create merchant with owner link
-    const merchant = await merchantRepository.createWithUser(
-      {
+    const merchantCreateData = {
         name: input.name,
         code: merchantCode, // Use the validated/regenerated code
         description: input.description,
@@ -276,6 +295,7 @@ class MerchantService {
         timezone: input.timezone || 'Australia/Sydney',
         latitude: input.latitude || null,
         longitude: input.longitude || null,
+        branchType: 'MAIN',
         // Fees/charges default OFF for new merchants
         enableTax: false,
         taxPercentage: null,
@@ -305,7 +325,10 @@ class MerchantService {
         features,
         receiptSettings: receiptSettings as unknown as Prisma.InputJsonValue,
         isActive: true,
-      },
+      } as Prisma.MerchantCreateInput;
+
+    const merchant = await merchantRepository.createWithUser(
+      merchantCreateData,
       owner.id, // Pass userId
       'OWNER'
     );
@@ -366,6 +389,274 @@ class MerchantService {
       merchant,
       owner,
     };
+  }
+
+  /**
+   * Create a new branch/outlet for an existing merchant owner
+   */
+  async createBranch(ownerUserId: bigint, input: CreateBranchInput): Promise<Merchant> {
+    validateRequired(input.name, 'Merchant name');
+    validateRequired(input.code, 'Merchant code');
+
+    const owner = await userRepository.findById(ownerUserId);
+    if (!owner) {
+      throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    if (owner.role !== 'MERCHANT_OWNER') {
+      throw new AuthorizationError('Only merchant owners can create branches', ERROR_CODES.FORBIDDEN);
+    }
+
+    const normalizedCode = input.code.trim().toUpperCase();
+    validateMerchantCode(normalizedCode);
+
+    let merchantCode = normalizedCode;
+    let codeExists = await merchantRepository.codeExists(merchantCode);
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (codeExists && attempts < maxAttempts) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      merchantCode = '';
+      for (let i = 0; i < 4; i++) {
+        merchantCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      codeExists = await merchantRepository.codeExists(merchantCode);
+      attempts++;
+    }
+
+    if (codeExists) {
+      throw new ConflictError(
+        'Unable to generate unique merchant code. Please try again.',
+        ERROR_CODES.MERCHANT_CODE_EXISTS
+      );
+    }
+
+    const parentMerchantId = input.parentMerchantId;
+    if (!parentMerchantId) {
+      throw new ValidationError('Parent merchant is required for branch creation', ERROR_CODES.VALIDATION_FAILED);
+    }
+
+    const parentMerchant = await prisma.merchant.findUnique({
+      where: { id: parentMerchantId },
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        parentMerchantId: true,
+        branchType: true,
+      },
+    } as unknown as Prisma.MerchantFindUniqueArgs) as {
+      id: bigint;
+      name: string;
+      code: string;
+      parentMerchantId: bigint | null;
+      branchType: 'MAIN' | 'BRANCH';
+    } | null;
+
+    if (!parentMerchant) {
+      throw new NotFoundError('Parent merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+    }
+
+    const mainMerchantId = parentMerchant.parentMerchantId ?? parentMerchant.id;
+
+    const ownerLink = await prisma.merchantUser.findFirst({
+      where: {
+        userId: ownerUserId,
+        merchantId: mainMerchantId,
+        role: 'OWNER',
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    if (!ownerLink) {
+      throw new AuthorizationError('You do not have access to the parent merchant', ERROR_CODES.FORBIDDEN);
+    }
+
+    const currency = input.currency || 'AUD';
+    const receiptSettings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      receiptLanguage: currency === 'IDR' ? 'id' : 'en',
+      showEmail: true,
+      showCustomerPhone: true,
+      showAddonPrices: true,
+      showUnitPrice: true,
+      showCustomFooterText: false,
+      customFooterText: undefined,
+      customThankYouMessage: undefined,
+      sendCompletedOrderEmailToCustomer: false,
+    };
+
+    const features = {
+      orderVouchers: {
+        posDiscountsEnabled: true,
+        customerEnabled: false,
+      },
+      pos: {
+        customItems: {
+          enabled: false,
+        },
+      },
+    };
+
+    const branchCreateData = {
+        name: input.name,
+        code: merchantCode,
+        description: input.description,
+        address: input.address,
+        phone: input.phoneNumber,
+        email: input.email || owner.email,
+        isOpen: input.isOpen ?? true,
+        country: input.country || 'Australia',
+        currency,
+        timezone: input.timezone || 'Australia/Sydney',
+        latitude: input.latitude || null,
+        longitude: input.longitude || null,
+        branchType: 'BRANCH',
+        parentMerchant: {
+          connect: { id: mainMerchantId },
+        },
+        enableTax: false,
+        taxPercentage: null,
+        enableServiceCharge: false,
+        serviceChargePercent: null,
+        enablePackagingFee: false,
+        packagingFeeAmount: null,
+        isDineInEnabled: true,
+        isTakeawayEnabled: true,
+        isDeliveryEnabled: false,
+        enforceDeliveryZones: true,
+        requireTableNumberForDineIn: true,
+        posPayImmediately: true,
+        isReservationEnabled: false,
+        isScheduledOrderEnabled: false,
+        reservationMenuRequired: false,
+        reservationMinItemCount: 0,
+        features,
+        receiptSettings: receiptSettings as unknown as Prisma.InputJsonValue,
+        isActive: true,
+      } as Prisma.MerchantCreateInput;
+
+    const merchant = await merchantRepository.createWithUser(
+      branchCreateData,
+      owner.id,
+      'OWNER'
+    );
+
+    try {
+      const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      const { default: balanceRepository } = await import('@/lib/repositories/BalanceRepository');
+      const { default: subscriptionService } = await import('@/lib/services/SubscriptionService');
+      const { default: userNotificationService } = await import('@/lib/services/UserNotificationService');
+      const { default: merchantTemplateService } = await import('@/lib/services/MerchantTemplateService');
+
+      const pricing = await subscriptionService.getPlanPricing(currency);
+      const trialDays = pricing.trialDays || 30;
+
+      await subscriptionRepository.createMerchantSubscription(merchant.id, trialDays);
+      await balanceRepository.getOrCreateBalance(merchant.id);
+
+      try {
+        await merchantTemplateService.createTemplateData(
+          merchant.id,
+          owner.id,
+          currency
+        );
+      } catch (templateError) {
+        console.warn('⚠️ Failed to create template data for branch:', templateError);
+      }
+
+      userNotificationService.notifyNewMerchantRegistration(
+        merchant.name,
+        merchant.code,
+        merchant.id
+      ).catch(err => {
+        console.error('⚠️ New branch notification failed:', err);
+      });
+    } catch (subscriptionError) {
+      console.warn('Failed to create branch subscription:', subscriptionError);
+    }
+
+    return merchant;
+  }
+
+  /**
+   * Promote a branch to become the main merchant for its group
+   */
+  async setPrimaryBranch(ownerUserId: bigint, newMainMerchantId: bigint): Promise<void> {
+    const owner = await userRepository.findById(ownerUserId);
+    if (!owner) {
+      throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    if (owner.role !== 'MERCHANT_OWNER') {
+      throw new AuthorizationError('Only merchant owners can change the main branch', ERROR_CODES.FORBIDDEN);
+    }
+
+    const newMain = await prisma.merchant.findUnique({
+      where: { id: newMainMerchantId },
+      select: { id: true, parentMerchantId: true, branchType: true },
+    } as unknown as Prisma.MerchantFindUniqueArgs) as {
+      id: bigint;
+      parentMerchantId: bigint | null;
+      branchType: 'MAIN' | 'BRANCH';
+    } | null;
+
+    if (!newMain) {
+      throw new NotFoundError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+    }
+
+    const currentMainId = newMain.parentMerchantId ?? newMain.id;
+
+    const ownerLink = await prisma.merchantUser.findFirst({
+      where: {
+        userId: ownerUserId,
+        merchantId: currentMainId,
+        role: 'OWNER',
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    if (!ownerLink) {
+      throw new AuthorizationError('You do not have access to this merchant group', ERROR_CODES.FORBIDDEN);
+    }
+
+    if (currentMainId === newMain.id && newMain.branchType === 'MAIN') {
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.merchant.update({
+        where: { id: newMain.id },
+        data: {
+          branchType: 'MAIN',
+          parentMerchantId: null,
+        } as Prisma.MerchantUpdateInput,
+      });
+
+      if (currentMainId !== newMain.id) {
+        await tx.merchant.update({
+          where: { id: currentMainId },
+          data: {
+            branchType: 'BRANCH',
+            parentMerchantId: newMain.id,
+          } as Prisma.MerchantUpdateInput,
+        });
+
+        await tx.merchant.updateMany({
+          where: {
+            parentMerchantId: currentMainId,
+            id: { not: newMain.id },
+          } as Prisma.MerchantWhereInput,
+          data: {
+            parentMerchantId: newMain.id,
+            branchType: 'BRANCH',
+          } as Prisma.MerchantUpdateManyMutationInput,
+        });
+      }
+    });
   }
 
   /**
@@ -753,7 +1044,7 @@ class MerchantService {
     merchantId: bigint,
     currentTime?: Date
   ): Promise<boolean> {
-    const merchant = await merchantRepository.findById(merchantId);
+    const merchant = await merchantRepository.findById(merchantId) as MerchantWithDetails | null;
     if (!merchant || !merchant.isActive) {
       return false;
     }
@@ -799,7 +1090,16 @@ class MerchantService {
    * @returns Updated merchant user link
    */
   async addStaff(merchantId: bigint, userId: bigint, role: 'OWNER' | 'STAFF' = 'STAFF'): Promise<void> {
-    const user = await userRepository.findById(userId);
+    type MerchantUserLink = {
+      merchantId: bigint;
+      role: string;
+      isActive: boolean;
+      merchant?: { isActive?: boolean | null };
+    };
+
+    const user = await userRepository.findById(userId) as (User & {
+      merchantUsers?: MerchantUserLink[];
+    }) | null;
     if (!user) {
       throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
     }
@@ -815,10 +1115,10 @@ class MerchantService {
     // Staff accounts must have exactly one merchant (single-merchant staff).
     if (role === 'STAFF' && user.role === 'MERCHANT_STAFF') {
       const activeStaffLinks = (user.merchantUsers ?? [])
-        .filter((mu) => mu.isActive && mu.merchant?.isActive)
-        .filter((mu) => mu.role === 'OWNER' || mu.role === 'STAFF');
+        .filter((mu: MerchantUserLink) => mu.isActive && mu.merchant?.isActive)
+        .filter((mu: MerchantUserLink) => mu.role === 'OWNER' || mu.role === 'STAFF');
 
-      const hasOtherMerchant = activeStaffLinks.some((mu) => mu.merchantId !== merchantId);
+      const hasOtherMerchant = activeStaffLinks.some((mu: MerchantUserLink) => mu.merchantId !== merchantId);
       if (hasOtherMerchant) {
         throw new ValidationError(
           'This staff account is already linked to another merchant. Staff accounts must have exactly one merchant.',
@@ -829,7 +1129,7 @@ class MerchantService {
 
     // If adding OWNER, check merchant doesn't already have one
     if (role === 'OWNER') {
-      const merchant = await merchantRepository.findById(merchantId);
+      const merchant = await merchantRepository.findById(merchantId) as MerchantWithDetails | null;
       const existingOwner = merchant?.merchantUsers?.find(
         (mu: { role: string }) => mu.role === 'OWNER'
       );

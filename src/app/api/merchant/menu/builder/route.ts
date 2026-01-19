@@ -57,27 +57,19 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = authUser.id;
+    const merchantId = authUser.merchantId;
 
-    // Get merchant
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: {
-        userId: userId,
-      },
-    });
-
-    if (!merchantUser) {
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant tidak ditemukan',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID tidak ditemukan',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
-
-    const merchantId = merchantUser.merchantId;
 
     // Parse and validate
     const body = await request.json();
@@ -162,27 +154,19 @@ export async function PUT(request: NextRequest) {
     }
 
     const userId = authUser.id;
+    const merchantId = authUser.merchantId;
 
-    // Get merchant
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: {
-        userId: userId,
-      },
-    });
-
-    if (!merchantUser) {
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant tidak ditemukan',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID tidak ditemukan',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
-
-    const merchantId = merchantUser.merchantId;
 
     // Parse and validate
     const body = await request.json();

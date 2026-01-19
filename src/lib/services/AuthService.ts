@@ -203,6 +203,12 @@ class AuthService {
             city: string | null;
             isOpen: boolean;
             isActive: boolean;
+            branchType?: 'MAIN' | 'BRANCH';
+            parentMerchantId?: bigint | null;
+            parentMerchant?: {
+              id: bigint;
+              name: string;
+            } | null;
           };
         }) => ({
           merchantId: mu.merchantId.toString(),
@@ -215,6 +221,9 @@ class AuthService {
           role: mu.role,
           permissions: mu.role === 'OWNER' ? Object.values(STAFF_PERMISSIONS) : mu.permissions,
           isActive: mu.isActive,
+          branchType: mu.merchant.branchType,
+          parentMerchantId: mu.merchant.parentMerchantId ? mu.merchant.parentMerchantId.toString() : null,
+          parentMerchantName: mu.merchant.parentMerchant?.name || null,
         }));
 
         // Staff must be linked to exactly one merchant.

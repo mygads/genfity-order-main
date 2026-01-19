@@ -32,6 +32,16 @@ interface MerchantDetails {
   longitude: string | null;
   mapUrl: string | null;
   createdAt: string;
+  branchType?: 'MAIN' | 'BRANCH';
+  parentMerchantId?: string | null;
+  parentMerchantName?: string | null;
+  branches?: Array<{
+    id: string;
+    code: string;
+    name: string;
+    branchType?: 'MAIN' | 'BRANCH';
+    isActive?: boolean;
+  }>;
   openingHours: Array<{
     dayOfWeek: number;
     openTime: string;
@@ -326,6 +336,26 @@ export default function MerchantDetailsPage() {
               <p className="text-gray-800 dark:text-white/90">{merchant.timezone}</p>
             </div>
 
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                Branch Type
+              </label>
+              <p className="text-gray-800 dark:text-white/90">
+                {merchant.branchType === 'BRANCH' ? 'Branch' : 'Main'}
+              </p>
+            </div>
+
+            {merchant.branchType === 'BRANCH' && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Parent Merchant
+                </label>
+                <p className="text-gray-800 dark:text-white/90">
+                  {merchant.parentMerchantName || '-'}
+                </p>
+              </div>
+            )}
+
             <div className="md:col-span-2">
               <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
                 Address
@@ -339,6 +369,21 @@ export default function MerchantDetailsPage() {
                   Description
                 </label>
                 <p className="text-gray-800 dark:text-white/90">{merchant.description}</p>
+              </div>
+            )}
+
+            {merchant.branchType !== 'BRANCH' && merchant.branches && merchant.branches.length > 0 && (
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Branches
+                </label>
+                <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                  {merchant.branches.map((branch) => (
+                    <li key={branch.id}>
+                      {branch.name} {branch.code ? `(${branch.code})` : ''}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>

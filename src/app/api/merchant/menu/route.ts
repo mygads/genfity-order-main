@@ -19,13 +19,25 @@ import { parseOptionalBigIntQueryParam } from '@/lib/utils/routeContext';
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -44,7 +56,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     }
 
     const menus = await menuService.getMenusByMerchant(
-      merchantUser.merchantId,
+      merchantId,
       categoryIdResult.value ?? undefined
     );
 
@@ -75,13 +87,25 @@ async function handleGet(req: NextRequest, context: AuthContext) {
  */
 async function handlePost(req: NextRequest, context: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -96,7 +120,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const body = await req.json();
 
     const menu = await menuService.createMenu({
-      merchantId: merchantUser.merchantId,
+      merchantId,
       categoryId: body.categoryId ? BigInt(body.categoryId) : undefined,
       name: body.name,
       description: body.description,

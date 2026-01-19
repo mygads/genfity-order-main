@@ -41,12 +41,24 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    if (!context.merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: context.merchantId },
+      select: { id: true, code: true, promoBannerUrls: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -58,8 +70,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    const existingUrls = Array.isArray((merchantUser.merchant as any)?.promoBannerUrls)
-      ? (merchantUser.merchant as any).promoBannerUrls
+    const existingUrls = Array.isArray((merchant as any)?.promoBannerUrls)
+      ? (merchant as any).promoBannerUrls
       : [];
 
     if (existingUrls.length >= 10) {
@@ -77,7 +89,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const merchantCode = merchantUser.merchant.code;
+    const merchantCode = merchant.code;
     const result = await BlobService.uploadMerchantPromoBanner(merchantCode, buffer);
 
     return NextResponse.json({

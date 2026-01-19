@@ -413,6 +413,10 @@ model Merchant {
   // Per-day mode schedules feature flag (explicit enable/disable)
   isPerDayModeScheduleEnabled Boolean          @default(false) @map("is_per_day_mode_schedule_enabled")
 
+  // Multi-merchant (branch/outlet) support
+  parentMerchantId      BigInt?               @map("parent_merchant_id")
+  branchType            MerchantBranchType    @default(MAIN) @map("branch_type")
+
   // Optional global delivery schedule (HH:MM)
   deliveryScheduleStart  String?               @map("delivery_schedule_start")
   deliveryScheduleEnd    String?               @map("delivery_schedule_end")
@@ -441,6 +445,8 @@ model Merchant {
   deliveryFeePerKm           Decimal?             @map("delivery_fee_per_km") @db.Decimal(10, 2)
   deliveryFeeMin             Decimal?             @map("delivery_fee_min") @db.Decimal(10, 2)
   deliveryFeeMax             Decimal?             @map("delivery_fee_max") @db.Decimal(10, 2)
+  parentMerchant        Merchant?             @relation("MerchantBranch", fields: [parentMerchantId], references: [id])
+  branches              Merchant[]            @relation("MerchantBranch")
   addonCategories        AddonCategory[]
   menuCategories         MenuCategory[]
   menus                  Menu[]
@@ -488,6 +494,7 @@ model Merchant {
 
   @@index([code])
   @@index([isActive])
+  @@index([parentMerchantId])
   @@index([referredByInfluencerId])
   @@map("merchants")
 }
@@ -1399,6 +1406,11 @@ enum MerchantRole {
   OWNER
   STAFF
   DRIVER
+}
+
+enum MerchantBranchType {
+  MAIN
+  BRANCH
 }
 
 enum MerchantUserInvitationStatus {

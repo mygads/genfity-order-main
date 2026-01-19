@@ -47,13 +47,24 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    // Get merchant
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    if (!context.merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: context.merchantId },
+      select: { id: true, code: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -65,7 +76,41 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    const merchantCode = merchantUser.merchant.code;
+    const merchantCode = merchant.code;
+
+    let menuIdValue: bigint | null = null;
+    if (menuId) {
+      try {
+        menuIdValue = BigInt(menuId);
+      } catch {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'INVALID_MENU_ID',
+            message: 'menuId must be numeric',
+            statusCode: 400,
+          },
+          { status: 400 }
+        );
+      }
+
+      const menu = await prisma.menu.findFirst({
+        where: { id: menuIdValue, merchantId: merchant.id },
+        select: { id: true },
+      });
+
+      if (!menu) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'MENU_NOT_FOUND',
+            message: 'Menu not found',
+            statusCode: 404,
+          },
+          { status: 404 }
+        );
+      }
+    }
 
     // Delete old image if exists and menuId provided
     if (menuId) {
@@ -132,9 +177,9 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     };
 
     // Update menu item with new image URL if menuId provided
-    if (menuId) {
+    if (menuIdValue) {
       await prisma.menu.update({
-        where: { id: BigInt(menuId) },
+        where: { id: menuIdValue },
         data: {
           imageUrl: result.url,
           imageThumbUrl: thumbResult.url,

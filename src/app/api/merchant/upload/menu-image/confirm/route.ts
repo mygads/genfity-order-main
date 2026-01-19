@@ -45,19 +45,26 @@ async function handlePost(request: NextRequest, context: AuthContext) {
       }
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    if (!context.merchantId) {
+      return NextResponse.json(
+        { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required', statusCode: 400 },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: context.merchantId },
+      select: { id: true, code: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found', statusCode: 404 },
         { status: 404 }
       );
     }
 
-    const merchantCodeLower = merchantUser.merchant.code.toLowerCase();
+    const merchantCodeLower = merchant.code.toLowerCase();
     for (const url of urlsToValidate) {
       const lowerUrl = url.toLowerCase();
       if (!lowerUrl.includes(`/merchants/${merchantCodeLower}/`)) {
@@ -80,7 +87,7 @@ async function handlePost(request: NextRequest, context: AuthContext) {
       }
 
       const existing = await prisma.menu.findFirst({
-        where: { id: menuIdValue, merchantId: merchantUser.merchantId },
+        where: { id: menuIdValue, merchantId: merchant.id },
         select: { id: true, imageUrl: true, imageThumbUrl: true, imageThumbMeta: true },
       });
 

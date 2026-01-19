@@ -17,13 +17,20 @@ import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitch
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        // Get merchant from user's merchant_users relationship
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true, currency: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -33,7 +40,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         // Auto-check and switch subscription if needed
         // This runs every time merchant user accesses the dashboard
         try {
-            const switchResult = await subscriptionAutoSwitchService.checkAndAutoSwitch(merchantUser.merchantId);
+            const switchResult = await subscriptionAutoSwitchService.checkAndAutoSwitch(merchantId);
             if (switchResult.action !== 'NO_CHANGE') {
                 console.log(`📋 Dashboard access triggered subscription auto-switch:`, {
                     merchant: switchResult.merchantCode,
@@ -47,12 +54,12 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             // Don't fail the request if auto-switch fails
         }
 
-        const status = await subscriptionService.getSubscriptionStatus(merchantUser.merchantId);
+        const status = await subscriptionService.getSubscriptionStatus(merchantId);
 
         // If no subscription found, return a "no subscription" status (not an error)
         // This allows the frontend to show appropriate warning without breaking
         if (!status) {
-            const merchantCurrency = merchantUser.merchant?.currency || 'IDR';
+            const merchantCurrency = merchant.currency || 'IDR';
             const pricing = await subscriptionService.getPlanPricing(merchantCurrency);
             
             return NextResponse.json({

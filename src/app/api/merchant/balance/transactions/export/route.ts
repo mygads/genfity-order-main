@@ -31,13 +31,20 @@ function formatCurrency(amount: number, currency: string): string {
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        // Get merchant from user's merchant_users relationship
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true, code: true, currency: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -51,7 +58,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
         // Get balance record
         const balance = await prisma.merchantBalance.findUnique({
-            where: { merchantId: merchantUser.merchantId },
+            where: { merchantId },
         });
 
         if (!balance) {
@@ -84,7 +91,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             orderBy: { createdAt: 'desc' },
         });
 
-        const currency = merchantUser.merchant.currency || 'IDR';
+        const currency = merchant.currency || 'IDR';
         const currencySymbol = currency === 'AUD' ? 'AUD' : 'IDR';
 
         // Generate CSV content
@@ -107,7 +114,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
         // Generate filename
         const dateStr = new Date().toISOString().split('T')[0];
-        const filename = `transactions_${merchantUser.merchant.code}_${dateStr}.csv`;
+        const filename = `transactions_${merchant.code}_${dateStr}.csv`;
 
         // Return CSV file
         return new NextResponse(csv, {

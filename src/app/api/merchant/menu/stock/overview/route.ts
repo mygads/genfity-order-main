@@ -13,13 +13,25 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 
 async function handleGet(req: NextRequest, authContext: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      include: { merchant: true },
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, name: true, currency: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -30,8 +42,6 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
         { status: 404 }
       );
     }
-
-    const merchantId = merchantUser.merchantId;
 
     // Fetch all menus with stock tracking
     const menus = await prisma.menu.findMany({
@@ -134,9 +144,9 @@ async function handleGet(req: NextRequest, authContext: AuthContext) {
         items: serializeBigInt(allItems),
         stats,
         merchant: serializeBigInt({
-          id: merchantUser.merchant.id,
-          name: merchantUser.merchant.name,
-          currency: merchantUser.merchant.currency,
+          id: merchant.id,
+          name: merchant.name,
+          currency: merchant.currency,
         }),
       },
       message: 'Stock overview retrieved successfully',

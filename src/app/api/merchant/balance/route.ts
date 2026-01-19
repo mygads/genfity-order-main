@@ -15,24 +15,31 @@ import balanceService from '@/lib/services/BalanceService';
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        // Get merchant from user's merchant_users relationship
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true, currency: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
             );
         }
 
-        const currency = merchantUser.merchant.currency || 'IDR';
-        const balanceInfo = await balanceService.getBalanceInfo(merchantUser.merchantId, currency);
+        const currency = merchant.currency || 'IDR';
+        const balanceInfo = await balanceService.getBalanceInfo(merchantId, currency);
 
         // Get billing summary for deposit mode
-        const billingSummary = await balanceService.getBillingSummary(merchantUser.merchantId);
+        const billingSummary = await balanceService.getBillingSummary(merchantId);
 
         return NextResponse.json({
             success: true,

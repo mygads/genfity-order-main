@@ -51,6 +51,14 @@ async function switchMerchantHandler(
             logoUrl: true,
             isActive: true,
             isOpen: true,
+            branchType: true,
+            parentMerchantId: true,
+            parentMerchant: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
         user: {
@@ -135,6 +143,9 @@ async function switchMerchantHandler(
           name: merchantUser.merchant.name,
           logoUrl: merchantUser.merchant.logoUrl,
           isOpen: merchantUser.merchant.isOpen,
+          branchType: merchantUser.merchant.branchType,
+          parentMerchantId: merchantUser.merchant.parentMerchantId ? merchantUser.merchant.parentMerchantId.toString() : null,
+          parentMerchantName: merchantUser.merchant.parentMerchant?.name || null,
         },
         permissions,
         merchantRole: merchantUser.role,

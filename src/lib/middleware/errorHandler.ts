@@ -4,9 +4,22 @@
  */
 
 import { NextResponse } from 'next/server';
-import { CustomError, ERROR_CODES, ERROR_MESSAGES } from '@/lib/constants/errors';
+import { CustomError, ERROR_CODES, ERROR_MESSAGES, type ErrorCode } from '@/lib/constants/errors';
 import { ApiErrorResponse } from '@/lib/types/api';
 import { serializeData } from '@/lib/utils/serializer';
+
+const VALIDATION_ERROR_CODES = new Set<ErrorCode>([
+  ERROR_CODES.VALIDATION_ERROR,
+  ERROR_CODES.VALIDATION_FAILED,
+  ERROR_CODES.REQUIRED_FIELD,
+  ERROR_CODES.INVALID_EMAIL,
+  ERROR_CODES.INVALID_PASSWORD,
+]);
+
+function getValidationI18nKey(errorCode: ErrorCode): string | undefined {
+  if (!VALIDATION_ERROR_CODES.has(errorCode)) return undefined;
+  return `errors.${errorCode}`;
+}
 
 /**
  * Handle errors and return standardized API response
@@ -21,12 +34,15 @@ export function handleError(error: unknown): NextResponse<ApiErrorResponse> {
       console.error('API Error:', error);
     }
 
+    const i18nKey = getValidationI18nKey(error.errorCode);
+
     return NextResponse.json<ApiErrorResponse>(
       {
         success: false,
         error: error.errorCode,
         message: error.message,
         statusCode: error.statusCode,
+        ...(i18nKey ? { i18nKey } : {}),
         ...(error.details ? { details: serializeData(error.details) } : {}),
       },
       { status: error.statusCode }

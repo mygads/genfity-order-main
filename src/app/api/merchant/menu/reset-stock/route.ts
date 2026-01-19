@@ -21,12 +21,25 @@ import prisma from '@/lib/db/client';
  */
 async function handlePost(req: NextRequest, context: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true },
     });
-    
-    if (!merchantUser) {
+
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -39,13 +52,13 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     }
 
     // Reset stock for this merchant's menus
-    const resetCount = await menuService.resetDailyStock(merchantUser.merchantId);
+    const resetCount = await menuService.resetDailyStock(merchantId);
 
     return NextResponse.json({
       success: true,
       data: {
         resetCount,
-        merchantId: merchantUser.merchantId.toString(),
+        merchantId: merchantId.toString(),
         resetAt: new Date().toISOString(),
       },
       message: `Successfully reset stock for ${resetCount} menu items`,

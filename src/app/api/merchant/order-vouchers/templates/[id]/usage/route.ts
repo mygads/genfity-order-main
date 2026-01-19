@@ -26,11 +26,6 @@ function parseOptionalInt(value: string | null): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function getMerchantIdForUser(userId: bigint): Promise<bigint | null> {
-  const merchantUser = await prisma.merchantUser.findFirst({ where: { userId } });
-  return merchantUser?.merchantId ?? null;
-}
-
 async function handleGet(req: NextRequest, context: AuthContext, routeContext: { params: Promise<Record<string, string>> }) {
   try {
     const idParam = await requireBigIntRouteParam(routeContext, 'id');
@@ -38,9 +33,9 @@ async function handleGet(req: NextRequest, context: AuthContext, routeContext: {
       return NextResponse.json(idParam.body, { status: idParam.status });
     }
 
-    const merchantId = await getMerchantIdForUser(context.userId);
+    const merchantId = context.merchantId;
     if (!merchantId) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templateId = idParam.value;

@@ -16,13 +16,25 @@ import { PaymentStatus } from '@prisma/client';
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      include: { merchant: true },
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
+        },
+        { status: 400 }
+      );
+    }
+
+    const merchant = await prisma.merchant.findUnique({
+      where: { id: merchantId },
+      select: { id: true, currency: true },
     });
 
-    if (!merchantUser) {
+    if (!merchant) {
       return NextResponse.json(
         {
           success: false,
@@ -46,8 +58,6 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       ? new Date(startDateStr)
       : new Date(endDate.getTime() - 30 * 24 * 60 * 60 * 1000);
     startDate.setHours(0, 0, 0, 0);
-
-    const merchantId = merchantUser.merchantId;
 
     // Revenue is based on PAID transactions only
     const paidOrders = await prisma.order.findMany({
@@ -207,7 +217,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
           startDate: startDate.toISOString(),
           endDate: endDate.toISOString(),
         }, merchant: {
-          currency: merchantUser.merchant.currency || 'AUD',
+          currency: merchant.currency || 'AUD',
         }, summary: {
           totalOrders,
           totalRevenue: totalSubtotal,

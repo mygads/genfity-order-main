@@ -102,15 +102,15 @@ async function handleGet(_req: NextRequest, context: AuthContext, routeContext: 
       return NextResponse.json(idParam.body, { status: idParam.status });
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({ where: { userId: context.userId } });
-    if (!merchantUser) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templateId = idParam.value;
 
     const template = await prisma.orderVoucherTemplate.findFirst({
-      where: { id: templateId, merchantId: merchantUser.merchantId },
+      where: { id: templateId, merchantId },
       include: {
         _count: { select: { codes: true, orderDiscounts: true } },
         menuScopes: { include: { menu: { select: { id: true, name: true } } } },
@@ -136,15 +136,15 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: {
       return NextResponse.json(idParam.body, { status: idParam.status });
     }
 
-    const merchantUser = await prisma.merchantUser.findFirst({ where: { userId: context.userId } });
-    if (!merchantUser) {
-      return NextResponse.json({ success: false, message: 'Merchant not found' }, { status: 404 });
+    const merchantId = context.merchantId;
+    if (!merchantId) {
+      return NextResponse.json({ success: false, message: 'Merchant ID is required' }, { status: 400 });
     }
 
     const templateId = idParam.value;
 
     const existing = await prisma.orderVoucherTemplate.findFirst({
-      where: { id: templateId, merchantId: merchantUser.merchantId },
+      where: { id: templateId, merchantId },
       select: { id: true },
     });
 
@@ -212,7 +212,7 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: {
     if (shouldUpdateScopes && includeAllItems === false) {
       if (scopedMenuIds.length > 0) {
         const count = await prisma.menu.count({
-          where: { merchantId: merchantUser.merchantId, id: { in: scopedMenuIds }, deletedAt: null },
+          where: { merchantId, id: { in: scopedMenuIds }, deletedAt: null },
         });
         if (count !== scopedMenuIds.length) {
           return NextResponse.json({ success: false, message: 'Invalid scopedMenuIds' }, { status: 400 });
@@ -220,7 +220,7 @@ async function handlePut(req: NextRequest, context: AuthContext, routeContext: {
       }
       if (scopedCategoryIds.length > 0) {
         const count = await prisma.menuCategory.count({
-          where: { merchantId: merchantUser.merchantId, id: { in: scopedCategoryIds }, deletedAt: null },
+          where: { merchantId, id: { in: scopedCategoryIds }, deletedAt: null },
         });
         if (count !== scopedCategoryIds.length) {
           return NextResponse.json({ success: false, message: 'Invalid scopedCategoryIds' }, { status: 400 });

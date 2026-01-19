@@ -15,6 +15,7 @@ export interface ApiErrorResponse {
   error: string;
   message: string;
   statusCode: number;
+  i18nKey?: string;
   details?: Record<string, unknown>;
 }
 

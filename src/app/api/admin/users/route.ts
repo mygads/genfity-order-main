@@ -40,6 +40,8 @@ async function getUsersHandler(
       merchant: {
         id: bigint;
         name: string;
+        branchType?: string;
+        parentMerchantId?: bigint | null;
       };
     }>;
   }
@@ -61,17 +63,24 @@ async function getUsersHandler(
   }
 
   // Format response with merchant info
-  const formattedUsers = users.map(user => ({
-    id: user.id.toString(),
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    isActive: user.isActive,
-    merchantId: user.merchantUsers?.[0]?.merchantId.toString(),
-    merchantName: user.merchantUsers?.[0]?.merchant.name,
-    createdAt: user.createdAt.toISOString(),
-  }));
+  const formattedUsers = users.map((user) => {
+    const merchantLinks = user.merchantUsers || [];
+    const mainMerchantLink = merchantLinks.find((link) =>
+      !link.merchant.parentMerchantId || link.merchant.branchType === 'MAIN'
+    ) || merchantLinks[0];
+
+    return {
+      id: user.id.toString(),
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      isActive: user.isActive,
+      merchantId: mainMerchantLink?.merchantId.toString(),
+      merchantName: mainMerchantLink?.merchant.name,
+      createdAt: user.createdAt.toISOString(),
+    };
+  });
 
   return successResponse(formattedUsers, 'Users retrieved successfully', 200);
 }

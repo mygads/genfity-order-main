@@ -6,19 +6,15 @@ import balanceService from '@/lib/services/BalanceService';
 
 async function handleGet(_req: NextRequest, context: AuthContext) {
   try {
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-      select: { merchantId: true },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
-        { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
-        { status: 404 }
+        { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+        { status: 400 }
       );
     }
 
-    const usage = await balanceService.getUsageSummary(merchantUser.merchantId);
+    const usage = await balanceService.getUsageSummary(merchantId);
 
     return NextResponse.json({
       success: true,

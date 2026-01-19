@@ -13,25 +13,21 @@ export type MerchantLockReason = 'NONE' | 'INACTIVE' | 'SUBSCRIPTION_SUSPENDED';
 
 async function handleGet(_req: NextRequest, authContext: AuthContext) {
   try {
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: authContext.userId },
-      select: { merchantId: true },
-    });
-
-    if (!merchantUser) {
+    const merchantId = authContext.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
     const merchant = await prisma.merchant.findUnique({
-      where: { id: merchantUser.merchantId },
+      where: { id: merchantId },
       select: {
         id: true,
         code: true,
@@ -51,7 +47,7 @@ async function handleGet(_req: NextRequest, authContext: AuthContext) {
       );
     }
 
-    const status = await subscriptionService.getSubscriptionStatus(merchantUser.merchantId);
+    const status = await subscriptionService.getSubscriptionStatus(merchantId);
 
     const subscription = status
       ? {

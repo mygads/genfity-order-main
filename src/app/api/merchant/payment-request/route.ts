@@ -23,12 +23,20 @@ const createRequestSchema = z.object({
  */
 async function handleGet(req: NextRequest, context: AuthContext) {
     try {
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -40,7 +48,7 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         const offset = parseInt(searchParams.get('offset') || '0', 10);
 
         const { requests, total } = await paymentRequestService.getMerchantPaymentRequests(
-            merchantUser.merchantId,
+            merchantId,
             { limit, offset }
         );
 
@@ -82,12 +90,20 @@ async function handleGet(req: NextRequest, context: AuthContext) {
  */
 async function handlePost(req: NextRequest, context: AuthContext) {
     try {
-        const merchantUser = await prisma.merchantUser.findFirst({
-            where: { userId: context.userId },
-            include: { merchant: true },
+        const merchantId = context.merchantId;
+        if (!merchantId) {
+            return NextResponse.json(
+                { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+                { status: 400 }
+            );
+        }
+
+        const merchant = await prisma.merchant.findUnique({
+            where: { id: merchantId },
+            select: { id: true, currency: true },
         });
 
-        if (!merchantUser) {
+        if (!merchant) {
             return NextResponse.json(
                 { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
                 { status: 404 }
@@ -105,10 +121,10 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         }
 
         const { type, amount, monthsRequested } = validation.data;
-        const currency = merchantUser.merchant.currency || 'IDR';
+        const currency = merchant.currency || 'IDR';
 
         const paymentRequest = await paymentRequestService.createPaymentRequest({
-            merchantId: merchantUser.merchantId,
+            merchantId,
             type,
             currency,
             amount: amount || 0,

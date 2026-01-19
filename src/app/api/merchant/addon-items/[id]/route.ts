@@ -24,20 +24,16 @@ async function handleGet(
   contextParams: RouteContext
 ) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -50,7 +46,7 @@ async function handleGet(
     // Get addon item
     const item = await addonService.getAddonItemById(
       itemId,
-      merchantUser.merchantId
+      merchantId
     );
 
     return NextResponse.json({
@@ -85,20 +81,16 @@ async function handlePut(
   contextParams: RouteContext
 ) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -112,7 +104,7 @@ async function handlePut(
     // Update addon item
     const item = await addonService.updateAddonItem(
       itemId,
-      merchantUser.merchantId,
+      merchantId,
       {
         name: body.name,
         description: body.description,
@@ -186,20 +178,16 @@ async function handleDelete(
   contextParams: RouteContext
 ) {
   try {
-    // Get merchant from user's merchant_users relationship
-    const merchantUser = await prisma.merchantUser.findFirst({
-      where: { userId: context.userId },
-    });
-
-    if (!merchantUser) {
+    const merchantId = context.merchantId;
+    if (!merchantId) {
       return NextResponse.json(
         {
           success: false,
-          error: 'MERCHANT_NOT_FOUND',
-          message: 'Merchant not found for this user',
-          statusCode: 404,
+          error: 'MERCHANT_ID_REQUIRED',
+          message: 'Merchant ID is required',
+          statusCode: 400,
         },
-        { status: 404 }
+        { status: 400 }
       );
     }
 
@@ -210,7 +198,7 @@ async function handleDelete(
     const itemId = itemIdResult.value;
 
     // Delete addon item
-    await addonService.deleteAddonItem(itemId, merchantUser.merchantId);
+    await addonService.deleteAddonItem(itemId, merchantId);
 
     return NextResponse.json({
       success: true,

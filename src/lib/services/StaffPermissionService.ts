@@ -287,6 +287,9 @@ class StaffPermissionService {
     role: string;
     permissions: string[];
     isActive: boolean;
+    branchType?: 'MAIN' | 'BRANCH';
+    parentMerchantId?: string | null;
+    parentMerchantName?: string | null;
   }>> {
     const merchantUsers = await prisma.merchantUser.findMany({
       where: { 
@@ -304,6 +307,14 @@ class StaffPermissionService {
             city: true,
             isOpen: true,
             isActive: true,
+            branchType: true,
+            parentMerchantId: true,
+            parentMerchant: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },
@@ -322,6 +333,9 @@ class StaffPermissionService {
         role: mu.role,
         permissions: mu.role === 'OWNER' ? Object.values(STAFF_PERMISSIONS) : mu.permissions,
         isActive: mu.isActive,
+        branchType: mu.merchant.branchType,
+        parentMerchantId: mu.merchant.parentMerchantId ? mu.merchant.parentMerchantId.toString() : null,
+        parentMerchantName: mu.merchant.parentMerchant?.name || null,
       }));
   }
 
