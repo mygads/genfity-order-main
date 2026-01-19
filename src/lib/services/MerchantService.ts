@@ -5,8 +5,11 @@
 
 import merchantRepository from '@/lib/repositories/MerchantRepository';
 import userRepository from '@/lib/repositories/UserRepository';
+import prisma from '@/lib/db/client';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired, validateMerchantCode } from '@/lib/utils/validators';
+import { serializeData } from '@/lib/utils/serializer';
+import { BlobService } from '@/lib/services/BlobService';
 import {
   ValidationError,
   ConflictError,
@@ -514,8 +517,87 @@ class MerchantService {
     // Receipt settings
     if (input.receiptSettings !== undefined) updateData.receiptSettings = input.receiptSettings;
 
-    // Update merchant
-    return await merchantRepository.update(merchantId, updateData);
+    const shouldMoveAssets = nextCode !== undefined && nextCode !== existing.code;
+
+    if (!shouldMoveAssets) {
+      return await merchantRepository.update(merchantId, updateData);
+    }
+
+    const sourcePrefix = `merchants/${existing.code}/`;
+    const destinationPrefix = `merchants/${nextCode}/`;
+
+    await BlobService.copyPrefix(sourcePrefix, destinationPrefix);
+
+    const replaceUrl = (url?: string | null): string | null | undefined => {
+      if (!url) return url;
+      return BlobService.replacePrefixInUrl(url, sourcePrefix, destinationPrefix);
+    };
+
+    const replaceThumbMeta = (meta: unknown): unknown => {
+      if (!meta || typeof meta !== 'object') return meta;
+      const metaObj = meta as { variants?: Array<{ url?: string | null }> };
+      if (!Array.isArray(metaObj.variants)) return meta;
+
+      let changed = false;
+      const nextVariants = metaObj.variants.map((variant) => {
+        if (!variant || !variant.url) return variant;
+        const nextUrl = replaceUrl(variant.url) as string;
+        if (nextUrl !== variant.url) changed = true;
+        return { ...variant, url: nextUrl };
+      });
+
+      if (!changed) return meta;
+      return { ...metaObj, variants: nextVariants };
+    };
+
+    const updatedMerchant = await prisma.$transaction(async (tx) => {
+      if (existing.logoUrl) updateData.logoUrl = replaceUrl(existing.logoUrl);
+      if (existing.bannerUrl) updateData.bannerUrl = replaceUrl(existing.bannerUrl);
+
+      const promoSource = input.promoBannerUrls !== undefined
+        ? input.promoBannerUrls
+        : (existing as { promoBannerUrls?: string[] }).promoBannerUrls;
+      if (promoSource !== undefined) {
+        updateData.promoBannerUrls = promoSource.map((url) => replaceUrl(url) as string);
+      }
+
+      const menus = await tx.menu.findMany({
+        where: { merchantId },
+        select: { id: true, imageUrl: true, imageThumbUrl: true, imageThumbMeta: true },
+      });
+
+      for (const menu of menus) {
+        const nextImageUrl = replaceUrl(menu.imageUrl) ?? null;
+        const nextThumbUrl = replaceUrl(menu.imageThumbUrl) ?? null;
+        const nextThumbMeta = replaceThumbMeta(menu.imageThumbMeta);
+
+        const hasChanges =
+          nextImageUrl !== menu.imageUrl ||
+          nextThumbUrl !== menu.imageThumbUrl ||
+          nextThumbMeta !== menu.imageThumbMeta;
+
+        if (hasChanges) {
+          const menuUpdate: Record<string, unknown> = {};
+          if (nextImageUrl !== menu.imageUrl) menuUpdate.imageUrl = nextImageUrl;
+          if (nextThumbUrl !== menu.imageThumbUrl) menuUpdate.imageThumbUrl = nextThumbUrl;
+          if (nextThumbMeta !== menu.imageThumbMeta) menuUpdate.imageThumbMeta = nextThumbMeta as object;
+
+          await tx.menu.update({
+            where: { id: menu.id },
+            data: menuUpdate,
+          });
+        }
+      }
+
+      return await tx.merchant.update({
+        where: { id: merchantId },
+        data: updateData,
+      });
+    });
+
+    await BlobService.deletePrefix(sourcePrefix);
+
+    return serializeData(updatedMerchant) as Merchant;
   }
 
   /**

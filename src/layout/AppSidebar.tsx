@@ -46,6 +46,7 @@ import {
   FaTruck,
   FaCalendarAlt,
   FaLock,
+  FaDatabase,
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus";
@@ -170,6 +171,12 @@ const superAdminNavGroups: NavGroup[] = [
         icon: <FaExchangeAlt />,
         nameKey: "admin.nav.transactions",
         path: "/admin/dashboard/transactions",
+        roles: ["SUPER_ADMIN"],
+      },
+      {
+        icon: <FaDatabase />,
+        nameKey: "admin.nav.storageUsage",
+        path: "/admin/dashboard/storage-usage",
         roles: ["SUPER_ADMIN"],
       },
     ],

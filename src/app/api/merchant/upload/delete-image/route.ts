@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { withMerchant } from '@/lib/middleware/auth';
-import { del } from '@vercel/blob';
+import { BlobService } from '@/lib/services/BlobService';
 import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 
@@ -18,7 +18,7 @@ import prisma from '@/lib/db/client';
 async function handlePost(req: NextRequest, context: AuthContext) {
     try {
         const body = await req.json();
-        const { imageUrl, imageThumbUrl } = body;
+        const { imageUrl, imageThumbUrl, imageThumb2xUrl } = body;
 
         if (!imageUrl) {
             return NextResponse.json(
@@ -71,11 +71,13 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         }
 
         // Verify the URL(s) belong to this merchant's blob storage
-        const merchantIdStr = String(merchantUser.merchantId);
-        const urlsToDelete = [imageUrl, imageThumbUrl].filter(Boolean) as string[];
+        const merchantCode = merchantUser.merchant.code;
+        const merchantCodeLower = merchantCode.toLowerCase();
+        const urlsToDelete = [imageUrl, imageThumbUrl, imageThumb2xUrl].filter(Boolean) as string[];
 
         for (const url of urlsToDelete) {
-            if (!url.includes(merchantIdStr) && !url.includes('menu-images')) {
+            const lowerUrl = url.toLowerCase();
+            if (!lowerUrl.includes(`/merchants/${merchantCodeLower}/`)) {
                 return NextResponse.json(
                     {
                         success: false,
@@ -88,10 +90,10 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             }
         }
 
-        // Delete from Vercel Blob
+        // Delete from R2
         for (const url of urlsToDelete) {
             try {
-                await del(url);
+                await BlobService.deleteFile(url);
             } catch (deleteError) {
                 console.error('Blob deletion error:', deleteError);
                 // Don't fail the request if blob deletion fails (might already be deleted)

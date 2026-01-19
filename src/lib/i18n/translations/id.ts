@@ -917,6 +917,22 @@ const id = {
   "admin.nav.influencerSettings": "Pengaturan Influencer",
   "admin.nav.financialSettings": "Pengaturan Keuangan",
   "admin.nav.customerFeedback": "Feedback Pelanggan",
+  "admin.nav.storageUsage": "Penggunaan Penyimpanan",
+
+  // Super Admin - Storage Usage
+  "admin.storageUsage.title": "Penggunaan Penyimpanan",
+  "admin.storageUsage.subtitle": "Pantau penggunaan penyimpanan R2 per merchant",
+  "admin.storageUsage.totalStorage": "Total Penyimpanan",
+  "admin.storageUsage.totalObjects": "Total Objek",
+  "admin.storageUsage.totalMerchants": "Total Merchant",
+  "admin.storageUsage.searchPlaceholder": "Cari nama merchant atau kode...",
+  "admin.storageUsage.refresh": "Muat Ulang",
+  "admin.storageUsage.table.merchant": "Merchant",
+  "admin.storageUsage.table.code": "Kode",
+  "admin.storageUsage.table.status": "Status",
+  "admin.storageUsage.table.objects": "Objek",
+  "admin.storageUsage.table.storage": "Penyimpanan",
+  "admin.storageUsage.empty": "Tidak ada data penyimpanan",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Pengaturan Langganan",
@@ -2909,6 +2925,22 @@ const id = {
   "admin.menuBuilder.preview.menuPlaceholderName": "Menu Baru",
   "admin.menuBuilder.preview.dummyName": "Menu Dummy (Nonaktif)",
   "admin.menuBuilder.preview.dummyDescription": "Item ini hanya untuk preview layout dan tidak bisa diklik.",
+
+  // Menu image upload
+  "admin.menuUpload.error.invalidFileType": "Tipe file tidak valid. Silakan unggah file gambar.",
+  "admin.menuUpload.error.fileTooLarge": "Ukuran file harus kurang dari {maxSize}MB.",
+  "admin.menuUpload.error.authRequired": "Autentikasi diperlukan. Silakan login kembali.",
+  "admin.menuUpload.error.uploadFailed": "Gagal mengunggah gambar.",
+  "admin.menuUpload.error.prepareFailed": "Gagal menyiapkan unggahan.",
+  "admin.menuUpload.error.invalidResponse": "Respons unggahan tidak valid.",
+  "admin.menuUpload.error.networkError": "Terjadi gangguan jaringan.",
+  "admin.menuUpload.error.uploadCancelled": "Unggahan dibatalkan.",
+  "admin.menuUpload.error.canvasUnsupported": "Canvas tidak didukung.",
+  "admin.menuUpload.error.thumbnailFailed": "Gagal membuat thumbnail.",
+  "admin.menuUpload.error.confirmFailed": "Gagal mengonfirmasi unggahan.",
+  "admin.menuUpload.error.uploadInProgress": "Tunggu hingga unggahan gambar selesai.",
+  "admin.menuUpload.warning.smallImageTitle": "Peringatan gambar kecil",
+  "admin.menuUpload.warning.smallImageMessage": "Gambar cukup kecil ({width}px lebar). Untuk kualitas terbaik pada detail/zoom menu, unggah gambar minimal 800px lebar.",
 
   // Landing page
   "landing.title": "Sistem Pemesanan Online untuk Restoran & Cafe",

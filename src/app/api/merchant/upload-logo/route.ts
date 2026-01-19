@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
 import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
+import { BlobService } from '@/lib/services/BlobService';
 
 /**
  * POST /api/merchant/upload-logo
@@ -49,47 +49,36 @@ async function handlePost(req: NextRequest, authContext: AuthContext) {
       );
     }
 
-    // Validate file type - accept all image formats
-    if (!file.type.startsWith('image/')) {
+    const validation = BlobService.validateImageFile(file, 5);
+    if (!validation.valid) {
       return NextResponse.json(
         {
           success: false,
           error: 'VALIDATION_ERROR',
-          message: 'Invalid file type. Only JPEG, PNG, and WebP are allowed',
+          message: validation.error || 'Invalid file',
           statusCode: 400,
         },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VALIDATION_ERROR',
-          message: 'File size must be less than 5MB',
-          statusCode: 400,
-        },
-        { status: 400 }
-      );
-    }
+    const merchantCode = merchantUser.merchant.code;
 
-    // Upload to Vercel Blob
-    const filename = `merchant-logos/${merchantUser.merchant.code}-${Date.now()}.${file.type.split('/')[1]}`;
-    const blob = await put(filename, file, {
-      access: 'public',
-    });
+    // Delete old logo before uploading a new one
+    await BlobService.deleteOldMerchantLogo(merchantCode);
+
+    // Upload to R2
+    const result = await BlobService.uploadMerchantLogo(merchantCode, file);
 
     // Update merchant logo URL in database
     await prisma.merchant.update({
       where: { id: merchantUser.merchantId },
-      data: { logoUrl: blob.url },
+      data: { logoUrl: result.url },
     });
 
     return NextResponse.json({
       success: true,
-      data: { url: blob.url },
+      data: { url: result.url },
       message: 'Logo uploaded successfully',
       statusCode: 200,
     });

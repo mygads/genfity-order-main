@@ -858,6 +858,22 @@ const en = {
   "admin.nav.influencerWithdrawals": "Influencer Withdrawals",
   "admin.nav.influencerSettings": "Influencer Settings",
   "admin.nav.customerFeedback": "Customer Feedback",
+  "admin.nav.storageUsage": "Storage Usage",
+
+  // Super Admin - Storage Usage
+  "admin.storageUsage.title": "Storage Usage",
+  "admin.storageUsage.subtitle": "Track R2 storage usage per merchant",
+  "admin.storageUsage.totalStorage": "Total Storage",
+  "admin.storageUsage.totalObjects": "Total Objects",
+  "admin.storageUsage.totalMerchants": "Total Merchants",
+  "admin.storageUsage.searchPlaceholder": "Search by merchant or code...",
+  "admin.storageUsage.refresh": "Refresh",
+  "admin.storageUsage.table.merchant": "Merchant",
+  "admin.storageUsage.table.code": "Code",
+  "admin.storageUsage.table.status": "Status",
+  "admin.storageUsage.table.objects": "Objects",
+  "admin.storageUsage.table.storage": "Storage",
+  "admin.storageUsage.empty": "No storage data found",
 
   // Subscription Settings Page (Super Admin)
   "admin.subscriptionSettings.title": "Subscription Settings",
@@ -2913,6 +2929,22 @@ const en = {
   "admin.menuBuilder.preview.menuPlaceholderName": "New Menu",
   "admin.menuBuilder.preview.dummyName": "Dummy Menu (Disabled)",
   "admin.menuBuilder.preview.dummyDescription": "This item is only for layout preview and cannot be clicked.",
+
+  // Menu image upload
+  "admin.menuUpload.error.invalidFileType": "Invalid file type. Please upload an image file.",
+  "admin.menuUpload.error.fileTooLarge": "File size must be less than {maxSize}MB.",
+  "admin.menuUpload.error.authRequired": "Authentication required. Please sign in again.",
+  "admin.menuUpload.error.uploadFailed": "Failed to upload image.",
+  "admin.menuUpload.error.prepareFailed": "Failed to prepare upload.",
+  "admin.menuUpload.error.invalidResponse": "Invalid upload response.",
+  "admin.menuUpload.error.networkError": "Network error.",
+  "admin.menuUpload.error.uploadCancelled": "Upload cancelled.",
+  "admin.menuUpload.error.canvasUnsupported": "Canvas is not supported.",
+  "admin.menuUpload.error.thumbnailFailed": "Failed to create thumbnail.",
+  "admin.menuUpload.error.confirmFailed": "Failed to confirm upload.",
+  "admin.menuUpload.error.uploadInProgress": "Please wait for the image upload to finish.",
+  "admin.menuUpload.warning.smallImageTitle": "Small image warning",
+  "admin.menuUpload.warning.smallImageMessage": "Image is quite small ({width}px wide). For best quality in menu detail/zoom, upload an image at least 800px wide.",
 
   // Landing page
   "landing.title": "Online Ordering System for Restaurants & Cafes",

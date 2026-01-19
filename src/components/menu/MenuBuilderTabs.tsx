@@ -18,6 +18,12 @@ import DetailedMenuSection from '@/components/customer/DetailedMenuSection';
 import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
 import ViewModeToggle, { type ViewMode } from '@/components/customer/ViewModeToggle';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
+import {
+  buildMenuThumbMeta,
+  createMenuImageBlobs,
+  requestPresignedUpload,
+  uploadBlobWithProgress,
+} from '@/lib/utils/menuImage';
 
 /**
  * Menu Builder Tabs Component
@@ -37,6 +43,7 @@ const menuBuilderSchema = z.object({
   price: z.number().positive('Harga harus lebih dari 0'),
   imageUrl: z.string().url().optional().or(z.literal('')),
   imageThumbUrl: z.string().url().optional().or(z.literal('')),
+  imageThumbMeta: z.any().optional().nullable(),
   isActive: z.boolean(),
   // Note: Promo is now managed via Special Prices page, not on individual menu items
   trackStock: z.boolean(),
@@ -89,6 +96,7 @@ interface MenuBuilderTabsProps {
 
 type TabKey = 'basic' | 'categories' | 'addons' | 'preview';
 
+
 export default function MenuBuilderTabs({
   menuId,
   initialData,
@@ -103,6 +111,15 @@ export default function MenuBuilderTabs({
   const { currency, merchant } = useMerchant();
   const { t } = useTranslation();
   const { showError, showWarning } = useToast();
+  const menuImageMessages = useMemo(() => ({
+    prepareFailed: t('admin.menuUpload.error.prepareFailed'),
+    invalidResponse: t('admin.menuUpload.error.invalidResponse'),
+    uploadFailed: t('admin.menuUpload.error.uploadFailed'),
+    networkError: t('admin.menuUpload.error.networkError'),
+    uploadCancelled: t('admin.menuUpload.error.uploadCancelled'),
+    canvasUnsupported: t('admin.menuUpload.error.canvasUnsupported'),
+    thumbnailFailed: t('admin.menuUpload.error.thumbnailFailed'),
+  }), [t]);
   const currencySymbol = getCurrencySymbol(currency);
   const [activeTab, setActiveTab] = useState<TabKey>('basic');
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -134,6 +151,7 @@ export default function MenuBuilderTabs({
       price: initialData?.price || 0,
       imageUrl: initialData?.imageUrl || '',
       imageThumbUrl: (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl || '',
+      imageThumbMeta: (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbMeta ?? null,
       isActive: initialData?.isActive ?? true,
       // Note: Promo is now managed via Special Prices page
       trackStock: initialData?.trackStock || false,
@@ -174,6 +192,7 @@ export default function MenuBuilderTabs({
   // Track the uploaded image URL (only for newly uploaded images, not initial data)
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImageThumbUrl, setUploadedImageThumbUrl] = useState<string | null>(null);
+  const [uploadedImageThumb2xUrl, setUploadedImageThumb2xUrl] = useState<string | null>(null);
   const [imageSource, setImageSource] = useState<'initial' | 'upload' | 'stock'>('initial');
 
   // Update form values when selections change
@@ -186,7 +205,11 @@ export default function MenuBuilderTabs({
   }, [selectedAddonCategories, setValue]);
 
   // Cleanup function to delete orphaned uploaded image
-  const deleteUploadedImage = async (imageUrl: string, imageThumbUrl?: string | null) => {
+  const deleteUploadedImage = async (
+    imageUrl: string,
+    imageThumbUrl?: string | null,
+    imageThumb2xUrl?: string | null
+  ) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token || !imageUrl) return;
@@ -198,7 +221,11 @@ export default function MenuBuilderTabs({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ imageUrl, imageThumbUrl: imageThumbUrl || undefined }),
+        body: JSON.stringify({
+          imageUrl,
+          imageThumbUrl: imageThumbUrl || undefined,
+          imageThumb2xUrl: imageThumb2xUrl || undefined,
+        }),
       });
     } catch (error) {
       console.error('Failed to delete orphaned image:', error);
@@ -208,9 +235,10 @@ export default function MenuBuilderTabs({
   const replaceTempUpload = async (nextSource: 'upload' | 'stock' | 'initial') => {
     // If there is a previously uploaded image that hasn't been saved, delete it.
     if (uploadedImageUrl) {
-      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
       setUploadedImageUrl(null);
       setUploadedImageThumbUrl(null);
+      setUploadedImageThumb2xUrl(null);
     }
 
     setImageSource(nextSource);
@@ -233,7 +261,7 @@ export default function MenuBuilderTabs({
     if (!onRegisterCleanup) return;
     onRegisterCleanup(cleanupDraftAndTemp);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onRegisterCleanup, draftStorageKey, uploadedImageUrl, uploadedImageThumbUrl, imageSource]);
+  }, [onRegisterCleanup, draftStorageKey, uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl, imageSource]);
 
   // Load draft (if any)
   useEffect(() => {
@@ -252,6 +280,7 @@ export default function MenuBuilderTabs({
         imageSource?: 'initial' | 'upload' | 'stock';
         uploadedImageUrl?: string | null;
         uploadedImageThumbUrl?: string | null;
+        uploadedImageThumb2xUrl?: string | null;
       };
 
       if (parsed?.form) {
@@ -261,6 +290,7 @@ export default function MenuBuilderTabs({
           price: parsed.form.price ?? initialData?.price ?? 0,
           imageUrl: parsed.form.imageUrl ?? initialData?.imageUrl ?? '',
           imageThumbUrl: parsed.form.imageThumbUrl ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbUrl ?? '',
+          imageThumbMeta: parsed.form.imageThumbMeta ?? (initialData as Partial<MenuBuilderFormData> | undefined)?.imageThumbMeta ?? null,
           isActive: parsed.form.isActive ?? initialData?.isActive ?? true,
           trackStock: parsed.form.trackStock ?? initialData?.trackStock ?? false,
           stockQty: parsed.form.stockQty ?? initialData?.stockQty ?? null,
@@ -282,6 +312,7 @@ export default function MenuBuilderTabs({
       if (parsed.imageSource) setImageSource(parsed.imageSource);
       if (typeof parsed.uploadedImageUrl !== 'undefined') setUploadedImageUrl(parsed.uploadedImageUrl);
       if (typeof parsed.uploadedImageThumbUrl !== 'undefined') setUploadedImageThumbUrl(parsed.uploadedImageThumbUrl);
+      if (typeof parsed.uploadedImageThumb2xUrl !== 'undefined') setUploadedImageThumb2xUrl(parsed.uploadedImageThumb2xUrl);
 
       onDraftStateChange?.(true);
     } catch {
@@ -307,6 +338,7 @@ export default function MenuBuilderTabs({
             imageSource,
             uploadedImageUrl: imageSource === 'upload' ? uploadedImageUrl : null,
             uploadedImageThumbUrl: imageSource === 'upload' ? uploadedImageThumbUrl : null,
+            uploadedImageThumb2xUrl: imageSource === 'upload' ? uploadedImageThumb2xUrl : null,
           };
           localStorage.setItem(draftStorageKey, JSON.stringify(payload));
           onDraftStateChange?.(true);
@@ -320,7 +352,7 @@ export default function MenuBuilderTabs({
       subscription.unsubscribe();
       if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
     };
-  }, [watch, hasLoadedDraft, activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, draftStorageKey, onDraftStateChange]);
+  }, [watch, hasLoadedDraft, activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl, draftStorageKey, onDraftStateChange]);
 
   // Persist draft when non-form state changes (tab / selections)
   useEffect(() => {
@@ -335,6 +367,7 @@ export default function MenuBuilderTabs({
         imageSource,
         uploadedImageUrl: imageSource === 'upload' ? uploadedImageUrl : null,
         uploadedImageThumbUrl: imageSource === 'upload' ? uploadedImageThumbUrl : null,
+        uploadedImageThumb2xUrl: imageSource === 'upload' ? uploadedImageThumb2xUrl : null,
       };
       localStorage.setItem(draftStorageKey, JSON.stringify(payload));
       onDraftStateChange?.(true);
@@ -342,17 +375,17 @@ export default function MenuBuilderTabs({
       // ignore
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, hasLoadedDraft, draftStorageKey]);
+  }, [activeTab, selectedCategories, selectedAddonCategories, imageSource, uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl, hasLoadedDraft, draftStorageKey]);
 
   // Cleanup on unmount if image was uploaded but menu not saved
   useEffect(() => {
     return () => {
       // Cleanup if a new image was uploaded and not saved
       if (uploadedImageUrl) {
-        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
       }
     };
-  }, [uploadedImageUrl, uploadedImageThumbUrl]);
+  }, [uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl]);
 
   const handleFormSubmit = async (data: MenuBuilderFormData) => {
     // Manually set categoryIds and addonCategoryIds from state, convert to numbers
@@ -367,6 +400,7 @@ export default function MenuBuilderTabs({
       // Clear the uploaded image tracking since it's now saved with the menu
       setUploadedImageUrl(null);
       setUploadedImageThumbUrl(null);
+      setUploadedImageThumb2xUrl(null);
       setImageSource('initial');
 
       // For create flow, restart the wizard so the user can add another menu quickly.
@@ -383,6 +417,7 @@ export default function MenuBuilderTabs({
           price: 0,
           imageUrl: '',
           imageThumbUrl: '',
+          imageThumbMeta: null,
           isActive: true,
           trackStock: false,
           stockQty: null,
@@ -414,13 +449,13 @@ export default function MenuBuilderTabs({
 
     // Validate file type - accept all image formats
     if (!file.type.startsWith('image/')) {
-      showError('Invalid file type. Please upload an image file.');
+      showError(t('admin.menuUpload.error.invalidFileType'));
       return;
     }
 
     const maxSizeMB = 5;
     if (file.size > maxSizeMB * 1024 * 1024) {
-      showError(`File size must be less than ${maxSizeMB}MB.`);
+      showError(t('admin.menuUpload.error.fileTooLarge', { maxSize: maxSizeMB }));
       return;
     }
 
@@ -432,57 +467,93 @@ export default function MenuBuilderTabs({
       // We intentionally do not delete initial/stock images here.
       await replaceTempUpload('upload');
 
-      const formData = new FormData();
-      formData.append('file', file);
       const token = localStorage.getItem('accessToken');
+      if (!token) {
+        showError(t('admin.menuUpload.error.authRequired'));
+        return;
+      }
 
-      // Use XMLHttpRequest for progress tracking
-      const xhr = new XMLHttpRequest();
+      const tempMenuId = menuId
+        ? String(menuId)
+        : `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const allowTemp = !menuId;
 
-      await new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
-        });
+      const { fullBlob, thumbBlob, thumb2xBlob, sourceWidth, sourceHeight, sourceFormat } =
+        await createMenuImageBlobs(file, menuImageMessages);
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const data = JSON.parse(xhr.responseText);
-            const imageUrl = data.data.url;
-            const imageThumbUrl = data.data.thumbUrl;
-            const warnings = Array.isArray(data?.data?.warnings) ? data.data.warnings : [];
-            setValue('imageUrl', imageUrl, { shouldValidate: true, shouldDirty: true });
-            setValue('imageThumbUrl', imageThumbUrl || '', { shouldValidate: true, shouldDirty: true });
-            // Track the uploaded image for cleanup if user cancels
-            setUploadedImageUrl(imageUrl);
-            setUploadedImageThumbUrl(imageThumbUrl || null);
-            setImageSource('upload');
+      if (sourceWidth < 800) {
+        showWarning(
+          t('admin.menuUpload.warning.smallImageMessage', { width: sourceWidth }),
+          t('admin.menuUpload.warning.smallImageTitle')
+        );
+      }
 
-            if (warnings.length > 0) {
-              showWarning(warnings[0], 'Small image warning');
-            }
-            resolve();
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              reject(new Error(data.message || 'Failed to upload image'));
-            } catch {
-              reject(new Error('Failed to upload image'));
-            }
-          }
-        });
+      const [mainPresign, thumbPresign, thumb2xPresign] = await Promise.all([
+        requestPresignedUpload(token, {
+          type: 'menu',
+          contentType: 'image/jpeg',
+          fileSize: fullBlob.size,
+          menuId: tempMenuId,
+          allowTemp,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb',
+          contentType: 'image/jpeg',
+          fileSize: thumbBlob.size,
+          menuId: tempMenuId,
+          allowTemp,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb-2x',
+          contentType: 'image/jpeg',
+          fileSize: thumb2xBlob.size,
+          menuId: tempMenuId,
+          allowTemp,
+        }, menuImageMessages),
+      ]);
 
-        xhr.addEventListener('error', () => reject(new Error('Network error')));
-        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+      await uploadBlobWithProgress(mainPresign.uploadUrl, fullBlob, 'image/jpeg', setUploadProgress, menuImageMessages);
+      await uploadBlobWithProgress(thumbPresign.uploadUrl, thumbBlob, 'image/jpeg', undefined, menuImageMessages);
+      await uploadBlobWithProgress(thumb2xPresign.uploadUrl, thumb2xBlob, 'image/jpeg', undefined, menuImageMessages);
+      setUploadProgress(100);
 
-        xhr.open('POST', '/api/merchant/upload/menu-image');
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.send(formData);
+      const imageThumbMeta = buildMenuThumbMeta({
+        sourceWidth,
+        sourceHeight,
+        sourceFormat,
+        thumbUrl: thumbPresign.publicUrl,
+        thumb2xUrl: thumb2xPresign.publicUrl,
       });
+
+      const confirmResponse = await fetch('/api/merchant/upload/menu-image/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          imageUrl: mainPresign.publicUrl,
+          imageThumbUrl: thumbPresign.publicUrl,
+          imageThumb2xUrl: thumb2xPresign.publicUrl,
+          imageThumbMeta,
+          menuId: menuId ? String(menuId) : undefined,
+        }),
+      });
+
+      const confirmData = await confirmResponse.json();
+      if (!confirmResponse.ok || !confirmData?.success) {
+        throw new Error(confirmData?.message || t('admin.menuUpload.error.confirmFailed'));
+      }
+
+      setValue('imageUrl', mainPresign.publicUrl, { shouldValidate: true, shouldDirty: true });
+      setValue('imageThumbUrl', thumbPresign.publicUrl, { shouldValidate: true, shouldDirty: true });
+      setValue('imageThumbMeta', imageThumbMeta, { shouldValidate: true, shouldDirty: true });
+      setUploadedImageUrl(mainPresign.publicUrl);
+      setUploadedImageThumbUrl(thumbPresign.publicUrl);
+      setUploadedImageThumb2xUrl(thumb2xPresign.publicUrl);
+      setImageSource('upload');
     } catch (error) {
-      showError(error instanceof Error ? error.message : 'Failed to upload image');
+      showError(error instanceof Error ? error.message : t('admin.menuUpload.error.uploadFailed'));
     } finally {
       setUploadingImage(false);
       setUploadProgress(0);
@@ -730,15 +801,17 @@ export default function MenuBuilderTabs({
 
                           // If there is a temp upload tracked, delete it immediately
                           if (uploadedImageUrl) {
-                            deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+                            deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
                             setUploadedImageUrl(null);
                             setUploadedImageThumbUrl(null);
+                            setUploadedImageThumb2xUrl(null);
                           }
 
                           setImageSource('initial');
 
                           setValue('imageUrl', '', { shouldValidate: true, shouldDirty: true });
                           setValue('imageThumbUrl', '', { shouldValidate: true, shouldDirty: true });
+                          setValue('imageThumbMeta', null, { shouldValidate: true, shouldDirty: true });
 
                           // Keep these reads to avoid unused vars in some TS configurations
                           void currentThumbUrl;
@@ -1374,7 +1447,7 @@ export default function MenuBuilderTabs({
 
       {/* Save Confirmation Modal */}
       {showSaveConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1419,6 +1492,7 @@ export default function MenuBuilderTabs({
           await replaceTempUpload('stock');
           setValue('imageUrl', selection.imageUrl, { shouldValidate: true, shouldDirty: true });
           setValue('imageThumbUrl', selection.thumbnailUrl || '', { shouldValidate: true, shouldDirty: true });
+          setValue('imageThumbMeta', null, { shouldValidate: true, shouldDirty: true });
           setShowStockPhotoPicker(false);
         }}
       />

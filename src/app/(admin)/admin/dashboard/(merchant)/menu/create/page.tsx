@@ -14,6 +14,12 @@ import { getCurrencySymbol } from "@/lib/utils/format";
 import { getCurrencyConfig } from "@/lib/constants/location";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  buildMenuThumbMeta,
+  createMenuImageBlobs,
+  requestPresignedUpload,
+  uploadBlobWithProgress,
+} from "@/lib/utils/menuImage";
 
 interface Merchant {
   id: string;
@@ -43,6 +49,7 @@ interface MenuFormData {
   price: string;
   imageUrl: string;
   imageThumbUrl: string;
+  imageThumbMeta?: Record<string, unknown> | null;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -59,6 +66,15 @@ export default function CreateMenuPage() {
   const { t } = useTranslation();
   const { currency } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
+  const menuImageMessages = useMemo(() => ({
+    prepareFailed: t('admin.menuUpload.error.prepareFailed'),
+    invalidResponse: t('admin.menuUpload.error.invalidResponse'),
+    uploadFailed: t('admin.menuUpload.error.uploadFailed'),
+    networkError: t('admin.menuUpload.error.networkError'),
+    uploadCancelled: t('admin.menuUpload.error.uploadCancelled'),
+    canvasUnsupported: t('admin.menuUpload.error.canvasUnsupported'),
+    thumbnailFailed: t('admin.menuUpload.error.thumbnailFailed'),
+  }), [t]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +83,7 @@ export default function CreateMenuPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [uploadedImageThumbUrl, setUploadedImageThumbUrl] = useState<string | null>(null);
+  const [uploadedImageThumb2xUrl, setUploadedImageThumb2xUrl] = useState<string | null>(null);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [authToken, setAuthToken] = useState<string>("");
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -83,6 +100,7 @@ export default function CreateMenuPage() {
     price: "",
     imageUrl: "",
     imageThumbUrl: "",
+    imageThumbMeta: null,
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -179,7 +197,11 @@ export default function CreateMenuPage() {
 
 
   // Cleanup function to delete orphaned uploaded image
-  const deleteUploadedImage = async (imageUrl: string, imageThumbUrl?: string | null) => {
+  const deleteUploadedImage = async (
+    imageUrl: string,
+    imageThumbUrl?: string | null,
+    imageThumb2xUrl?: string | null
+  ) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token || !imageUrl) return;
@@ -190,7 +212,11 @@ export default function CreateMenuPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ imageUrl, imageThumbUrl: imageThumbUrl || undefined }),
+        body: JSON.stringify({
+          imageUrl,
+          imageThumbUrl: imageThumbUrl || undefined,
+          imageThumb2xUrl: imageThumb2xUrl || undefined,
+        }),
       });
     } catch (error) {
       console.error('Failed to delete orphaned image:', error);
@@ -200,9 +226,10 @@ export default function CreateMenuPage() {
   const replaceTempUpload = async (nextSource: 'upload' | 'stock') => {
     // If there is a previously uploaded image that hasn't been saved, delete it.
     if (uploadedImageUrl) {
-      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+      await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
       setUploadedImageUrl(null);
       setUploadedImageThumbUrl(null);
+      setUploadedImageThumb2xUrl(null);
     }
     setImageSource(nextSource);
   };
@@ -211,10 +238,10 @@ export default function CreateMenuPage() {
   useEffect(() => {
     return () => {
       if (uploadedImageUrl && !formSubmitted) {
-        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+        deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
       }
     };
-  }, [uploadedImageUrl, uploadedImageThumbUrl, formSubmitted]);
+  }, [uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl, formSubmitted]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -222,14 +249,14 @@ export default function CreateMenuPage() {
 
     // Validate file - accept all image formats
     if (!file.type.startsWith('image/')) {
-      setError('Invalid file type. Please upload an image file.');
+      setError(t('admin.menuUpload.error.invalidFileType'));
       return;
     }
 
     const maxSizeMB = 5;
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setError(`File size must be less than ${maxSizeMB}MB.`);
+      setError(t('admin.menuUpload.error.fileTooLarge', { maxSize: maxSizeMB }));
       return;
     }
 
@@ -241,50 +268,85 @@ export default function CreateMenuPage() {
       // Replacing an existing temp upload? Clean it up first.
       await replaceTempUpload('upload');
 
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
       const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError(t('admin.menuUpload.error.authRequired'));
+        return;
+      }
 
-      // Use XMLHttpRequest for progress tracking
-      const xhr = new XMLHttpRequest();
+      const tempMenuId = `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-      await new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
-        });
+      const { fullBlob, thumbBlob, thumb2xBlob, sourceWidth, sourceHeight, sourceFormat } =
+        await createMenuImageBlobs(file, menuImageMessages);
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const data = JSON.parse(xhr.responseText);
-            const imageUrl = data.data.url;
-            const imageThumbUrl = data.data.thumbUrl;
-            setFormData(prev => ({ ...prev, imageUrl, imageThumbUrl: imageThumbUrl || '' }));
-            setUploadedImageUrl(imageUrl);
-            setUploadedImageThumbUrl(imageThumbUrl || null);
-            setImageSource('upload');
-            resolve();
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              reject(new Error(data.message || 'Failed to upload image'));
-            } catch {
-              reject(new Error('Failed to upload image'));
-            }
-          }
-        });
+      const [mainPresign, thumbPresign, thumb2xPresign] = await Promise.all([
+        requestPresignedUpload(token, {
+          type: 'menu',
+          contentType: 'image/jpeg',
+          fileSize: fullBlob.size,
+          menuId: tempMenuId,
+          allowTemp: true,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb',
+          contentType: 'image/jpeg',
+          fileSize: thumbBlob.size,
+          menuId: tempMenuId,
+          allowTemp: true,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb-2x',
+          contentType: 'image/jpeg',
+          fileSize: thumb2xBlob.size,
+          menuId: tempMenuId,
+          allowTemp: true,
+        }, menuImageMessages),
+      ]);
 
-        xhr.addEventListener('error', () => reject(new Error('Network error')));
-        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+      await uploadBlobWithProgress(mainPresign.uploadUrl, fullBlob, 'image/jpeg', setUploadProgress, menuImageMessages);
+      await uploadBlobWithProgress(thumbPresign.uploadUrl, thumbBlob, 'image/jpeg', undefined, menuImageMessages);
+      await uploadBlobWithProgress(thumb2xPresign.uploadUrl, thumb2xBlob, 'image/jpeg', undefined, menuImageMessages);
+      setUploadProgress(100);
 
-        xhr.open('POST', '/api/merchant/upload/menu-image');
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.send(uploadFormData);
+      const imageThumbMeta = buildMenuThumbMeta({
+        sourceWidth,
+        sourceHeight,
+        sourceFormat,
+        thumbUrl: thumbPresign.publicUrl,
+        thumb2xUrl: thumb2xPresign.publicUrl,
       });
+
+      const confirmResponse = await fetch('/api/merchant/upload/menu-image/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          imageUrl: mainPresign.publicUrl,
+          imageThumbUrl: thumbPresign.publicUrl,
+          imageThumb2xUrl: thumb2xPresign.publicUrl,
+          imageThumbMeta,
+        }),
+      });
+
+      const confirmData = await confirmResponse.json();
+      if (!confirmResponse.ok || !confirmData?.success) {
+        throw new Error(confirmData?.message || t('admin.menuUpload.error.confirmFailed'));
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: mainPresign.publicUrl,
+        imageThumbUrl: thumbPresign.publicUrl,
+        imageThumbMeta,
+      }));
+      setUploadedImageUrl(mainPresign.publicUrl);
+      setUploadedImageThumbUrl(thumbPresign.publicUrl);
+      setUploadedImageThumb2xUrl(thumb2xPresign.publicUrl);
+      setImageSource('upload');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : t('admin.menuUpload.error.uploadFailed'));
     } finally {
       setUploadingImage(false);
       setUploadProgress(0);
@@ -312,7 +374,7 @@ export default function CreateMenuPage() {
     e.preventDefault();
 
     if (uploadingImage) {
-      setError('Please wait for the image upload to finish.');
+      setError(t('admin.menuUpload.error.uploadInProgress'));
       return;
     }
 
@@ -332,6 +394,7 @@ export default function CreateMenuPage() {
         price: parseFloat(formData.price),
         imageUrl: formData.imageUrl || undefined,
         imageThumbUrl: formData.imageThumbUrl || undefined,
+        imageThumbMeta: formData.imageThumbMeta || undefined,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -394,6 +457,7 @@ export default function CreateMenuPage() {
       // Mark form as submitted to prevent image cleanup
       setFormSubmitted(true);
       setUploadedImageUrl(null);
+      setUploadedImageThumb2xUrl(null);
       router.push("/admin/dashboard/menu");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -596,11 +660,12 @@ export default function CreateMenuPage() {
                       type="button"
                       onClick={async () => {
                         if (uploadedImageUrl) {
-                          await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl);
+                          await deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
                           setUploadedImageUrl(null);
                           setUploadedImageThumbUrl(null);
+                          setUploadedImageThumb2xUrl(null);
                         }
-                        setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }));
+                        setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null }));
                       }}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
@@ -684,6 +749,7 @@ export default function CreateMenuPage() {
                 ...prev,
                 imageUrl: selection.imageUrl,
                 imageThumbUrl: selection.thumbnailUrl || '',
+                imageThumbMeta: null,
               }));
               setShowStockPhotoPicker(false);
             }}

@@ -48,7 +48,7 @@ async function uploadMerchantLogoHandler(
     // Check if merchant exists using Prisma
     const merchant = await prisma.merchant.findUnique({
       where: { id: merchantId },
-      select: { id: true, name: true },
+      select: { id: true, name: true, code: true },
     });
 
     if (!merchant) {
@@ -59,10 +59,10 @@ async function uploadMerchantLogoHandler(
     }
 
     // Delete old logo if exists
-    await BlobService.deleteOldMerchantLogo(merchantIdStr);
+    await BlobService.deleteOldMerchantLogo(merchant.code);
 
     // Upload new logo
-    const uploadResult = await BlobService.uploadMerchantLogo(merchantIdStr, file);
+    const uploadResult = await BlobService.uploadMerchantLogo(merchant.code, file);
 
     // Update merchant logo URL in database using Prisma
     await prisma.merchant.update({

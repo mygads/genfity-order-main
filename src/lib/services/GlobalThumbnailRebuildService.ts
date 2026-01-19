@@ -204,7 +204,7 @@ export async function tickGlobalThumbnailRebuild(options?: GlobalThumbnailRebuil
       where: menuWhere,
       select: {
         id: true,
-        merchantId: true,
+        merchant: { select: { code: true } },
         imageUrl: true,
       },
       take: batchSizeMenus,
@@ -255,16 +255,20 @@ export async function tickGlobalThumbnailRebuild(options?: GlobalThumbnailRebuil
       }
 
       const imageKey = menu.id.toString();
-      const merchantIdString = menu.merchantId.toString();
+      const merchantCode = menu.merchant?.code;
+
+      if (!merchantCode) {
+        throw new Error(`Missing merchant code for menu ${menu.id.toString()}`);
+      }
 
       const thumbResult = await BlobService.uploadMenuImageThumbnail(
-        merchantIdString,
+        merchantCode,
         imageKey,
         thumbJpegBuffer
       );
 
       const thumb2xResult = await BlobService.uploadMenuImageThumbnail2x(
-        merchantIdString,
+        merchantCode,
         imageKey,
         thumb2xJpegBuffer
       );

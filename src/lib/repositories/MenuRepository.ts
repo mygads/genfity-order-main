@@ -5,6 +5,7 @@
 
 import prisma from '@/lib/db/client';
 import { serializeData } from '@/lib/utils/serializer';
+import { Prisma } from '@prisma/client';
 
 export class MenuRepository {
   /**
@@ -160,6 +161,7 @@ export class MenuRepository {
     price: number;
     imageUrl?: string;
     imageThumbUrl?: string;
+    imageThumbMeta?: Prisma.InputJsonValue | null;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
@@ -173,11 +175,14 @@ export class MenuRepository {
     lastStockResetAt?: Date;
     createdByUserId?: bigint;
   }) {
+    const imageThumbMeta = data.imageThumbMeta === null ? Prisma.DbNull : data.imageThumbMeta;
+    const payload: Prisma.MenuUncheckedCreateInput = {
+      ...data,
+      imageThumbMeta,
+      updatedByUserId: data.createdByUserId,
+    };
     const result = await prisma.menu.create({
-      data: {
-        ...data,
-        updatedByUserId: data.createdByUserId,
-      },
+      data: payload,
     });
     return serializeData(result);
   }
@@ -189,6 +194,7 @@ export class MenuRepository {
     price?: number;
     imageUrl?: string;
     imageThumbUrl?: string;
+    imageThumbMeta?: Prisma.InputJsonValue | null;
     isActive?: boolean;
     // Note: Promo fields removed - use SpecialPrice table
     isSpicy?: boolean;
@@ -202,9 +208,14 @@ export class MenuRepository {
     lastStockResetAt?: Date;
     updatedByUserId?: bigint;
   }) {
+    const imageThumbMeta = data.imageThumbMeta === null ? Prisma.DbNull : data.imageThumbMeta;
+    const payload: Prisma.MenuUncheckedUpdateInput = {
+      ...data,
+      imageThumbMeta,
+    };
     const result = await prisma.menu.update({
       where: { id },
-      data,
+      data: payload,
     });
     return serializeData(result);
   }

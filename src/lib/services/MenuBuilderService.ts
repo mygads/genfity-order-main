@@ -15,6 +15,7 @@ export interface MenuBuilderInput {
   price: number;
   imageUrl?: string | null;
   imageThumbUrl?: string | null;
+  imageThumbMeta?: Prisma.InputJsonValue | null;
   isActive?: boolean;
   // Note: Promo pricing is now managed via SpecialPrice table
   
@@ -71,6 +72,7 @@ export class MenuBuilderService {
           price: new Prisma.Decimal(input.price),
           imageUrl: input.imageUrl,
           imageThumbUrl: input.imageThumbUrl,
+          imageThumbMeta: input.imageThumbMeta ?? undefined,
           isActive: input.isActive ?? true,
           // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock ?? false,
@@ -216,6 +218,7 @@ export class MenuBuilderService {
           price: new Prisma.Decimal(input.price),
           imageUrl: input.imageUrl,
           imageThumbUrl: input.imageThumbUrl,
+          imageThumbMeta: input.imageThumbMeta ?? undefined,
           isActive: input.isActive,
           // Promo fields removed - use SpecialPrice table
           trackStock: input.trackStock,

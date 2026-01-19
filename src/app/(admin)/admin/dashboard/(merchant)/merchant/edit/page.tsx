@@ -49,6 +49,7 @@ import { hasMerchantUnsavedChanges } from "@/components/merchants/merchant-edit/
 import type { PerDayModeScheduleHandle } from "@/components/merchants/PerDayModeSchedule";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
 
 /**
  * Edit Merchant Page for Merchant Owner/Staff
@@ -69,6 +70,11 @@ export default function EditMerchantPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadingPromoBanners, setUploadingPromoBanners] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+  const [logoUploadStatus, setLogoUploadStatus] = useState<UploadStatus>('idle');
+  const [logoUploadPreviewUrl, setLogoUploadPreviewUrl] = useState<string | null>(null);
+  const [logoUploadFile, setLogoUploadFile] = useState<File | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
 
   const [posCustomItemsEnabled, setPosCustomItemsEnabled] = useState(false);
   const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
@@ -81,8 +87,18 @@ export default function EditMerchantPage() {
     currency: string;
   } | null>(null);
   const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [bannerUploadProgress, setBannerUploadProgress] = useState(0);
+  const [bannerUploadStatus, setBannerUploadStatus] = useState<UploadStatus>('idle');
+  const [bannerUploadPreviewUrl, setBannerUploadPreviewUrl] = useState<string | null>(null);
+  const [bannerUploadFile, setBannerUploadFile] = useState<File | null>(null);
+  const [bannerUploadError, setBannerUploadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
   const [authToken, setAuthToken] = useState<string>("");
+  const [promoUploadProgress, setPromoUploadProgress] = useState(0);
+  const [promoUploadStatus, setPromoUploadStatus] = useState<UploadStatus>('idle');
+  const [promoUploadPreviewUrl, setPromoUploadPreviewUrl] = useState<string | null>(null);
+  const [promoUploadFile, setPromoUploadFile] = useState<File | null>(null);
+  const [promoUploadError, setPromoUploadError] = useState<string | null>(null);
 
   // Discount & voucher feature toggles
   const [posDiscountsEnabled, setPosDiscountsEnabled] = useState<boolean>(false);
@@ -478,6 +494,33 @@ export default function EditMerchantPage() {
     }
   };
 
+  const refreshMerchantImages = async () => {
+    try {
+      const token = localStorage.getItem("accessToken");
+      if (!token) return;
+
+      const response = await fetch("/api/merchant/profile", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to refresh merchant profile");
+      }
+
+      const merchant = data.data;
+      setFormData((prev) => ({
+        ...prev,
+        logoUrl: merchant.logoUrl || prev.logoUrl,
+        bannerUrl: merchant.bannerUrl || prev.bannerUrl,
+      }));
+    } catch (err) {
+      showError("Error", err instanceof Error ? err.message : "Failed to refresh merchant data");
+    }
+  };
+
   // Check if there are unsaved changes
   const hasUnsavedChanges = useCallback((): boolean => {
     const baseHasUnsaved = hasMerchantUnsavedChanges({
@@ -570,33 +613,101 @@ export default function EditMerchantPage() {
       return;
     }
 
+    const previewUrl = URL.createObjectURL(file);
+    setLogoUploadPreviewUrl(previewUrl);
+    setLogoUploadFile(file);
+    setLogoUploadError(null);
+    setLogoUploadProgress(0);
+    setLogoUploadStatus('uploading');
     setUploading(true);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('type', 'logo');
-
       const token = localStorage.getItem("accessToken");
-      const response = await fetch("/api/merchant/upload/merchant-image", {
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const presignResponse = await fetch('/api/merchant/upload/presign', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: formDataUpload,
+        body: JSON.stringify({
+          type: 'logo',
+          contentType: file.type,
+          fileSize: file.size,
+        }),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setFormData(prev => ({ ...prev, logoUrl: data.data.url }));
-        showSuccess('Success', 'Logo uploaded successfully');
-      } else {
-        showError('Error', data.message || 'Failed to upload logo');
+      const presignData = await presignResponse.json();
+      if (!presignResponse.ok || !presignData?.success) {
+        throw new Error(presignData?.message || 'Failed to prepare upload');
       }
-    } catch {
-      showError('Error', 'Failed to upload logo');
+
+      const { uploadUrl, publicUrl } = presignData.data || {};
+      if (!uploadUrl || !publicUrl) {
+        throw new Error('Invalid upload response');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setLogoUploadProgress(percentComplete);
+            if (percentComplete === 100) {
+              setLogoUploadStatus('processing');
+            }
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error('Failed to upload logo'));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.send(file);
+      });
+
+      const confirmResponse = await fetch('/api/merchant/upload/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'logo',
+          publicUrl,
+        }),
+      });
+
+      const confirmData = await confirmResponse.json();
+      if (!confirmResponse.ok || !confirmData?.success) {
+        throw new Error(confirmData?.message || 'Failed to confirm upload');
+      }
+
+      setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+      setLogoUploadStatus('completed');
+      showSuccess('Success', 'Logo uploaded successfully');
+      await refreshMerchantImages();
+    } catch (err) {
+      setLogoUploadStatus('error');
+      setLogoUploadError(err instanceof Error ? err.message : 'Failed to upload logo');
+      showError('Error', err instanceof Error ? err.message : 'Failed to upload logo');
     } finally {
       setUploading(false);
+      setLogoUploadProgress(100);
+      URL.revokeObjectURL(previewUrl);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -619,33 +730,101 @@ export default function EditMerchantPage() {
       return;
     }
 
+    const previewUrl = URL.createObjectURL(file);
+    setBannerUploadPreviewUrl(previewUrl);
+    setBannerUploadFile(file);
+    setBannerUploadError(null);
+    setBannerUploadProgress(0);
+    setBannerUploadStatus('uploading');
     setUploadingBanner(true);
     try {
-      const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
-      formDataUpload.append('type', 'banner');
-
       const token = localStorage.getItem("accessToken");
-      const response = await fetch("/api/merchant/upload/merchant-image", {
+      if (!token) {
+        router.push("/admin/login");
+        return;
+      }
+
+      const presignResponse = await fetch('/api/merchant/upload/presign', {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: formDataUpload,
+        body: JSON.stringify({
+          type: 'banner',
+          contentType: file.type,
+          fileSize: file.size,
+        }),
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setFormData(prev => ({ ...prev, bannerUrl: data.data.url }));
-        showSuccess('Success', 'Banner uploaded successfully');
-      } else {
-        showError('Error', data.message || 'Failed to upload banner');
+      const presignData = await presignResponse.json();
+      if (!presignResponse.ok || !presignData?.success) {
+        throw new Error(presignData?.message || 'Failed to prepare upload');
       }
-    } catch {
-      showError('Error', 'Failed to upload banner');
+
+      const { uploadUrl, publicUrl } = presignData.data || {};
+      if (!uploadUrl || !publicUrl) {
+        throw new Error('Invalid upload response');
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = Math.round((event.loaded / event.total) * 100);
+            setBannerUploadProgress(percentComplete);
+            if (percentComplete === 100) {
+              setBannerUploadStatus('processing');
+            }
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else {
+            reject(new Error('Failed to upload banner'));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Network error')));
+        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.send(file);
+      });
+
+      const confirmResponse = await fetch('/api/merchant/upload/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'banner',
+          publicUrl,
+        }),
+      });
+
+      const confirmData = await confirmResponse.json();
+      if (!confirmResponse.ok || !confirmData?.success) {
+        throw new Error(confirmData?.message || 'Failed to confirm upload');
+      }
+
+      setFormData(prev => ({ ...prev, bannerUrl: publicUrl }));
+      setBannerUploadStatus('completed');
+      showSuccess('Success', 'Banner uploaded successfully');
+      await refreshMerchantImages();
+    } catch (err) {
+      setBannerUploadStatus('error');
+      setBannerUploadError(err instanceof Error ? err.message : 'Failed to upload banner');
+      showError('Error', err instanceof Error ? err.message : 'Failed to upload banner');
     } finally {
       setUploadingBanner(false);
+      setBannerUploadProgress(100);
+      URL.revokeObjectURL(previewUrl);
       if (bannerInputRef.current) {
         bannerInputRef.current.value = '';
       }
@@ -669,7 +848,11 @@ export default function EditMerchantPage() {
 
     const filesToUpload = files.slice(0, Math.max(0, maxCount - currentCount));
 
+    let lastPromoPreviewUrl: string | null = null;
     setUploadingPromoBanners(true);
+    setPromoUploadError(null);
+    setPromoUploadProgress(0);
+    setPromoUploadStatus('uploading');
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
@@ -690,23 +873,81 @@ export default function EditMerchantPage() {
           continue;
         }
 
-        const formDataUpload = new FormData();
-        formDataUpload.append('file', file);
+        if (lastPromoPreviewUrl) {
+          URL.revokeObjectURL(lastPromoPreviewUrl);
+        }
+        const previewUrl = URL.createObjectURL(file);
+        lastPromoPreviewUrl = previewUrl;
+        setPromoUploadPreviewUrl(previewUrl);
+        setPromoUploadFile(file);
+        setPromoUploadProgress(0);
+        setPromoUploadStatus('uploading');
 
-        const response = await fetch('/api/merchant/upload/promo-banner', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formDataUpload,
-        });
+        try {
+          const presignResponse = await fetch('/api/merchant/upload/presign', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              type: 'promo',
+              contentType: file.type,
+              fileSize: file.size,
+            }),
+          });
 
-        const data = await response.json();
+          const presignData = await presignResponse.json();
+          if (!presignResponse.ok || !presignData?.success) {
+            throw new Error(presignData?.message || 'Failed to prepare upload');
+          }
 
-        if (response.ok && data.success && data.data?.url) {
-          nextUrls.push(String(data.data.url));
-        } else {
-          showError('Upload Failed', data.message || 'Failed to upload banner');
+          const { uploadUrl, publicUrl } = presignData.data || {};
+          if (!uploadUrl || !publicUrl) {
+            throw new Error('Invalid upload response');
+          }
+
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+
+            xhr.upload.addEventListener('progress', (event) => {
+              if (event.lengthComputable) {
+                const percentComplete = Math.round((event.loaded / event.total) * 100);
+                setPromoUploadProgress(percentComplete);
+                if (percentComplete === 100) {
+                  setPromoUploadStatus('processing');
+                }
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve();
+              } else {
+                reject(new Error('Failed to upload banner'));
+              }
+            });
+
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+
+            xhr.open('PUT', uploadUrl);
+            xhr.setRequestHeader('Content-Type', file.type);
+            xhr.send(file);
+          });
+
+          if (publicUrl) {
+            nextUrls.push(String(publicUrl));
+            setPromoUploadStatus('completed');
+          } else {
+            setPromoUploadStatus('error');
+            setPromoUploadError('Failed to upload banner');
+            showError('Upload Failed', 'Failed to upload banner');
+          }
+        } catch (err) {
+          setPromoUploadStatus('error');
+          setPromoUploadError(err instanceof Error ? err.message : 'Failed to upload banner');
+          showError('Upload Failed', err instanceof Error ? err.message : 'Failed to upload banner');
         }
       }
 
@@ -721,6 +962,10 @@ export default function EditMerchantPage() {
       showError('Error', 'Failed to upload promotional banners');
     } finally {
       setUploadingPromoBanners(false);
+      setPromoUploadProgress(100);
+      if (lastPromoPreviewUrl) {
+        URL.revokeObjectURL(lastPromoPreviewUrl);
+      }
       if (promoInputRef.current) {
         promoInputRef.current.value = '';
       }
@@ -1024,6 +1269,21 @@ export default function EditMerchantPage() {
             uploading={uploading}
             uploadingBanner={uploadingBanner}
             uploadingPromoBanners={uploadingPromoBanners}
+            logoUploadProgress={logoUploadProgress}
+            logoUploadStatus={logoUploadStatus}
+            logoUploadPreviewUrl={logoUploadPreviewUrl}
+            logoUploadFile={logoUploadFile || undefined}
+            logoUploadError={logoUploadError || undefined}
+            bannerUploadProgress={bannerUploadProgress}
+            bannerUploadStatus={bannerUploadStatus}
+            bannerUploadPreviewUrl={bannerUploadPreviewUrl}
+            bannerUploadFile={bannerUploadFile || undefined}
+            bannerUploadError={bannerUploadError || undefined}
+            promoUploadProgress={promoUploadProgress}
+            promoUploadStatus={promoUploadStatus}
+            promoUploadPreviewUrl={promoUploadPreviewUrl}
+            promoUploadFile={promoUploadFile || undefined}
+            promoUploadError={promoUploadError || undefined}
             onLogoUpload={handleLogoUpload}
             onBannerUpload={handleBannerUpload}
             onPromoBannerUpload={handlePromoBannerUpload}
@@ -1160,6 +1420,21 @@ export default function EditMerchantPage() {
             uploading={uploading}
             uploadingBanner={uploadingBanner}
             uploadingPromoBanners={uploadingPromoBanners}
+            logoUploadProgress={logoUploadProgress}
+            logoUploadStatus={logoUploadStatus}
+            logoUploadPreviewUrl={logoUploadPreviewUrl}
+            logoUploadFile={logoUploadFile || undefined}
+            logoUploadError={logoUploadError || undefined}
+            bannerUploadProgress={bannerUploadProgress}
+            bannerUploadStatus={bannerUploadStatus}
+            bannerUploadPreviewUrl={bannerUploadPreviewUrl}
+            bannerUploadFile={bannerUploadFile || undefined}
+            bannerUploadError={bannerUploadError || undefined}
+            promoUploadProgress={promoUploadProgress}
+            promoUploadStatus={promoUploadStatus}
+            promoUploadPreviewUrl={promoUploadPreviewUrl}
+            promoUploadFile={promoUploadFile || undefined}
+            promoUploadError={promoUploadError || undefined}
             onLogoUpload={handleLogoUpload}
             onBannerUpload={handleBannerUpload}
             onPromoBannerUpload={handlePromoBannerUpload}
@@ -1297,7 +1572,7 @@ export default function EditMerchantPage() {
           }}
         />
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 lg:h-[calc(100vh-220px)] lg:min-h-[560px] lg:max-h-[820px] flex flex-col">
+        <div className="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/3 lg:h-[calc(100vh-220px)] lg:min-h-140 lg:max-h-205 flex flex-col">
           <div className="border-b border-gray-200 p-6 dark:border-gray-800">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
               <div>

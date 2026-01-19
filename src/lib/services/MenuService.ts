@@ -11,6 +11,7 @@ import {
   ConflictError,
   ERROR_CODES,
 } from '@/lib/constants/errors';
+import { Prisma } from '@prisma/client';
 import type {
   MenuCategory,
   Menu,
@@ -42,6 +43,7 @@ export interface MenuInput {
   price: number;
   imageUrl?: string;
   imageThumbUrl?: string;
+  imageThumbMeta?: Prisma.InputJsonValue;
   isActive?: boolean;
   // Promo fields removed - use SpecialPrice table instead
   isSpicy?: boolean;
@@ -250,6 +252,7 @@ class MenuService {
       price: input.price,
       imageUrl: input.imageUrl,
       imageThumbUrl: input.imageThumbUrl,
+      imageThumbMeta: input.imageThumbMeta,
       isActive: input.isActive ?? true,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy ?? false,
@@ -309,6 +312,7 @@ class MenuService {
       price: input.price,
       imageUrl: input.imageUrl,
       imageThumbUrl: input.imageThumbUrl,
+      imageThumbMeta: input.imageThumbMeta,
       isActive: input.isActive,
       // Promo fields removed - use SpecialPrice table
       isSpicy: input.isSpicy,

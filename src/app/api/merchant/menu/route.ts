@@ -103,6 +103,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       price: body.price,
       imageUrl: body.imageUrl,
       imageThumbUrl: body.imageThumbUrl,
+      imageThumbMeta: body.imageThumbMeta,
       isActive: body.isActive !== undefined ? body.isActive : true,
       isSpicy: body.isSpicy || false,
       isBestSeller: body.isBestSeller || false,

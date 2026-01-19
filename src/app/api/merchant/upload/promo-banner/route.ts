@@ -77,7 +77,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const result = await BlobService.uploadMerchantPromoBanner(String(merchantUser.merchantId), buffer);
+    const merchantCode = merchantUser.merchant.code;
+    const result = await BlobService.uploadMerchantPromoBanner(merchantCode, buffer);
 
     return NextResponse.json({
       success: true,

@@ -7,6 +7,9 @@ import { tOr } from '@/lib/i18n/useTranslation';
 import type { MerchantFormData } from '@/components/merchants/merchant-edit/types';
 import SettingsCard from '@/components/merchants/merchant-edit/ui/SettingsCard';
 import Button from '@/components/ui/Button';
+import { ImageUploadProgress } from '@/components/ui/progress/ImageUploadProgress';
+
+type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
 
 export interface BasicInfoTabProps {
   t: (key: TranslationKeys | string, params?: Record<string, string | number>) => string;
@@ -19,6 +22,24 @@ export interface BasicInfoTabProps {
   uploading: boolean;
   uploadingBanner: boolean;
   uploadingPromoBanners: boolean;
+
+  logoUploadProgress: number;
+  logoUploadStatus: UploadStatus;
+  logoUploadPreviewUrl?: string | null;
+  logoUploadFile?: File;
+  logoUploadError?: string;
+
+  bannerUploadProgress: number;
+  bannerUploadStatus: UploadStatus;
+  bannerUploadPreviewUrl?: string | null;
+  bannerUploadFile?: File;
+  bannerUploadError?: string;
+
+  promoUploadProgress: number;
+  promoUploadStatus: UploadStatus;
+  promoUploadPreviewUrl?: string | null;
+  promoUploadFile?: File;
+  promoUploadError?: string;
 
   onLogoUpload: React.ChangeEventHandler<HTMLInputElement>;
   onBannerUpload: React.ChangeEventHandler<HTMLInputElement>;
@@ -37,6 +58,21 @@ export default function BasicInfoTab({
   uploading,
   uploadingBanner,
   uploadingPromoBanners,
+  logoUploadProgress,
+  logoUploadStatus,
+  logoUploadPreviewUrl,
+  logoUploadFile,
+  logoUploadError,
+  bannerUploadProgress,
+  bannerUploadStatus,
+  bannerUploadPreviewUrl,
+  bannerUploadFile,
+  bannerUploadError,
+  promoUploadProgress,
+  promoUploadStatus,
+  promoUploadPreviewUrl,
+  promoUploadFile,
+  promoUploadError,
   onLogoUpload,
   onBannerUpload,
   onPromoBannerUpload,
@@ -78,7 +114,7 @@ export default function BasicInfoTab({
               </Button>
             </div>
 
-            <div className="mt-4 flex items-center gap-4">
+            <div className="mt-4 flex flex-wrap items-center gap-4">
               <div className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
                 {formData.logoUrl ? (
                   <Image src={formData.logoUrl} alt={formData.name} fill className="object-cover" />
@@ -88,7 +124,21 @@ export default function BasicInfoTab({
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.logoFormats')}</p>
+              <div className="min-w-40">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.logoFormats')}</p>
+                {(uploading || logoUploadStatus !== 'idle') && (
+                  <div className="mt-2">
+                    <ImageUploadProgress
+                      progress={logoUploadProgress}
+                      status={logoUploadStatus}
+                      file={logoUploadFile}
+                      previewUrl={logoUploadPreviewUrl || formData.logoUrl || undefined}
+                      errorMessage={logoUploadError}
+                      size="sm"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -126,6 +176,18 @@ export default function BasicInfoTab({
               )}
             </div>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('admin.merchantEdit.bannerFormats')}</p>
+            {(uploadingBanner || bannerUploadStatus !== 'idle') && (
+              <div className="mt-3">
+                <ImageUploadProgress
+                  progress={bannerUploadProgress}
+                  status={bannerUploadStatus}
+                  file={bannerUploadFile}
+                  previewUrl={bannerUploadPreviewUrl || formData.bannerUrl || undefined}
+                  errorMessage={bannerUploadError}
+                  size="md"
+                />
+              </div>
+            )}
           </div>
         </div>
       </SettingsCard>
@@ -169,6 +231,19 @@ export default function BasicInfoTab({
                 : tOr(t, 'admin.merchantEdit.promoBannerUpload', 'Upload banners')}
             </Button>
           </div>
+
+          {(uploadingPromoBanners || promoUploadStatus !== 'idle') && (
+            <div className="mt-4">
+              <ImageUploadProgress
+                progress={promoUploadProgress}
+                status={promoUploadStatus}
+                file={promoUploadFile}
+                previewUrl={promoUploadPreviewUrl || undefined}
+                errorMessage={promoUploadError}
+                size="sm"
+              />
+            </div>
+          )}
 
           {promoCount === 0 ? (
             <div className="mt-4 flex items-center gap-3 rounded-lg border border-dashed border-gray-200 bg-white px-4 py-5 text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-400">

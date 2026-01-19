@@ -1,10 +1,23 @@
 /**
- * Vercel Blob Service
- * Handles file uploads to Vercel Blob storage
+ * R2 Storage Service
+ * Handles file uploads to Cloudflare R2 (S3-compatible API)
  * Used for: profile pictures, merchant logos, menu images, etc.
  */
 
-import { put, del, list } from '@vercel/blob';
+import crypto from 'crypto';
+import {
+  PutObjectCommand,
+  DeleteObjectCommand,
+  ListObjectsV2Command,
+  CopyObjectCommand,
+} from '@aws-sdk/client-s3';
+import {
+  buildR2PublicUrl,
+  getR2BucketName,
+  getR2PublicBaseUrl,
+  getR2S3Client,
+  getR2StorageClass,
+} from '@/lib/utils/r2Client';
 
 export interface UploadResult {
   url: string;
@@ -15,8 +28,66 @@ export interface UploadResult {
 }
 
 export class BlobService {
+  static getPublicUrl(key: string): string {
+    return buildR2PublicUrl(key);
+  }
+
+  private static addRandomSuffix(pathname: string): string {
+    const safeName = pathname.replace(/\/+$/, '');
+    const lastSlash = safeName.lastIndexOf('/');
+    const lastDot = safeName.lastIndexOf('.');
+    const hasExtension = lastDot > lastSlash;
+    const base = hasExtension ? safeName.slice(0, lastDot) : safeName;
+    const ext = hasExtension ? safeName.slice(lastDot) : '';
+    const suffix = `${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    return `${base}-${suffix}${ext}`;
+  }
+
+  private static resolveKeyFromUrl(url: string): string | null {
+    try {
+      const parsed = new URL(url);
+      const publicBase = getR2PublicBaseUrl();
+
+      if (url.startsWith(publicBase)) {
+        return url.slice(publicBase.length).replace(/^\/+/, '');
+      }
+
+      if (parsed.hostname.endsWith('.r2.cloudflarestorage.com')) {
+        const pathParts = parsed.pathname.replace(/^\/+/, '').split('/');
+        const bucket = getR2BucketName();
+        if (pathParts[0] === bucket) {
+          return pathParts.slice(1).join('/');
+        }
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  static isManagedUrl(url: string): boolean {
+    const key = this.resolveKeyFromUrl(url);
+    return Boolean(key);
+  }
+
   /**
-   * Upload a file to Vercel Blob
+   * Replace a managed URL prefix with a new prefix
+   */
+  static replacePrefixInUrl(
+    url: string,
+    sourcePrefix: string,
+    destinationPrefix: string
+  ): string {
+    const key = this.resolveKeyFromUrl(url);
+    if (!key) return url;
+    if (!key.startsWith(sourcePrefix)) return url;
+    const nextKey = `${destinationPrefix}${key.slice(sourcePrefix.length)}`;
+    return buildR2PublicUrl(nextKey);
+  }
+
+  /**
+   * Upload a file to R2
    * @param file File to upload (File or Buffer)
    * @param pathname Path where file will be stored (e.g., 'avatars/user-123.jpg')
    * @param options Upload options
@@ -33,22 +104,37 @@ export class BlobService {
     } = {}
   ): Promise<UploadResult> {
     try {
-      const blob = await put(pathname, file, {
-        access: options.access || 'public',
-        addRandomSuffix: options.addRandomSuffix !== false, // Default true for safety
-        cacheControlMaxAge: options.cacheControlMaxAge || 3600, // 1 hour default
-        contentType: options.contentType,
-      });
+      const key = options.addRandomSuffix !== false ? this.addRandomSuffix(pathname) : pathname;
+      const body = Buffer.isBuffer(file)
+        ? file
+        : Buffer.from(await (file as File).arrayBuffer());
+
+      const cacheControlMaxAge = options.cacheControlMaxAge || 31536000;
+      const cacheControl = `public, max-age=${cacheControlMaxAge}, immutable`;
+
+      const client = getR2S3Client();
+      await client.send(
+        new PutObjectCommand({
+          Bucket: getR2BucketName(),
+          Key: key,
+          Body: body,
+          ContentType: options.contentType,
+          CacheControl: cacheControl,
+          StorageClass: getR2StorageClass(),
+        })
+      );
+
+      const url = buildR2PublicUrl(key);
 
       return {
-        url: blob.url,
-        downloadUrl: blob.downloadUrl,
-        pathname: blob.pathname,
-        contentType: blob.contentType || '',
-        contentDisposition: blob.contentDisposition,
+        url,
+        downloadUrl: url,
+        pathname: key,
+        contentType: options.contentType || '',
+        contentDisposition: '',
       };
     } catch (error) {
-      console.error('Blob upload error:', error);
+      console.error('R2 upload error:', error);
       throw new Error('Failed to upload file to storage');
     }
   }
@@ -68,7 +154,7 @@ export class BlobService {
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true, // Prevent cache issues
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -80,15 +166,16 @@ export class BlobService {
    * @returns Upload result
    */
   static async uploadMerchantLogo(
-    merchantId: string | number,
+    merchantCode: string,
     file: File | Buffer
   ): Promise<UploadResult> {
-    const pathname = `merchants/logos/merchant-${merchantId}.jpg`;
+    const timestamp = Date.now();
+    const pathname = `merchants/${merchantCode}/logos/logo-${timestamp}.jpg`;
     
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -100,15 +187,16 @@ export class BlobService {
    * @returns Upload result
    */
   static async uploadMerchantBanner(
-    merchantId: string | number,
+    merchantCode: string,
     file: File | Buffer
   ): Promise<UploadResult> {
-    const pathname = `merchants/banners/merchant-${merchantId}.jpg`;
+    const timestamp = Date.now();
+    const pathname = `merchants/${merchantCode}/banners/banner-${timestamp}.jpg`;
     
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -120,16 +208,16 @@ export class BlobService {
    * @returns Upload result
    */
   static async uploadMerchantPromoBanner(
-    merchantId: string | number,
+    merchantCode: string,
     file: File | Buffer
   ): Promise<UploadResult> {
     const timestamp = Date.now();
-    const pathname = `merchants/promo-banners/merchant-${merchantId}/promo-${timestamp}.jpg`;
+    const pathname = `merchants/${merchantCode}/promos/promo-${timestamp}.jpg`;
 
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400,
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -142,16 +230,16 @@ export class BlobService {
    * @returns Upload result
    */
   static async uploadMenuImage(
-    merchantId: string | number,
+    merchantCode: string,
     menuId: string | number,
     file: File | Buffer
   ): Promise<UploadResult> {
-    const pathname = `merchants/menus/merchant-${merchantId}/menu-${menuId}.jpg`;
+    const pathname = `merchants/${merchantCode}/menus/menu-${menuId}.jpg`;
     
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -163,16 +251,16 @@ export class BlobService {
    * @param file Image buffer
    */
   static async uploadMenuImageThumbnail(
-    merchantId: string | number,
+    merchantCode: string,
     menuId: string | number,
     file: File | Buffer
   ): Promise<UploadResult> {
-    const pathname = `merchants/menus/merchant-${merchantId}/menu-${menuId}-thumb.jpg`;
+    const pathname = `merchants/${merchantCode}/menus/menu-${menuId}-thumb.jpg`;
 
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -184,16 +272,16 @@ export class BlobService {
    * @param file Image buffer
    */
   static async uploadMenuImageThumbnail2x(
-    merchantId: string | number,
+    merchantCode: string,
     menuId: string | number,
     file: File | Buffer
   ): Promise<UploadResult> {
-    const pathname = `merchants/menus/merchant-${merchantId}/menu-${menuId}-thumb-2x.jpg`;
+    const pathname = `merchants/${merchantCode}/menus/menu-${menuId}-thumb-2x.jpg`;
 
     return this.uploadFile(file, pathname, {
       access: 'public',
       addRandomSuffix: true,
-      cacheControlMaxAge: 86400, // 24 hours
+      cacheControlMaxAge: 31536000, // 1 year
       contentType: 'image/jpeg',
     });
   }
@@ -204,9 +292,20 @@ export class BlobService {
    */
   static async deleteFile(url: string): Promise<void> {
     try {
-      await del(url);
+      const key = this.resolveKeyFromUrl(url);
+      if (!key) {
+        throw new Error('URL does not belong to managed R2 bucket');
+      }
+
+      const client = getR2S3Client();
+      await client.send(
+        new DeleteObjectCommand({
+          Bucket: getR2BucketName(),
+          Key: key,
+        })
+      );
     } catch (error) {
-      console.error('Blob delete error:', error);
+      console.error('R2 delete error:', error);
       throw new Error('Failed to delete file from storage');
     }
   }
@@ -222,16 +321,144 @@ export class BlobService {
     limit: number = 1000
   ): Promise<Array<{ url: string; pathname: string; size: number; uploadedAt: Date }>> {
     try {
-      const result = await list({
-        prefix,
-        limit,
-      });
+      const client = getR2S3Client();
+      const result = await client.send(
+        new ListObjectsV2Command({
+          Bucket: getR2BucketName(),
+          Prefix: prefix,
+          MaxKeys: limit,
+        })
+      );
 
-      return result.blobs;
+      const items = (result.Contents ?? []) as Array<{
+        Key?: string;
+        Size?: number;
+        LastModified?: Date;
+      }>;
+      return items
+        .filter((item) => Boolean(item.Key))
+        .map((item) => {
+          const key = item.Key as string;
+          return {
+            url: buildR2PublicUrl(key),
+            pathname: key,
+            size: item.Size ?? 0,
+            uploadedAt: item.LastModified ? new Date(item.LastModified) : new Date(0),
+          };
+        });
     } catch (error) {
-      console.error('Blob list error:', error);
+      console.error('R2 list error:', error);
       throw new Error('Failed to list files from storage');
     }
+  }
+
+  /**
+   * Copy all objects from one prefix to another
+   */
+  static async copyPrefix(
+    sourcePrefix: string,
+    destinationPrefix: string
+  ): Promise<{ objectCount: number }> {
+    const client = getR2S3Client();
+    const bucket = getR2BucketName();
+    let continuationToken: string | undefined;
+    let objectCount = 0;
+
+    do {
+      const result = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: sourcePrefix,
+          ContinuationToken: continuationToken,
+        })
+      );
+
+      const items = result.Contents ?? [];
+      for (const item of items) {
+        if (!item.Key) continue;
+        const sourceKey = item.Key;
+        const relativeKey = sourceKey.slice(sourcePrefix.length);
+        const destinationKey = `${destinationPrefix}${relativeKey}`;
+
+        await client.send(
+          new CopyObjectCommand({
+            Bucket: bucket,
+            CopySource: `${bucket}/${sourceKey}`,
+            Key: destinationKey,
+          })
+        );
+
+        objectCount += 1;
+      }
+
+      continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return { objectCount };
+  }
+
+  /**
+   * Delete all objects under a prefix
+   */
+  static async deletePrefix(prefix: string): Promise<void> {
+    const client = getR2S3Client();
+    const bucket = getR2BucketName();
+    let continuationToken: string | undefined;
+
+    do {
+      const result = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        })
+      );
+
+      const items = result.Contents ?? [];
+      for (const item of items) {
+        if (!item.Key) continue;
+        await client.send(
+          new DeleteObjectCommand({
+            Bucket: bucket,
+            Key: item.Key,
+          })
+        );
+      }
+
+      continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+    } while (continuationToken);
+  }
+
+  /**
+   * Get total size and object count for a prefix
+   */
+  static async getPrefixUsage(prefix: string): Promise<{ totalBytes: number; objectCount: number }> {
+    const client = getR2S3Client();
+    const bucket = getR2BucketName();
+    let continuationToken: string | undefined;
+    let totalBytes = 0;
+    let objectCount = 0;
+
+    do {
+      const result = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: prefix,
+          ContinuationToken: continuationToken,
+        })
+      );
+
+      const items = result.Contents ?? [];
+      for (const item of items) {
+        if (!item.Key) continue;
+        objectCount += 1;
+        totalBytes += item.Size ?? 0;
+      }
+
+      continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
+    } while (continuationToken);
+
+    return { totalBytes, objectCount };
   }
 
   /**
@@ -256,9 +483,9 @@ export class BlobService {
    * Delete old merchant logo before uploading new one
    * @param merchantId Merchant ID
    */
-  static async deleteOldMerchantLogo(merchantId: string | number): Promise<void> {
+  static async deleteOldMerchantLogo(merchantCode: string): Promise<void> {
     try {
-      const blobs = await this.listFiles(`merchants/logos/merchant-${merchantId}`);
+      const blobs = await this.listFiles(`merchants/${merchantCode}/logos/logo-`);
       
       for (const blob of blobs) {
         await this.deleteFile(blob.url);
@@ -272,9 +499,9 @@ export class BlobService {
    * Delete old merchant banner before uploading new one
    * @param merchantId Merchant ID
    */
-  static async deleteOldMerchantBanner(merchantId: string | number): Promise<void> {
+  static async deleteOldMerchantBanner(merchantCode: string): Promise<void> {
     try {
-      const blobs = await this.listFiles(`merchants/banners/merchant-${merchantId}`);
+      const blobs = await this.listFiles(`merchants/${merchantCode}/banners/banner-`);
       
       for (const blob of blobs) {
         await this.deleteFile(blob.url);
@@ -290,12 +517,12 @@ export class BlobService {
    * @param menuId Menu ID
    */
   static async deleteOldMenuImage(
-    merchantId: string | number,
+    merchantCode: string,
     menuId: string | number
   ): Promise<void> {
     try {
       const blobs = await this.listFiles(
-        `merchants/menus/merchant-${merchantId}/menu-${menuId}`
+        `merchants/${merchantCode}/menus/menu-${menuId}`
       );
       
       for (const blob of blobs) {

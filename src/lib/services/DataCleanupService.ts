@@ -97,7 +97,7 @@ class DataCleanupService {
       for (const menu of deletedMenus) {
         try {
           // Delete menu image from blob storage if exists
-          if (menu.imageUrl && menu.imageUrl.includes('vercel-storage.com')) {
+          if (menu.imageUrl && BlobService.isManagedUrl(menu.imageUrl)) {
             try {
               await BlobService.deleteFile(menu.imageUrl);
               details.push(`Deleted image for menu: ${menu.name} (ID: ${menu.id})`);
@@ -306,8 +306,8 @@ class DataCleanupService {
     let deletedCount = 0;
 
     try {
-      // List all images in the merchants/menus/ folder
-      const allImages = await BlobService.listFiles('merchants/menus/', 5000);
+      // List all images under merchant folders
+      const allImages = await BlobService.listFiles('merchants/', 5000);
 
       // Get all menu image URLs from database (including soft-deleted that are over 30 days)
       const threshold = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
@@ -334,7 +334,7 @@ class DataCleanupService {
       );
 
       // Find and delete orphaned images
-      for (const image of allImages) {
+      for (const image of allImages.filter((item) => item.pathname.includes('/menus/'))) {
         if (!activeImageUrls.has(image.url)) {
           try {
             await BlobService.deleteFile(image.url);

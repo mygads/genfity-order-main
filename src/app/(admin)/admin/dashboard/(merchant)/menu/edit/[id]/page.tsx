@@ -15,6 +15,12 @@ import { getCurrencySymbol } from "@/lib/utils/format";
 import { getCurrencyConfig } from "@/lib/constants/location";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import {
+  buildMenuThumbMeta,
+  createMenuImageBlobs,
+  requestPresignedUpload,
+  uploadBlobWithProgress,
+} from "@/lib/utils/menuImage";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -47,6 +53,7 @@ interface MenuFormData {
   price: string;
   imageUrl: string;
   imageThumbUrl: string;
+  imageThumbMeta?: Record<string, unknown> | null;
   isActive: boolean;
   isSpicy: boolean;
   isBestSeller: boolean;
@@ -71,6 +78,7 @@ interface Category {
   isActive?: boolean;
 }
 
+
 export default function EditMenuPage() {
   const router = useRouter();
   const { t } = useTranslation();
@@ -80,6 +88,15 @@ export default function EditMenuPage() {
   const returnPage = searchParams.get('returnPage');
   const { currency } = useMerchant();
   const currencySymbol = getCurrencySymbol(currency);
+  const menuImageMessages = useMemo(() => ({
+    prepareFailed: t('admin.menuUpload.error.prepareFailed'),
+    invalidResponse: t('admin.menuUpload.error.invalidResponse'),
+    uploadFailed: t('admin.menuUpload.error.uploadFailed'),
+    networkError: t('admin.menuUpload.error.networkError'),
+    uploadCancelled: t('admin.menuUpload.error.uploadCancelled'),
+    canvasUnsupported: t('admin.menuUpload.error.canvasUnsupported'),
+    thumbnailFailed: t('admin.menuUpload.error.thumbnailFailed'),
+  }), [t]);
 
   // Build return URL with pagination
   const menuListUrl = returnPage ? `/admin/dashboard/menu?page=${returnPage}` : '/admin/dashboard/menu';
@@ -116,6 +133,7 @@ export default function EditMenuPage() {
     price: "",
     imageUrl: "",
     imageThumbUrl: "",
+    imageThumbMeta: null,
     isActive: true,
     isSpicy: false,
     isBestSeller: false,
@@ -205,6 +223,7 @@ export default function EditMenuPage() {
             price: menu.price ? menu.price.toString() : "",
             imageUrl: menu.imageUrl || "",
             imageThumbUrl: menu.imageThumbUrl || "",
+            imageThumbMeta: menu.imageThumbMeta || null,
             isActive: menu.isActive !== undefined ? menu.isActive : true,
             isSpicy: menu.isSpicy !== undefined ? menu.isSpicy : false,
             isBestSeller: menu.isBestSeller !== undefined ? menu.isBestSeller : false,
@@ -271,7 +290,7 @@ export default function EditMenuPage() {
 
     // Validate file type - accept all image formats
     if (!file.type.startsWith('image/')) {
-      setError('Invalid file type. Please upload an image file.');
+      setError(t('admin.menuUpload.error.invalidFileType'));
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -279,7 +298,7 @@ export default function EditMenuPage() {
     const maxSizeMB = 5;
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      setError(`File size must be less than ${maxSizeMB}MB.`);
+      setError(t('admin.menuUpload.error.fileTooLarge', { maxSize: maxSizeMB }));
       setTimeout(() => setError(null), 3000);
       return;
     }
@@ -289,56 +308,80 @@ export default function EditMenuPage() {
       setError(null);
       setUploadProgress(0);
 
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', file);
-      uploadFormData.append('menuId', menuId);
       const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setError(t('admin.menuUpload.error.authRequired'));
+        return;
+      }
 
-      const xhr = new XMLHttpRequest();
+      const { fullBlob, thumbBlob, thumb2xBlob, sourceWidth, sourceHeight, sourceFormat } =
+        await createMenuImageBlobs(file, menuImageMessages);
 
-      await new Promise<void>((resolve, reject) => {
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable) {
-            const percentComplete = Math.round((event.loaded / event.total) * 100);
-            setUploadProgress(percentComplete);
-          }
-        });
+      const [mainPresign, thumbPresign, thumb2xPresign] = await Promise.all([
+        requestPresignedUpload(token, {
+          type: 'menu',
+          contentType: 'image/jpeg',
+          fileSize: fullBlob.size,
+          menuId,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb',
+          contentType: 'image/jpeg',
+          fileSize: thumbBlob.size,
+          menuId,
+        }, menuImageMessages),
+        requestPresignedUpload(token, {
+          type: 'menu-thumb-2x',
+          contentType: 'image/jpeg',
+          fileSize: thumb2xBlob.size,
+          menuId,
+        }, menuImageMessages),
+      ]);
 
-        xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            const data = JSON.parse(xhr.responseText);
-            const warnings = Array.isArray(data?.data?.warnings) ? data.data.warnings : [];
-            setFormData(prev => ({
-              ...prev,
-              imageUrl: data.data.url,
-              imageThumbUrl: data.data.thumbUrl || '',
-            }));
-            setSuccess(
-              warnings.length > 0
-                ? `Image uploaded with warning: ${warnings[0]}`
-                : 'Image uploaded successfully!'
-            );
-            setTimeout(() => setSuccess(null), 2000);
-            resolve();
-          } else {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              reject(new Error(data.message || 'Failed to upload image'));
-            } catch {
-              reject(new Error('Failed to upload image'));
-            }
-          }
-        });
+      await uploadBlobWithProgress(mainPresign.uploadUrl, fullBlob, 'image/jpeg', setUploadProgress, menuImageMessages);
+      await uploadBlobWithProgress(thumbPresign.uploadUrl, thumbBlob, 'image/jpeg', undefined, menuImageMessages);
+      await uploadBlobWithProgress(thumb2xPresign.uploadUrl, thumb2xBlob, 'image/jpeg', undefined, menuImageMessages);
+      setUploadProgress(100);
 
-        xhr.addEventListener('error', () => reject(new Error('Network error')));
-        xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
-
-        xhr.open('POST', '/api/merchant/upload/menu-image');
-        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-        xhr.send(uploadFormData);
+      const imageThumbMeta = buildMenuThumbMeta({
+        sourceWidth,
+        sourceHeight,
+        sourceFormat,
+        thumbUrl: thumbPresign.publicUrl,
+        thumb2xUrl: thumb2xPresign.publicUrl,
       });
+
+      const confirmResponse = await fetch('/api/merchant/upload/menu-image/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          imageUrl: mainPresign.publicUrl,
+          imageThumbUrl: thumbPresign.publicUrl,
+          imageThumb2xUrl: thumb2xPresign.publicUrl,
+          imageThumbMeta,
+          menuId,
+        }),
+      });
+
+      const confirmData = await confirmResponse.json();
+      if (!confirmResponse.ok || !confirmData?.success) {
+        throw new Error(confirmData?.message || t('admin.menuUpload.error.confirmFailed'));
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        imageUrl: mainPresign.publicUrl,
+        imageThumbUrl: thumbPresign.publicUrl,
+        imageThumbMeta,
+      }));
+      setImageSource('upload');
+      setSuccess('Image uploaded successfully!');
+      setTimeout(() => setSuccess(null), 2000);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload image');
+      setError(err instanceof Error ? err.message : t('admin.menuUpload.error.uploadFailed'));
       setTimeout(() => setError(null), 5000);
     } finally {
       setUploadingImage(false);
@@ -367,7 +410,7 @@ export default function EditMenuPage() {
     e.preventDefault();
 
     if (uploadingImage) {
-      setError('Please wait for the image upload to finish.');
+      setError(t('admin.menuUpload.error.uploadInProgress'));
       return;
     }
 
@@ -387,6 +430,7 @@ export default function EditMenuPage() {
         price: parseFloat(formData.price),
         imageUrl: formData.imageUrl || undefined,
         imageThumbUrl: formData.imageThumbUrl || undefined,
+        imageThumbMeta: formData.imageThumbMeta || undefined,
         isActive: formData.isActive,
         isSpicy: formData.isSpicy,
         isBestSeller: formData.isBestSeller,
@@ -626,7 +670,7 @@ export default function EditMenuPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '' }))}
+                      onClick={() => setFormData(prev => ({ ...prev, imageUrl: '', imageThumbUrl: '', imageThumbMeta: null }))}
                       className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                     >
                       <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -704,6 +748,7 @@ export default function EditMenuPage() {
                 ...prev,
                 imageUrl: selection.imageUrl,
                 imageThumbUrl: selection.thumbnailUrl || '',
+                imageThumbMeta: null,
               }));
               setShowStockPhotoPicker(false);
             }}

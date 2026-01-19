@@ -102,6 +102,25 @@ export class MerchantRepository {
   }
 
   /**
+   * Get merchants for storage usage summary
+   */
+  async findAllForStorageUsage() {
+    const results = await prisma.merchant.findMany({
+      select: {
+        id: true,
+        name: true,
+        code: true,
+        isActive: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+    return serializeData(results);
+  }
+
+  /**
    * Create merchant
    */
   async create(data: Prisma.MerchantCreateInput) {

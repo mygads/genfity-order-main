@@ -81,7 +81,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
-    const merchantId = String(merchantUser.merchantId);
+    const merchantCode = merchantUser.merchant.code;
 
     // Convert File to Buffer
     const bytes = await file.arrayBuffer();
@@ -92,15 +92,15 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     if (imageType === 'logo') {
       // Delete old logo
-      await BlobService.deleteOldMerchantLogo(merchantId);
+      await BlobService.deleteOldMerchantLogo(merchantCode);
       // Upload new logo
-      result = await BlobService.uploadMerchantLogo(merchantId, buffer);
+      result = await BlobService.uploadMerchantLogo(merchantCode, buffer);
       updateData = { logoUrl: result.url };
     } else {
       // Delete old banner
-      await BlobService.deleteOldMerchantBanner(merchantId);
+      await BlobService.deleteOldMerchantBanner(merchantCode);
       // Upload new banner
-      result = await BlobService.uploadMerchantBanner(merchantId, buffer);
+      result = await BlobService.uploadMerchantBanner(merchantCode, buffer);
       updateData = { bannerUrl: result.url };
     }
 

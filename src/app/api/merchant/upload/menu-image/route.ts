@@ -65,10 +65,11 @@ async function handlePost(req: NextRequest, context: AuthContext) {
       );
     }
 
+    const merchantCode = merchantUser.merchant.code;
+
     // Delete old image if exists and menuId provided
     if (menuId) {
-      // BlobService expects string|number for IDs; convert bigint to string where needed
-      await BlobService.deleteOldMenuImage(String(merchantUser.merchantId), menuId);
+      await BlobService.deleteOldMenuImage(merchantCode, menuId);
     }
 
     // Convert File to Buffer
@@ -107,20 +108,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const imageKey = menuId ? String(menuId) : String(Date.now());
 
     // Upload to Vercel Blob
-    const result = await BlobService.uploadMenuImage(
-      String(merchantUser.merchantId),
-      imageKey,
-      fullJpegBuffer
-    );
+    const result = await BlobService.uploadMenuImage(merchantCode, imageKey, fullJpegBuffer);
 
-    const thumbResult = await BlobService.uploadMenuImageThumbnail(
-      String(merchantUser.merchantId),
-      imageKey,
-      thumbJpegBuffer
-    );
+    const thumbResult = await BlobService.uploadMenuImageThumbnail(merchantCode, imageKey, thumbJpegBuffer);
 
     const thumb2xResult = await BlobService.uploadMenuImageThumbnail2x(
-      String(merchantUser.merchantId),
+      merchantCode,
       imageKey,
       thumb2xJpegBuffer
     );

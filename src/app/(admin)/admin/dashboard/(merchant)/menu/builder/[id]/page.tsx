@@ -42,6 +42,8 @@ interface MenuFormData {
   description?: string;
   price: number;
   imageUrl?: string;
+  imageThumbUrl?: string;
+  imageThumbMeta?: Record<string, unknown> | null;
   isActive: boolean;
   // Note: Promo fields removed - use SpecialPrice table
   trackStock: boolean;
@@ -161,6 +163,8 @@ export default function MenuBuilderPage() {
             description: menuData.data.description,
             price: parseFloat(menuData.data.price),
             imageUrl: menuData.data.imageUrl,
+            imageThumbUrl: menuData.data.imageThumbUrl,
+            imageThumbMeta: menuData.data.imageThumbMeta || null,
             isActive: menuData.data.isActive,
             // Note: Promo fields removed - use SpecialPrice table
             trackStock: menuData.data.trackStock,
@@ -207,6 +211,7 @@ export default function MenuBuilderPage() {
       const cleanedData = {
         ...data,
         imageUrl: data.imageUrl || null,
+        imageThumbMeta: data.imageThumbMeta ?? null,
         description: data.description || undefined,
         // Note: Promo fields removed - use SpecialPrice table
         stockQty: data.trackStock ? data.stockQty : null,
@@ -289,7 +294,7 @@ export default function MenuBuilderPage() {
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50">
           <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-lg dark:border-gray-800 dark:bg-gray-900">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-warning-100 dark:bg-warning-900/20">
