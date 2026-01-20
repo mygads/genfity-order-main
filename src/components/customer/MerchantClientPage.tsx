@@ -109,6 +109,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         isLoading: isStatusLoading,
         todaySpecialHour,
         specialHourName,
+        isSubscriptionSuspended,
     } = useStoreStatus(merchantCode, {
         refreshInterval: 30000, // Refresh every 30 seconds
         revalidateOnFocus: true,
@@ -126,6 +127,8 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     const reservationRequiresPreorder = merchant.reservationMenuRequired === true || reservationMinItemCount > 0;
 
     const isScheduledOrderEnabled = merchant.isScheduledOrderEnabled === true;
+    const isReservationAvailable = isReservationEnabled && !isSubscriptionSuspended;
+    const reservationLabel = tOr(t, 'customer.reservation.ctaButton', 'Reservation');
 
     const resolvedDeliveryLabel = deliveryLabel || merchant.deliveryLabel || tOr(t, 'customer.mode.delivery', 'Delivery');
 
@@ -162,6 +165,15 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
     };
 
     const handleReservationSelect = () => {
+        if (!isReservationAvailable) {
+            showToast({
+                variant: 'warning',
+                title: tOr(t, 'customer.toast.modeUnavailableTitle', 'Mode Unavailable'),
+                message: tOr(t, 'customer.toast.modeUnavailableMessage', '{mode} is currently unavailable', { mode: reservationLabel }),
+                duration: 4000,
+            });
+            return;
+        }
         // Use the same Order UI flow, with a required reservation-details bottom sheet.
         router.replace(`/${merchantCode}/order?mode=dinein&flow=reservation`);
         if (!storeOpen) {
@@ -403,9 +415,17 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                         <button
                             id="mode-reservation"
                             onClick={handleReservationSelect}
-                            className="w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 border-gray-300 bg-white text-gray-900 hover:bg-gray-50"
+                            className={`w-full h-12 border rounded-lg text-base font-medium transition-colors duration-200 shadow-lg flex items-center justify-center gap-2 ${isReservationAvailable
+                                ? 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'
+                                : 'border-gray-200 text-gray-400 bg-gray-100'
+                                }`}
                         >
-                            <span>{tOr(t, 'customer.reservation.ctaButton', 'Reservation')}</span>
+                            <span>{reservationLabel}</span>
+                            {!isReservationAvailable && (
+                                <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
+                                    {t('customer.mode.unavailableNow')}
+                                </span>
+                            )}
                         </button>
                     </div>
                 </div>
