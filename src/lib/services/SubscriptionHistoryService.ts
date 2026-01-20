@@ -135,12 +135,13 @@ class SubscriptionHistoryService {
         const formattedAmount = currency === 'IDR' 
             ? `Rp ${amount.toLocaleString()}` 
             : `${currency} ${amount.toLocaleString()}`;
+        const flowId = `payment-${requestId.toString()}`;
         
         return this.recordEvent({
             merchantId,
             eventType: 'PAYMENT_SUBMITTED',
             reason: `Payment of ${formattedAmount} submitted for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}. Awaiting verification.`,
-            metadata: { paymentType, amount, currency, requestId: requestId.toString() },
+            metadata: { paymentType, amount, currency, requestId: requestId.toString(), flowId, flowType: 'PAYMENT_VERIFICATION' },
             triggeredBy: 'MERCHANT',
         });
     }
@@ -158,12 +159,13 @@ class SubscriptionHistoryService {
         const formattedAmount = currency === 'IDR'
             ? `Rp ${amount.toLocaleString()}`
             : `${currency} ${amount.toLocaleString()}`;
+        const flowId = `payment-${requestId.toString()}`;
 
         return this.recordEvent({
             merchantId,
             eventType: 'PAYMENT_CANCELLED',
             reason: `Payment request of ${formattedAmount} cancelled for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}.`,
-            metadata: { paymentType, amount, currency, requestId: requestId.toString() },
+            metadata: { paymentType, amount, currency, requestId: requestId.toString(), flowId, flowType: 'PAYMENT_VERIFICATION' },
             triggeredBy: 'MERCHANT',
         });
     }
@@ -175,17 +177,23 @@ class SubscriptionHistoryService {
         merchantId: bigint,
         paymentType: 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
         amount: number,
-        balance: number,
+        balance?: number | null,
         periodEnd?: Date | null,
-        adminUserId?: bigint
+        adminUserId?: bigint,
+        currency: string = 'IDR',
+        requestId?: bigint
     ) {
+        const formattedAmount = currency === 'IDR'
+            ? `Rp ${amount.toLocaleString()}`
+            : `${currency} ${amount.toLocaleString()}`;
+        const flowId = requestId ? `payment-${requestId.toString()}` : undefined;
         return this.recordEvent({
             merchantId,
             eventType: 'PAYMENT_RECEIVED',
-            newBalance: balance,
+            newBalance: typeof balance === 'number' ? balance : null,
             newPeriodEnd: periodEnd,
-            reason: `Payment of ${amount} verified for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}`,
-            metadata: { paymentType, amount },
+            reason: `Payment of ${formattedAmount} verified for ${paymentType === 'DEPOSIT_TOPUP' ? 'deposit top-up' : 'monthly subscription'}`,
+            metadata: { paymentType, amount, currency, requestId: requestId?.toString(), flowId, flowType: 'PAYMENT_VERIFICATION' },
             triggeredBy: 'ADMIN',
             triggeredByUserId: adminUserId,
         });
@@ -199,13 +207,19 @@ class SubscriptionHistoryService {
         paymentType: 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
         amount: number,
         reason: string,
-        adminUserId: bigint
+        adminUserId: bigint,
+        currency: string = 'IDR',
+        requestId?: bigint
     ) {
+        const formattedAmount = currency === 'IDR'
+            ? `Rp ${amount.toLocaleString()}`
+            : `${currency} ${amount.toLocaleString()}`;
+        const flowId = requestId ? `payment-${requestId.toString()}` : undefined;
         return this.recordEvent({
             merchantId,
             eventType: 'PAYMENT_REJECTED',
-            reason: `Payment of ${amount} rejected: ${reason}`,
-            metadata: { paymentType, amount, rejectionReason: reason },
+            reason: `Payment of ${formattedAmount} rejected: ${reason}`,
+            metadata: { paymentType, amount, currency, rejectionReason: reason, requestId: requestId?.toString(), flowId, flowType: 'PAYMENT_VERIFICATION' },
             triggeredBy: 'ADMIN',
             triggeredByUserId: adminUserId,
         });
@@ -235,14 +249,95 @@ class SubscriptionHistoryService {
         balanceBefore: number,
         balanceAfter: number
     ) {
+        const flowId = `order-fee-${orderId.toString()}`;
         return this.recordEvent({
             merchantId,
             eventType: 'ORDER_FEE_DEDUCTED',
             previousBalance: balanceBefore,
             newBalance: balanceAfter,
             reason: `Order fee of ${fee} deducted for order #${orderId}`,
-            metadata: { orderId: orderId.toString(), fee },
+            metadata: { orderId: orderId.toString(), fee, amount: fee, flowId, flowType: 'ORDER_FEE' },
             triggeredBy: 'SYSTEM',
+        });
+    }
+
+    /**
+     * Record manual or voucher balance adjustment
+     */
+    async recordBalanceAdjusted(
+        merchantId: bigint,
+        amount: number,
+        balanceBefore: number,
+        balanceAfter: number,
+        reason: string,
+        triggeredBy: 'SYSTEM' | 'ADMIN' | 'MERCHANT',
+        triggeredByUserId?: bigint | null,
+        metadata: Record<string, unknown> = {}
+    ) {
+        const flowIdValue = typeof metadata.flowId === 'string'
+            ? metadata.flowId
+            : `balance-adjust-${merchantId.toString()}-${Date.now()}`;
+        const flowTypeValue = typeof metadata.flowType === 'string' ? metadata.flowType : 'BALANCE_ADJUSTMENT';
+        const adjustmentType = amount >= 0 ? 'CREDIT' : 'DEBIT';
+
+        return this.recordEvent({
+            merchantId,
+            eventType: 'BALANCE_TOPUP',
+            previousBalance: balanceBefore,
+            newBalance: balanceAfter,
+            reason,
+            metadata: {
+                ...metadata,
+                amount,
+                balanceBefore,
+                balanceAfter,
+                adjustmentType,
+                flowId: flowIdValue,
+                flowType: flowTypeValue,
+            },
+            triggeredBy,
+            triggeredByUserId,
+        });
+    }
+
+    /**
+     * Record subscription period adjustment
+     */
+    async recordPeriodAdjusted(
+        merchantId: bigint,
+        previousPeriodEnd: Date | null,
+        newPeriodEnd: Date | null,
+        daysDelta: number,
+        reason: string,
+        triggeredBy: 'SYSTEM' | 'ADMIN' | 'MERCHANT',
+        triggeredByUserId?: bigint | null,
+        previousType?: string | null,
+        newType?: string | null,
+        metadata: Record<string, unknown> = {}
+    ) {
+        const flowIdValue = typeof metadata.flowId === 'string'
+            ? metadata.flowId
+            : `period-adjust-${merchantId.toString()}-${Date.now()}`;
+        const flowTypeValue = typeof metadata.flowType === 'string' ? metadata.flowType : 'SUBSCRIPTION_ADJUSTMENT';
+
+        return this.recordEvent({
+            merchantId,
+            eventType: 'PERIOD_EXTENDED',
+            previousType: previousType ?? null,
+            newType: newType ?? null,
+            previousPeriodEnd: previousPeriodEnd ?? null,
+            newPeriodEnd: newPeriodEnd ?? null,
+            reason,
+            metadata: {
+                ...metadata,
+                daysDelta,
+                periodFrom: previousPeriodEnd?.toISOString() ?? null,
+                periodTo: newPeriodEnd?.toISOString() ?? null,
+                flowId: flowIdValue,
+                flowType: flowTypeValue,
+            },
+            triggeredBy,
+            triggeredByUserId,
         });
     }
 

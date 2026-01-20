@@ -9,6 +9,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import subscriptionAutoSwitchService from '@/lib/services/SubscriptionAutoSwitchService';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 
 /**
  * POST /api/merchant/vouchers/redeem
@@ -194,6 +195,27 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         redemptionData.balanceBefore = currentBalanceAmount;
         redemptionData.balanceAfter = newBalanceAmount;
 
+        try {
+            await subscriptionHistoryService.recordBalanceAdjusted(
+                merchantId,
+                Number(voucher.value),
+                currentBalanceAmount,
+                newBalanceAmount,
+                `Voucher ${voucher.code} redeemed (+${formatCurrency(Number(voucher.value), merchantCurrency)})`,
+                'MERCHANT',
+                context.userId,
+                {
+                    source: 'VOUCHER_REDEEM',
+                    voucherCode: voucher.code,
+                    currency: merchantCurrency,
+                    flowId: `voucher-${voucher.code}`,
+                    flowType: 'VOUCHER_REDEMPTION',
+                }
+            );
+        } catch (historyError) {
+            console.error('Failed to record voucher balance history:', historyError);
+        }
+
         // Check if we should auto-switch from TRIAL to DEPOSIT
         if (currentSubscription?.type === 'TRIAL') {
             const switchResult = await subscriptionAutoSwitchService.checkAndAutoSwitch(merchantId);
@@ -269,29 +291,27 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             });
         }
 
-        // Create balance transaction record for subscription days
-        // Get or create merchant balance for transaction record
-        let balanceRecord = currentBalance;
-        if (!balanceRecord) {
-            balanceRecord = await prisma.merchantBalance.create({
-                data: {
-                    merchantId: merchantId,
-                    balance: 0,
-                },
-            });
+        try {
+            await subscriptionHistoryService.recordPeriodAdjusted(
+                merchantId,
+                currentPeriodEnd,
+                newPeriodEnd,
+                daysToAdd,
+                `Voucher ${voucher.code} redeemed (+${daysToAdd} days subscription)`,
+                'MERCHANT',
+                context.userId,
+                currentSubscription?.type || null,
+                newSubType,
+                {
+                    source: 'VOUCHER_REDEMPTION',
+                    voucherCode: voucher.code,
+                    flowId: `voucher-${voucher.code}`,
+                    flowType: 'VOUCHER_REDEMPTION',
+                }
+            );
+        } catch (historyError) {
+            console.error('Failed to record voucher subscription history:', historyError);
         }
-        
-        await prisma.balanceTransaction.create({
-            data: {
-                balanceId: balanceRecord.id,
-                type: 'SUBSCRIPTION',
-                amount: 0, // No monetary value for subscription days voucher
-                balanceBefore: Number(balanceRecord.balance),
-                balanceAfter: Number(balanceRecord.balance),
-                description: `Voucher redemption: ${voucher.code} (+${daysToAdd} days subscription)`,
-                createdByUserId: context.userId,
-            },
-        });
 
         resultMessage = `Successfully added ${daysToAdd} days to your subscription (valid until ${newPeriodEnd.toLocaleDateString()})`;
     }

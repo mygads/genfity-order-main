@@ -95,6 +95,21 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             };
         }
 
+        // Hide no-op subscription-day voucher redemptions from balance transactions.
+        // These are subscription period changes and should appear in Subscription History, not Transactions.
+        transactionWhere.NOT = {
+            AND: [
+                { type: 'SUBSCRIPTION' },
+                { amount: 0 },
+                {
+                    description: {
+                        contains: 'days subscription',
+                        mode: 'insensitive',
+                    },
+                },
+            ],
+        };
+
         // Fetch transactions
         const [transactions, transactionTotal] = await Promise.all([
             prisma.balanceTransaction.findMany({

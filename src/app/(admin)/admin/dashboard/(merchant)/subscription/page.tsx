@@ -482,7 +482,7 @@ export default function SubscriptionPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg text-sm font-medium hover:bg-white/30 transition-colors"
                         >
                             <FaHistory className="w-3.5 h-3.5" />
-                            {locale === 'id' ? 'Riwayat Event' : 'Event History'}
+                            {locale === 'id' ? 'Riwayat Langganan' : 'Subscription History'}
                         </Link>
                     </div>
                 </div>

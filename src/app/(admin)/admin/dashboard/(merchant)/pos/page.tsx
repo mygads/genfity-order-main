@@ -242,6 +242,7 @@ function POSPageContent() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastOrderNumber, setLastOrderNumber] = useState('');
   const [lastOrderTotal, setLastOrderTotal] = useState('');
+  const [lastCreatedOrderId, setLastCreatedOrderId] = useState<string>('');
 
   // Payment modal state
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -1590,6 +1591,7 @@ function POSPageContent() {
 
         // Store order info and show payment modal
         setPendingOrderId(data.data.id);
+        setLastCreatedOrderId(String(data.data.id));
         setLastOrderNumber(data.data.orderNumber);
         const createdTotal = calculateOrderTotal();
         setPendingOrderTotal(createdTotal);
@@ -1792,6 +1794,7 @@ function POSPageContent() {
     setShowSuccessModal(false);
     setLastOrderNumber('');
     setLastOrderTotal('');
+    setLastCreatedOrderId('');
     setPendingOrderId('');
     setPendingOrderTotal(0);
     setPendingOrderDetails(null);
@@ -1800,8 +1803,12 @@ function POSPageContent() {
   // Handle view order after success
   const handleViewOrder = useCallback(() => {
     setShowSuccessModal(false);
+    if (lastCreatedOrderId) {
+      router.push(`/admin/dashboard/orders?orderId=${encodeURIComponent(lastCreatedOrderId)}`);
+      return;
+    }
     router.push('/admin/dashboard/orders');
-  }, [router]);
+  }, [lastCreatedOrderId, router]);
 
   const handlePrintCreatedOrderReceipt = useCallback(async () => {
     if (!pendingOrderId) {

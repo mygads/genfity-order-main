@@ -10,9 +10,11 @@ import type { AuthContext } from '@/lib/middleware/auth';
 import subscriptionService from '@/lib/services/SubscriptionService';
 import subscriptionRepository from '@/lib/repositories/SubscriptionRepository';
 import emailService from '@/lib/services/EmailService';
+import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import prisma from '@/lib/db/client';
 import { z } from 'zod';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import { serializeBigInt } from '@/lib/utils/serializer';
 
 const updateSubscriptionSchema = z.object({
     type: z.enum(['TRIAL', 'DEPOSIT', 'MONTHLY']).optional(),
@@ -51,7 +53,7 @@ async function handleGet(
 
         return NextResponse.json({
             success: true,
-            data: status,
+            data: serializeBigInt(status),
         });
     } catch (error) {
         console.error('Error getting subscription:', error);
@@ -122,6 +124,9 @@ async function handlePut(
             const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
             if (subscription) {
                 let newExpiryDate: Date | null = null;
+                const previousExpiryDate = subscription.type === 'TRIAL'
+                    ? subscription.trialEndsAt
+                    : subscription.currentPeriodEnd;
                 
                 if (subscription.type === 'TRIAL' && subscription.trialEndsAt) {
                     const newTrialEnd = new Date(subscription.trialEndsAt);
@@ -139,6 +144,34 @@ async function handlePut(
                         currentPeriodEnd: newEnd,
                     });
                     newExpiryDate = newEnd;
+                }
+
+                if (newExpiryDate) {
+                    const daysLabel = Math.abs(daysDelta);
+                    const reason = daysDelta > 0
+                        ? `Subscription extended by ${daysLabel} day(s)`
+                        : `Subscription reduced by ${daysLabel} day(s)`;
+
+                    try {
+                        await subscriptionHistoryService.recordPeriodAdjusted(
+                            merchantId,
+                            previousExpiryDate ?? null,
+                            newExpiryDate,
+                            daysDelta,
+                            reason,
+                            'ADMIN',
+                            context.userId,
+                            subscription.type,
+                            subscription.type,
+                            {
+                                source: 'ADMIN_ADJUST',
+                                flowId: `subscription-adjust-${merchantId.toString()}-${Date.now()}`,
+                                flowType: 'SUBSCRIPTION_ADJUSTMENT',
+                            }
+                        );
+                    } catch (historyError) {
+                        console.error('Failed to record subscription adjustment history:', historyError);
+                    }
                 }
 
                 // Send email notification for subscription extension
@@ -187,7 +220,7 @@ async function handlePut(
         return NextResponse.json({
             success: true,
             message: 'Subscription updated successfully',
-            data: updatedStatus,
+            data: serializeBigInt(updatedStatus),
         });
     } catch (error: unknown) {
         console.error('Error updating subscription:', error);

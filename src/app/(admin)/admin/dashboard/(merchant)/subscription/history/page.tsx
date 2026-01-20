@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
@@ -17,7 +17,10 @@ import {
     FaBan,
     FaClock,
     FaCheckCircle,
-    FaChevronDown
+    FaChevronDown,
+    FaChevronUp,
+    FaTicketAlt,
+    FaCalendarAlt
 } from "react-icons/fa";
 
 interface HistoryEvent {
@@ -30,6 +33,9 @@ interface HistoryEvent {
     previousBalance: number | null;
     newBalance: number | null;
     reason: string | null;
+    previousPeriodEnd?: string | null;
+    newPeriodEnd?: string | null;
+    metadata?: Record<string, unknown> | null;
     triggeredBy: string;
     createdAt: string;
 }
@@ -61,8 +67,10 @@ const EVENT_ICONS: Record<string, React.ReactNode> = {
     'PAYMENT_CANCELLED': <FaBan className="w-4 h-4" />,
     'PAYMENT_RECEIVED': <FaCreditCard className="w-4 h-4" />,
     'PAYMENT_REJECTED': <FaBan className="w-4 h-4" />,
-    'ORDER_FEE_DEDUCTED': <FaCreditCard className="w-4 h-4" />,
+    'BALANCE_TOPUP': <FaExchangeAlt className="w-4 h-4" />,
+    'PERIOD_EXTENDED': <FaClock className="w-4 h-4" />,
     'MANUAL_ADJUSTMENT': <FaExchangeAlt className="w-4 h-4" />,
+    'VOUCHER_REDEEMED': <FaTicketAlt className="w-4 h-4" />,
 };
 
 const EVENT_COLORS: Record<string, { bg: string; text: string; icon: string }> = {
@@ -75,8 +83,10 @@ const EVENT_COLORS: Record<string, { bg: string; text: string; icon: string }> =
     'PAYMENT_CANCELLED': { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', icon: 'text-red-500' },
     'PAYMENT_RECEIVED': { bg: 'bg-emerald-50 dark:bg-emerald-900/20', text: 'text-emerald-700 dark:text-emerald-300', icon: 'text-emerald-500' },
     'PAYMENT_REJECTED': { bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', icon: 'text-red-500' },
-    'ORDER_FEE_DEDUCTED': { bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-700 dark:text-gray-300', icon: 'text-gray-500' },
+    'BALANCE_TOPUP': { bg: 'bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-700 dark:text-indigo-300', icon: 'text-indigo-500' },
+    'PERIOD_EXTENDED': { bg: 'bg-sky-50 dark:bg-sky-900/20', text: 'text-sky-700 dark:text-sky-300', icon: 'text-sky-500' },
     'MANUAL_ADJUSTMENT': { bg: 'bg-purple-50 dark:bg-purple-900/20', text: 'text-purple-700 dark:text-purple-300', icon: 'text-purple-500' },
+    'VOUCHER_REDEEMED': { bg: 'bg-pink-50 dark:bg-pink-900/20', text: 'text-pink-700 dark:text-pink-300', icon: 'text-pink-500' },
 };
 
 export default function SubscriptionHistoryPage() {
@@ -91,6 +101,8 @@ export default function SubscriptionHistoryPage() {
     const [pendingRequestLoading, setPendingRequestLoading] = useState(false);
     const [pendingRequestError, setPendingRequestError] = useState<string | null>(null);
     const [isOwner, setIsOwner] = useState<boolean>(true);
+    const [flowFilter, setFlowFilter] = useState<'ALL' | 'PAYMENT' | 'VOUCHER' | 'ADMIN'>('ALL');
+    const [expandedFlows, setExpandedFlows] = useState<Record<string, boolean>>({});
 
     const getPaymentRequestStatusLabel = (status: string) => {
         const key = `subscription.paymentRequest.status.${status}`;
@@ -232,8 +244,10 @@ export default function SubscriptionHistoryPage() {
             'PAYMENT_CANCELLED': { en: 'Payment Cancelled', id: 'Pembayaran Dibatalkan' },
             'PAYMENT_RECEIVED': { en: 'Payment Received', id: 'Pembayaran Diterima' },
             'PAYMENT_REJECTED': { en: 'Payment Rejected', id: 'Pembayaran Ditolak' },
-            'ORDER_FEE_DEDUCTED': { en: 'Order Fee Charged', id: 'Biaya Pesanan Dibebankan' },
+            'BALANCE_TOPUP': { en: 'Balance Adjustment', id: 'Penyesuaian Saldo' },
+            'PERIOD_EXTENDED': { en: 'Subscription Period Updated', id: 'Periode Langganan Diubah' },
             'MANUAL_ADJUSTMENT': { en: 'Manual Adjustment', id: 'Penyesuaian Manual' },
+            'VOUCHER_REDEEMED': { en: 'Voucher Redeemed', id: 'Voucher Ditukar' },
         };
         return labels[eventType]?.[locale] || eventType;
     };
@@ -279,6 +293,220 @@ export default function SubscriptionHistoryPage() {
         if (amount === null || amount === undefined) return '-';
         return formatCurrency(amount, currency, locale);
     };
+
+    const getMetadata = (metadata?: Record<string, unknown> | null) => {
+        if (metadata && typeof metadata === 'object') {
+            return metadata as Record<string, unknown>;
+        }
+        return {} as Record<string, unknown>;
+    };
+
+    const parseNumber = (value: unknown) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return value;
+        if (typeof value === 'string' && value.trim() !== '' && Number.isFinite(Number(value))) return Number(value);
+        return null;
+    };
+
+    // Helper to generate a day-based key for grouping legacy payment events
+    const getDayKey = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
+    const resolveFlowKey = (event: HistoryEvent) => {
+        const metadata = getMetadata(event.metadata);
+
+        // Priority 1: Use explicit flowId if present (should be payment-{requestId})
+        if (typeof metadata.flowId === 'string' && metadata.flowId.startsWith('payment-')) {
+            return metadata.flowId;
+        }
+
+        // Priority 2: For payment events, group by requestId
+        if (typeof metadata.requestId === 'string' && metadata.requestId.trim() !== '') {
+            return `payment-${metadata.requestId}`;
+        }
+
+        // Priority 3: For voucher events
+        if (typeof metadata.voucherCode === 'string') return `voucher-${metadata.voucherCode}`;
+
+        // Priority 4: For legacy payment events without requestId, group by amount+type+date
+        // This helps group PAYMENT_SUBMITTED with its corresponding PAYMENT_RECEIVED/CANCELLED/REJECTED
+        const isPaymentEvent = ['PAYMENT_SUBMITTED', 'PAYMENT_CANCELLED', 'PAYMENT_RECEIVED', 'PAYMENT_REJECTED'].includes(event.eventType);
+        if (isPaymentEvent) {
+            const paymentType = typeof metadata.paymentType === 'string' ? metadata.paymentType : 'UNKNOWN';
+            const amount = parseNumber(metadata.amount ?? metadata.fee) ?? 0;
+            const currencyMeta = typeof metadata.currency === 'string' ? metadata.currency : 'IDR';
+            // Use day-based grouping for legacy events (same day will group together)
+            const dayKey = getDayKey(event.createdAt);
+            return `payment-legacy-${paymentType}-${amount}-${currencyMeta}-${dayKey}`;
+        }
+
+        // Priority 5: Use explicit flowId for non-payment events
+        if (typeof metadata.flowId === 'string') return metadata.flowId;
+
+        return `event-${event.id}`;
+    };
+
+    const resolveFlowType = (event: HistoryEvent) => {
+        const metadata = getMetadata(event.metadata);
+        if (typeof metadata.flowType === 'string') return metadata.flowType;
+        if (['PAYMENT_SUBMITTED', 'PAYMENT_CANCELLED', 'PAYMENT_RECEIVED', 'PAYMENT_REJECTED'].includes(event.eventType)) {
+            return 'PAYMENT_VERIFICATION';
+        }
+        if (event.eventType === 'BALANCE_TOPUP') return 'BALANCE_ADJUSTMENT';
+        if (event.eventType === 'PERIOD_EXTENDED') return 'SUBSCRIPTION_ADJUSTMENT';
+        if (event.eventType === 'VOUCHER_REDEEMED') return 'VOUCHER_REDEMPTION';
+        return 'SUBSCRIPTION_EVENT';
+    };
+
+    const getFlowTitle = (flowType: string) => {
+        const labels: Record<string, { en: string; id: string }> = {
+            'PAYMENT_VERIFICATION': { en: 'Payment Verification Flow', id: 'Alur Verifikasi Pembayaran' },
+            'BALANCE_ADJUSTMENT': { en: 'Balance Adjustment', id: 'Penyesuaian Saldo' },
+            'SUBSCRIPTION_ADJUSTMENT': { en: 'Subscription Period Adjustment', id: 'Penyesuaian Periode Langganan' },
+            'VOUCHER_REDEMPTION': { en: 'Voucher Redemption', id: 'Penukaran Voucher' },
+            'SUBSCRIPTION_EVENT': { en: 'Subscription Event', id: 'Peristiwa Langganan' },
+        };
+        return labels[flowType]?.[locale] || flowType;
+    };
+
+    const getFlowIcon = (flowType: string) => {
+        if (flowType === 'PAYMENT_VERIFICATION') return <FaCreditCard className="w-4 h-4" />;
+        if (flowType === 'VOUCHER_REDEMPTION') return <FaTicketAlt className="w-4 h-4" />;
+        if (flowType === 'SUBSCRIPTION_ADJUSTMENT') return <FaCalendarAlt className="w-4 h-4" />;
+        if (flowType === 'BALANCE_ADJUSTMENT') return <FaExchangeAlt className="w-4 h-4" />;
+        return null;
+    };
+
+    const getTriggeredLabel = (triggeredBy: string) => {
+        if (triggeredBy === 'SYSTEM') return locale === 'id' ? 'Otomatis' : 'Automatic';
+        if (triggeredBy === 'ADMIN') return locale === 'id' ? 'Admin' : 'Admin';
+        if (triggeredBy === 'MERCHANT') return locale === 'id' ? 'Merchant' : 'Merchant';
+        return locale === 'id' ? 'Manual' : 'Manual';
+    };
+
+    const resolvePeriodRange = (event: HistoryEvent) => {
+        const metadata = getMetadata(event.metadata);
+        const daysDelta = parseNumber(metadata.daysDelta);
+        const metadataFrom = typeof metadata.periodFrom === 'string' ? new Date(metadata.periodFrom) : null;
+        const metadataTo = typeof metadata.periodTo === 'string' ? new Date(metadata.periodTo) : null;
+        const previousPeriod = metadataFrom ?? (event.previousPeriodEnd ? new Date(event.previousPeriodEnd) : null);
+        const newPeriod = metadataTo ?? (event.newPeriodEnd ? new Date(event.newPeriodEnd) : null);
+
+        if (!previousPeriod && newPeriod && typeof daysDelta === 'number' && Number.isFinite(daysDelta)) {
+            const derivedPrevious = new Date(newPeriod);
+            derivedPrevious.setDate(derivedPrevious.getDate() - daysDelta);
+            return { from: derivedPrevious, to: newPeriod };
+        }
+
+        return {
+            from: previousPeriod,
+            to: newPeriod,
+        };
+    };
+
+    const resolveFlowSummary = (groupEvents: HistoryEvent[]) => {
+        const entries = groupEvents.map((event) => ({ event, metadata: getMetadata(event.metadata) }));
+
+        const latestEvent = groupEvents[groupEvents.length - 1];
+        const amountEntry = [...entries].reverse().find(({ metadata }) => parseNumber(metadata.amount ?? metadata.fee) !== null);
+        const daysEntry = [...entries].reverse().find(({ metadata }) => parseNumber(metadata.daysDelta) !== null);
+        const paymentEntry = entries.find(({ metadata }) => typeof metadata.paymentType === 'string');
+        const voucherEntry = entries.find(({ metadata }) => typeof metadata.voucherCode === 'string');
+        const periodEntry = [...entries].reverse().find(({ metadata, event }) => (
+            typeof metadata.periodFrom === 'string' ||
+            typeof metadata.periodTo === 'string' ||
+            event.previousPeriodEnd ||
+            event.newPeriodEnd ||
+            parseNumber(metadata.daysDelta) !== null
+        ));
+
+        const paymentType = paymentEntry && typeof paymentEntry.metadata.paymentType === 'string' ? paymentEntry.metadata.paymentType : null;
+        const isMonthlyPaymentFlow = paymentType === 'MONTHLY_SUBSCRIPTION';
+        const isDepositTopupFlow = paymentType === 'DEPOSIT_TOPUP';
+
+        // Find balance entry - show for deposit topup, voucher redemption, and balance adjustments
+        // Don't show for monthly subscription payments
+        const balanceEntry = isMonthlyPaymentFlow
+            ? null
+            : [...groupEvents].reverse().find((event) => event.previousBalance !== null && event.newBalance !== null) || null;
+
+        const amount = amountEntry ? parseNumber(amountEntry.metadata.amount ?? amountEntry.metadata.fee) : null;
+        const metaCurrency = amountEntry && typeof amountEntry.metadata.currency === 'string' ? amountEntry.metadata.currency : currency;
+        const daysDelta = daysEntry ? parseNumber(daysEntry.metadata.daysDelta) : null;
+        const voucherCode = voucherEntry && typeof voucherEntry.metadata.voucherCode === 'string' ? voucherEntry.metadata.voucherCode : null;
+
+        const periodRange = periodEntry ? resolvePeriodRange(periodEntry.event) : { from: null, to: null };
+        const periodFrom = periodRange.from ? formatDate(periodRange.from.toISOString()) : null;
+        const periodTo = periodRange.to ? formatDate(periodRange.to.toISOString()) : null;
+
+        // Calculate balance change for display
+        const balanceFrom = balanceEntry?.previousBalance ?? null;
+        const balanceTo = balanceEntry?.newBalance ?? null;
+
+        return {
+            latestEvent,
+            amount,
+            metaCurrency,
+            daysDelta,
+            paymentType,
+            voucherCode,
+            periodFrom,
+            periodTo,
+            balanceEntry,
+            balanceFrom,
+            balanceTo,
+            isMonthlyPaymentFlow,
+        };
+    };
+
+    const groupedEvents = useMemo(() => {
+        const grouped = new Map<string, { id: string; flowType: string; events: HistoryEvent[]; latestAt: string }>();
+        const sortedEvents = [...events].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+
+        for (const event of sortedEvents) {
+            const groupKey = resolveFlowKey(event);
+            const flowType = resolveFlowType(event);
+            const existing = grouped.get(groupKey);
+
+            if (existing) {
+                existing.events.push(event);
+                if (new Date(event.createdAt).getTime() > new Date(existing.latestAt).getTime()) {
+                    existing.latestAt = event.createdAt;
+                }
+            } else {
+                grouped.set(groupKey, {
+                    id: groupKey,
+                    flowType,
+                    events: [event],
+                    latestAt: event.createdAt,
+                });
+            }
+        }
+
+        return Array.from(grouped.values()).sort(
+            (a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime()
+        );
+    }, [events]);
+
+    const filteredGroups = useMemo(() => {
+        if (flowFilter === 'ALL') return groupedEvents;
+        return groupedEvents.filter((group) => {
+            if (flowFilter === 'PAYMENT') return group.flowType === 'PAYMENT_VERIFICATION';
+            if (flowFilter === 'VOUCHER') return group.flowType === 'VOUCHER_REDEMPTION';
+            if (flowFilter === 'ADMIN') {
+                return ['BALANCE_ADJUSTMENT', 'SUBSCRIPTION_ADJUSTMENT'].includes(group.flowType);
+            }
+            return true;
+        });
+    }, [groupedEvents, flowFilter]);
+
+    const flowFilterOptions = [
+        { key: 'ALL', label: locale === 'id' ? 'Semua' : 'All' },
+        { key: 'PAYMENT', label: locale === 'id' ? 'Pembayaran' : 'Payment' },
+        { key: 'VOUCHER', label: locale === 'id' ? 'Voucher' : 'Voucher' },
+        { key: 'ADMIN', label: locale === 'id' ? 'Penyesuaian Admin' : 'Admin Adjustment' },
+    ] as const;
 
     if (loading) {
         return (
@@ -406,7 +634,7 @@ export default function SubscriptionHistoryPage() {
             )}
 
             {/* Timeline */}
-            {events.length === 0 ? (
+            {filteredGroups.length === 0 ? (
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-8 text-center">
                     <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                         <FaHistory className="w-8 h-8 text-gray-400" />
@@ -416,94 +644,213 @@ export default function SubscriptionHistoryPage() {
                     </p>
                 </div>
             ) : (
-                <div className="relative">
-                    {/* Timeline Line */}
-                    <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
-                    
-                    <div className="space-y-4">
-                        {events.map((event, index) => {
-                            const colors = EVENT_COLORS[event.eventType] || EVENT_COLORS['MANUAL_ADJUSTMENT'];
-                            return (
-                                <div key={event.id} className="relative flex gap-4">
-                                    {/* Timeline Dot */}
-                                    <div className={`relative z-10 w-12 h-12 rounded-full ${colors.bg} flex items-center justify-center shrink-0`}>
-                                        <span className={colors.icon}>
-                                            {EVENT_ICONS[event.eventType] || <FaExchangeAlt className="w-4 h-4" />}
-                                        </span>
-                                    </div>
-
-                                    {/* Event Card */}
-                                    <div className="flex-1 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4 pb-3">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
-                                                        {getEventLabel(event.eventType)}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400">
-                                                        {event.triggeredBy === 'SYSTEM' 
-                                                            ? (locale === 'id' ? 'Otomatis' : 'Automatic')
-                                                            : event.triggeredBy === 'ADMIN'
-                                                                ? (locale === 'id' ? 'Admin' : 'Admin')
-                                                                : (locale === 'id' ? 'Manual' : 'Manual')}
-                                                    </span>
-                                                </div>
-                                                
-                                                {/* Change Details */}
-                                                {(event.previousType || event.newType) && (
-                                                    <div className="mt-2 flex items-center gap-2 text-sm">
-                                                        {event.previousType && (
-                                                            <span className="text-gray-500">{getTypeLabel(event.previousType)}</span>
-                                                        )}
-                                                        {event.previousType && event.newType && (
-                                                            <span className="text-gray-400">→</span>
-                                                        )}
-                                                        {event.newType && (
-                                                            <span className="font-medium text-gray-900 dark:text-white">{getTypeLabel(event.newType)}</span>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* Reason */}
-                                                {event.reason && (
-                                                    <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                                                        {event.reason}
-                                                    </p>
-                                                )}
-
-                                                {/* Balance Change */}
-                                                {(event.previousBalance !== null || event.newBalance !== null) && (
-                                                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                                       {locale === 'id' ? 'Saldo: ' : 'Balance: '} 
-                                                       {event.previousBalance !== null && (
-                                                           <span>{formatBalance(event.previousBalance)}</span>
-                                                        )}
-                                                        {event.previousBalance !== null && event.newBalance !== null && (
-                                                            <span> → </span>
-                                                        )}
-                                                        {event.newBalance !== null && (
-                                                           <span className="font-medium">{formatBalance(event.newBalance)}</span>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Time */}
-                                            <div className="text-right shrink-0">
-                                                <p className="text-sm text-gray-500 dark:text-gray-400">
-                                                    {formatRelativeTime(event.createdAt)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                <div className="space-y-4">
+                    <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                                {locale === 'id' ? 'Filter' : 'Filters'}
+                            </span>
+                            {flowFilterOptions.map((option) => (
+                                <button
+                                    key={option.key}
+                                    type="button"
+                                    onClick={() => setFlowFilter(option.key)}
+                                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${flowFilter === option.key
+                                        ? 'bg-brand-500 text-white'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                                        }`}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Load More */}
+                    {filteredGroups.map((group) => {
+                        const groupEvents = group.events;
+                        const summary = resolveFlowSummary(groupEvents);
+                        const paymentType = summary.paymentType;
+                        const voucherCode = summary.voucherCode;
+                        const amount = summary.amount;
+                        const daysDelta = summary.daysDelta;
+                        const metaCurrency = summary.metaCurrency;
+                        const latestEvent = summary.latestEvent;
+                        const flowTitle = getFlowTitle(group.flowType);
+                        const flowIcon = getFlowIcon(group.flowType);
+                        const isExpanded = expandedFlows[group.id] ?? false;
+                        const statusColors = EVENT_COLORS[latestEvent?.eventType] || EVENT_COLORS['MANUAL_ADJUSTMENT'];
+                        const periodFrom = summary.periodFrom;
+                        const periodTo = summary.periodTo;
+                        const isMonthlyPaymentFlow = summary.isMonthlyPaymentFlow;
+                        const balanceFrom = summary.balanceFrom;
+                        const balanceTo = summary.balanceTo;
+                        const shouldShowBalance = balanceFrom !== null && balanceTo !== null && !isMonthlyPaymentFlow;
+
+                        return (
+                            <div key={group.id} className="rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-4">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {flowIcon && (
+                                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                {flowIcon}
+                                            </span>
+                                        )}
+                                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                                            {flowTitle}
+                                        </span>
+                                        <span className="text-xs text-gray-400">
+                                            {locale === 'id' ? `${groupEvents.length} langkah` : `${groupEvents.length} step${groupEvents.length > 1 ? 's' : ''}`}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                                        <span>{formatRelativeTime(group.latestAt)}</span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setExpandedFlows((prev) => ({ ...prev, [group.id]: !isExpanded }))}
+                                            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                                        >
+                                            {isExpanded ? (locale === 'id' ? 'Sembunyikan' : 'Hide') : (locale === 'id' ? 'Detail' : 'Details')}
+                                            {isExpanded ? <FaChevronUp className="w-3 h-3" /> : <FaChevronDown className="w-3 h-3" />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 dark:border-gray-800 dark:bg-gray-900/40 dark:text-gray-300">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold ${statusColors.bg} ${statusColors.text}`}>
+                                            {EVENT_ICONS[latestEvent?.eventType] || <FaExchangeAlt className="w-3 h-3" />}
+                                            <span>{locale === 'id' ? 'Terakhir' : 'Latest'}: {getEventLabel(latestEvent?.eventType || '')}</span>
+                                        </span>
+                                        {paymentType && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaCreditCard className="w-3 h-3" />
+                                                {getPaymentRequestTypeLabel(paymentType)}
+                                            </span>
+                                        )}
+                                        {typeof amount === 'number' && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaCreditCard className="w-3 h-3" />
+                                                {formatCurrency(amount, metaCurrency, locale)}
+                                            </span>
+                                        )}
+                                        {typeof daysDelta === 'number' && daysDelta !== 0 && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaClock className="w-3 h-3" />
+                                                {daysDelta > 0 ? '+' : ''}{daysDelta} {t('subscription.topup.days')}
+                                            </span>
+                                        )}
+                                        {(periodFrom || periodTo) && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaCalendarAlt className="w-3 h-3" />
+                                                {periodFrom && periodTo ? (
+                                                    <span>{periodFrom} → {periodTo}</span>
+                                                ) : (
+                                                    <span>{periodFrom || periodTo}</span>
+                                                )}
+                                            </span>
+                                        )}
+                                        {voucherCode && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaTicketAlt className="w-3 h-3" />
+                                                {voucherCode}
+                                            </span>
+                                        )}
+                                        {shouldShowBalance && (
+                                            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                                <FaExchangeAlt className="w-3 h-3" />
+                                                {locale === 'id' ? 'Saldo' : 'Balance'}: {formatBalance(balanceFrom)} → {formatBalance(balanceTo)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {isExpanded && (
+                                    <div className="mt-4 space-y-3">
+                                    {groupEvents.map((event) => {
+                                        const colors = EVENT_COLORS[event.eventType] || EVENT_COLORS['MANUAL_ADJUSTMENT'];
+                                        const periodRange = resolvePeriodRange(event);
+                                        const periodFrom = periodRange.from ? formatDate(periodRange.from.toISOString()) : null;
+                                        const periodTo = periodRange.to ? formatDate(periodRange.to.toISOString()) : null;
+
+                                        return (
+                                            <div key={event.id} className="flex gap-3">
+                                                <div className={`mt-0.5 w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center shrink-0`}>
+                                                    <span className={colors.icon}>
+                                                        {EVENT_ICONS[event.eventType] || <FaExchangeAlt className="w-4 h-4" />}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex-1 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 p-3">
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                                                                    {getEventLabel(event.eventType)}
+                                                                </span>
+                                                                <span className="text-xs text-gray-400">
+                                                                    {getTriggeredLabel(event.triggeredBy)}
+                                                                </span>
+                                                            </div>
+
+                                                            {(event.previousType || event.newType) && (
+                                                                <div className="mt-2 flex items-center gap-2 text-sm">
+                                                                    {event.previousType && (
+                                                                        <span className="text-gray-500">{getTypeLabel(event.previousType)}</span>
+                                                                    )}
+                                                                    {event.previousType && event.newType && (
+                                                                        <span className="text-gray-400">→</span>
+                                                                    )}
+                                                                    {event.newType && (
+                                                                        <span className="font-medium text-gray-900 dark:text-white">{getTypeLabel(event.newType)}</span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {event.reason && (
+                                                                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                                                    {event.reason}
+                                                                </p>
+                                                            )}
+
+                                                            {(event.previousBalance !== null || event.newBalance !== null) && !isMonthlyPaymentFlow && (
+                                                                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                                                    {locale === 'id' ? 'Saldo: ' : 'Balance: '}
+                                                                    {event.previousBalance !== null && (
+                                                                        <span>{formatBalance(event.previousBalance)}</span>
+                                                                    )}
+                                                                    {event.previousBalance !== null && event.newBalance !== null && (
+                                                                        <span> → </span>
+                                                                    )}
+                                                                    {event.newBalance !== null && (
+                                                                        <span className="font-medium">{formatBalance(event.newBalance)}</span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {(periodFrom || periodTo) && (
+                                                                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                                                    {locale === 'id' ? 'Periode: ' : 'Period: '}
+                                                                    {periodFrom && periodTo ? (
+                                                                        <span>{periodFrom} → <span className="font-medium">{periodTo}</span></span>
+                                                                    ) : (
+                                                                        <span className="font-medium">{periodFrom || periodTo}</span>
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                )}
+                            </div>
+                        );
+                    })}
+
                     {pagination?.hasMore && (
-                        <div className="mt-6 text-center">
+                        <div className="mt-2 text-center">
                             <button
                                 onClick={loadMore}
                                 disabled={loadingMore}

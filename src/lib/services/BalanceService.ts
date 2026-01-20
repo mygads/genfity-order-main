@@ -198,7 +198,37 @@ class BalanceService {
         description: string,
         adminUserId: bigint
     ): Promise<void> {
+        const balanceBefore = await balanceRepository.getMerchantBalance(merchantId);
+        if (!balanceBefore) {
+            throw new NotFoundError('Balance not found', ERROR_CODES.NOT_FOUND);
+        }
+
+        const balanceBeforeAmount = Number(balanceBefore.balance);
+
         await balanceRepository.adjustBalance(merchantId, amount, description, adminUserId);
+
+        const balanceAfter = await balanceRepository.getMerchantBalance(merchantId);
+        const balanceAfterAmount = balanceAfter ? Number(balanceAfter.balance) : balanceBeforeAmount + amount;
+
+        try {
+            await subscriptionHistoryService.recordBalanceAdjusted(
+                merchantId,
+                amount,
+                balanceBeforeAmount,
+                balanceAfterAmount,
+                description,
+                'ADMIN',
+                adminUserId,
+                {
+                    source: 'ADMIN_ADJUST',
+                    currency: balanceBefore.merchant?.currency,
+                    flowId: `balance-adjust-${merchantId.toString()}-${Date.now()}`,
+                    flowType: 'BALANCE_ADJUSTMENT',
+                }
+            );
+        } catch (historyError) {
+            console.error('Failed to record balance adjustment history:', historyError);
+        }
 
         // If adjustment makes balance positive and subscription was suspended
         if (amount > 0) {

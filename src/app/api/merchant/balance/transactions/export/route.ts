@@ -86,6 +86,20 @@ async function handleGet(req: NextRequest, context: AuthContext) {
             }
         }
 
+        // Hide no-op subscription-day voucher redemptions from exports.
+        where.NOT = {
+            AND: [
+                { type: 'SUBSCRIPTION' },
+                { amount: 0 },
+                {
+                    description: {
+                        contains: 'days subscription',
+                        mode: 'insensitive',
+                    },
+                },
+            ],
+        };
+
         const transactions = await prisma.balanceTransaction.findMany({
             where,
             orderBy: { createdAt: 'desc' },

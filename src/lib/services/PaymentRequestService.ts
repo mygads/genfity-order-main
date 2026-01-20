@@ -184,6 +184,10 @@ class PaymentRequestService {
         // Verify the payment
         await paymentRequestRepository.verifyPayment(requestId, adminUserId, notes);
 
+        const previousSubscription = await subscriptionRepository.getMerchantSubscription(request.merchantId);
+        const previousPeriodEnd = previousSubscription?.currentPeriodEnd ?? null;
+        const previousType = previousSubscription?.type ?? null;
+
         // Apply the payment based on type
         if (request.type === 'DEPOSIT_TOPUP') {
             // Add to balance
@@ -198,7 +202,7 @@ class PaymentRequestService {
             const months = request.monthsRequested || 1;
 
             // Get current subscription
-            const subscription = await subscriptionRepository.getMerchantSubscription(request.merchantId);
+            const subscription = previousSubscription;
 
             if (!subscription) {
                 // No subscription exists, create monthly subscription via upgradeToMonthly
@@ -258,14 +262,54 @@ class PaymentRequestService {
                 request.merchantId,
                 request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
                 Number(request.amount),
-                Number(updatedBalance?.balance ?? 0),
+                request.type === 'DEPOSIT_TOPUP' ? Number(updatedBalance?.balance ?? 0) : null,
                 updatedSubscription?.currentPeriodEnd ?? null,
-                adminUserId
+                adminUserId,
+                request.currency,
+                requestId
             );
             // console.log(`✅ Payment history recorded for merchant ${request.merchantId}`);
         } catch (historyError) {
             console.error('Failed to record payment history:', historyError);
             // Don't fail payment verification if history recording fails
+        }
+
+        if (request.type === 'MONTHLY_SUBSCRIPTION' && updatedSubscription?.currentPeriodEnd) {
+            const updatedPeriodEnd = updatedSubscription.currentPeriodEnd;
+            const dayMs = 24 * 60 * 60 * 1000;
+            const rawDelta = previousPeriodEnd
+                ? Math.round((updatedPeriodEnd.getTime() - previousPeriodEnd.getTime()) / dayMs)
+                : Math.max(0, Math.round((updatedPeriodEnd.getTime() - Date.now()) / dayMs));
+
+            const daysDelta = Number.isFinite(rawDelta) ? rawDelta : 0;
+            const reason = daysDelta > 0
+                ? `Subscription extended by ${daysDelta} day(s) after payment verification.`
+                : 'Subscription period updated after payment verification.';
+
+            try {
+                await subscriptionHistoryService.recordPeriodAdjusted(
+                    request.merchantId,
+                    previousPeriodEnd,
+                    updatedPeriodEnd,
+                    daysDelta,
+                    reason,
+                    'ADMIN',
+                    adminUserId,
+                    previousType,
+                    updatedSubscription?.type ?? previousType,
+                    {
+                        source: 'PAYMENT_VERIFICATION',
+                        paymentType: request.type,
+                        amount: Number(request.amount),
+                        currency: request.currency,
+                        requestId: requestId.toString(),
+                        flowId: `payment-${requestId.toString()}`,
+                        flowType: 'PAYMENT_VERIFICATION',
+                    }
+                );
+            } catch (historyError) {
+                console.error('Failed to record subscription period history:', historyError);
+            }
         }
 
         // Use SubscriptionAutoSwitchService to handle auto-switch and store activation
@@ -343,7 +387,9 @@ class PaymentRequestService {
                 request.type as 'DEPOSIT_TOPUP' | 'MONTHLY_SUBSCRIPTION',
                 Number(request.amount),
                 reason,
-                adminUserId
+                adminUserId,
+                request.currency,
+                requestId
             );
             console.log(`✅ Payment rejection recorded for merchant ${request.merchantId}`);
         } catch (historyError) {
