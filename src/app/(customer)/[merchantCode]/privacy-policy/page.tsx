@@ -272,9 +272,14 @@ function PrivacyPolicyContent() {
                                         <FaEnvelope className="text-orange-500" />
                                         Email
                                     </p>
-                                    <a href="mailto:genfity@gmail.com" className="text-orange-500 hover:text-orange-600 font-medium">
-                                        genfity@gmail.com
-                                    </a>
+                                    <div className="flex flex-col gap-1">
+                                        <a href="mailto:support@genfity.com" className="text-orange-500 hover:text-orange-600 font-medium">
+                                            support@genfity.com
+                                        </a>
+                                        <a href="mailto:genfity@gmail.com" className="text-orange-500 hover:text-orange-600 font-medium">
+                                            genfity@gmail.com
+                                        </a>
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="font-semibold text-gray-900 mb-2 flex items-center gap-2">

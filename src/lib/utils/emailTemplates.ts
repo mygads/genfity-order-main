@@ -16,6 +16,8 @@ const _getLogoUrl = () => {
   return `${origin}/images/logo/logo.png`;
 };
 
+const DEFAULT_SUPPORT_EMAILS = 'support@genfity.com, genfity@gmail.com';
+
 function _t(locale: Locale) {
   const lang = locale === 'id' ? 'id' : 'en';
   return {
@@ -29,6 +31,20 @@ function _t(locale: Locale) {
       ? `© ${new Date().getFullYear()} Genfity Digital Solution. Semua hak dilindungi.`
       : `© ${new Date().getFullYear()} Genfity Digital Solution. All rights reserved.`,
   };
+}
+
+function formatSupportLinks(emailList: string, locale: Locale): string {
+  const emails = emailList
+    .split(',')
+    .map(email => email.trim())
+    .filter(Boolean);
+
+  if (emails.length === 0) return '';
+
+  const joiner = locale === 'id' ? ' atau ' : ' or ';
+  return emails
+    .map(email => `<a href="mailto:${email}" style="color: #171717; text-decoration: underline;">${email}</a>`)
+    .join(joiner);
 }
 
 type DetailsRow = {
@@ -57,6 +73,7 @@ function renderDetailsRows(rows: DetailsRow[]): string {
  */
 function getBaseTemplate(content: string, footerEmail: string, locale: Locale = 'en'): string {
   const t = _t(locale);
+  const supportLinks = formatSupportLinks(footerEmail, locale);
   return `
 <!DOCTYPE html>
 <html lang="${t.lang}">
@@ -105,7 +122,7 @@ function getBaseTemplate(content: string, footerEmail: string, locale: Locale = 
                       ${t.poweredBy}
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      ${t.needHelp} <a href="mailto:${footerEmail}" style="color: #171717; text-decoration: underline;">${footerEmail}</a>
+                      ${t.needHelp} ${supportLinks}
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       ${t.rights}
@@ -525,7 +542,7 @@ export function getUserDeactivatedByAdminTemplate(params: {
     </table>
 
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
-      ${`Support: ${params.supportEmail}`}
+      ${`Support: ${formatSupportLinks(params.supportEmail, locale)}`}
     </p>
   `;
 
@@ -587,8 +604,8 @@ export function getPasswordChangedTemplate(params: {
 
     <p style="margin: 0; font-size: 12px; color: #a3a3a3; text-align: center;">
       ${isID
-        ? `Butuh bantuan? Hubungi ${params.supportEmail}`
-        : `Need help? Contact ${params.supportEmail}`}
+        ? `Butuh bantuan? Hubungi ${formatSupportLinks(params.supportEmail, locale)}`
+        : `Need help? Contact ${formatSupportLinks(params.supportEmail, locale)}`}
     </p>
   `;
 
@@ -784,7 +801,7 @@ export function getOrderConfirmationTemplate(params: {
     </table>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }
 
 /**
@@ -860,7 +877,7 @@ export function getOrderCompletedTemplate(params: {
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }
 
 /**
@@ -955,7 +972,7 @@ export function getPermissionUpdateTemplate(params: {
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }
 
 // ============================================================================
@@ -1038,7 +1055,7 @@ export function getPaymentVerifiedTemplate(params: {
     </p>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }
 
 export function getBalanceAdjustmentTemplate(params: {
@@ -1104,7 +1121,7 @@ export function getBalanceAdjustmentTemplate(params: {
     </table>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }
 
 export function getSubscriptionExtendedTemplate(params: {
@@ -1163,5 +1180,5 @@ export function getSubscriptionExtendedTemplate(params: {
     </table>
   `;
 
-  return getBaseTemplate(content, params.supportEmail || 'support@genfity.com', locale);
+  return getBaseTemplate(content, params.supportEmail || DEFAULT_SUPPORT_EMAILS, locale);
 }

@@ -168,9 +168,14 @@ export default function PrivacyPage() {
                                     </div>
                                     <div>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
-                                        <a href="mailto:genfity@gmail.com" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
-                                            genfity@gmail.com
-                                        </a>
+                                        <div className="flex flex-col gap-1">
+                                            <a href="mailto:support@genfity.com" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+                                                support@genfity.com
+                                            </a>
+                                            <a href="mailto:genfity@gmail.com" className="text-brand-600 dark:text-brand-400 font-medium hover:underline">
+                                                genfity@gmail.com
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">

@@ -63,6 +63,10 @@ export default function FooterSection() {
                         <ul className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
                             <li className="flex items-center gap-2">
                                 <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                <a href="mailto:support@genfity.com" className="hover:text-[#173C82] dark:hover:text-blue-400 transition-colors">support@genfity.com</a>
+                            </li>
+                            <li className="flex items-center gap-2">
+                                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                                 <a href="mailto:genfity@gmail.com" className="hover:text-[#173C82] dark:hover:text-blue-400 transition-colors">genfity@gmail.com</a>
                             </li>
                             <li className="flex items-center gap-2">

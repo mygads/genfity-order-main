@@ -80,7 +80,7 @@ EMAIL TEMPLATE (HTML SNIPPET)
                 <li>Ubah password ke yang lebih kuat</li>
                 <li>Mulai setup menu & konfigurasi merchant Anda</li>
             </ol>
-            <p>Jika ada pertanyaan, hubungi <strong>support@genfity.com</strong> atau <strong>+61-XXX-XXX-XXXX</strong></p>
+            <p>Jika ada pertanyaan, hubungi <strong>support@genfity.com</strong> atau <strong>genfity@gmail.com</strong> atau <strong>+61-XXX-XXX-XXXX</strong></p>
         </div>
         <div class="footer">
             &copy; 2024 GENFITY. All rights reserved.<br>

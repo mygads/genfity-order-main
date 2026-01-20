@@ -1,0 +1,239 @@
+GENFITY MULTI-MODE ARCHITECTURE & IMPLEMENTATION PLAN
+Date: 2026-01-20
+Author: GitHub Copilot
+Scope: Restaurant / Product / Service (Single Type per Merchant)
+
+============================================================
+1) EXECUTIVE SUMMARY
+============================================================
+This document defines a complete architecture and implementation plan to support multi-mode merchants in GENFITY. The system will support exactly one merchant type per merchant (RESTAURANT, PRODUCT, SERVICE). Restaurant keeps multi-mode order types (dine-in, takeaway, delivery). Product and Service each have a single delivery setting (delivery enabled or non-delivery only). The customer storefront, order flow, admin navigation, and data model will all respond to merchant type and delivery configuration.
+
+============================================================
+2) BUSINESS RULES (FINAL)
+============================================================
+2.1 Merchant Type
+- Each merchant has exactly one type:
+  - RESTAURANT
+  - PRODUCT
+  - SERVICE
+- Type is selected at registration and stored on Merchant.
+- Type may be locked or editable only by owner/admin (policy decision).
+
+2.2 Delivery Toggle (Product)
+- Product merchants can be:
+  A) Delivery enabled (requires address in checkout)
+  B) Non-delivery (no address required)
+- Only one active setting per merchant (no multi-mode).
+
+2.3 Delivery Toggle (Service)
+- Service merchants can be:
+  A) On-site service (customer address required)
+  B) In-store/digital service (no address required)
+- Only one active setting per merchant (no multi-mode).
+
+2.4 Restaurant Multi-Mode (Unchanged)
+- Dine-in / takeaway / delivery remain as current configuration.
+
+============================================================
+3) TECHNICAL ARCHITECTURE OVERVIEW
+============================================================
+3.1 Registration
+- Merchant selects merchantType and delivery setting (product/service).
+- Backend persists merchantType and flags.
+
+3.2 Public Merchant API
+- Public merchant endpoint returns merchantType and delivery flags.
+- Customer storefront and admin UI use these flags to render correct layout.
+
+3.3 Customer Storefront
+- /[merchantCode] acts as a mode router:
+  - RESTAURANT: current mode selection screen.
+  - PRODUCT: product storefront.
+  - SERVICE: service storefront.
+
+3.4 Checkout / Order
+- Product + Service checkout shows address only if delivery is enabled.
+- Restaurant checkout remains unchanged.
+
+============================================================
+4) DATA MODEL PLAN (PRISMA)
+============================================================
+4.1 Merchant Table
+Add fields:
+- merchantType: MerchantType @default(RESTAURANT)
+- productDeliveryEnabled: Boolean @default(false)
+- serviceDeliveryEnabled: Boolean @default(false)
+- productRequiresAddress: Boolean @default(false)
+- serviceRequiresAddress: Boolean @default(false)
+
+Add enum:
+- MerchantType = RESTAURANT | PRODUCT | SERVICE
+
+Notes:
+- RESTAURANT ignores product/service flags.
+- PRODUCT and SERVICE ignore restaurant mode fields in customer UI.
+
+4.2 Order / Service Booking Strategy
+Option A (MVP, fastest): Extend OrderType
+- Add OrderType.SERVICE
+- Add optional fields:
+  - serviceDate (YYYY-MM-DD)
+  - serviceTime (HH:MM)
+  - serviceDurationMinutes
+  - serviceLocationAddress
+Pros: Reuse payment/order history.
+Cons: Mixed domain in Order.
+
+Option B (Clean separation): New ServiceBooking model
+- Separate table for service bookings
+- Linked to Merchant + Customer
+- Separate lifecycle and UI
+Pros: Clean domain
+Cons: More engineering
+
+Recommendation: Start with Option A for MVP.
+
+============================================================
+5) API PLAN (ROUTES & RESPONSES)
+============================================================
+5.1 Public Merchant Lookup
+Route: /api/public/merchants/[code]
+Add response fields:
+- merchantType
+- productDeliveryEnabled
+- serviceDeliveryEnabled
+- productRequiresAddress
+- serviceRequiresAddress
+
+5.2 Merchant Registration
+Route: /api/public/merchant/register
+Add request fields:
+- merchantType
+- productDeliveryEnabled (if type=PRODUCT)
+- serviceDeliveryEnabled (if type=SERVICE)
+
+5.3 Merchant Settings
+Allow owner/admin to update delivery flags for product/service.
+
+============================================================
+6) CUSTOMER STORE UI PLAN
+============================================================
+6.1 Product Storefront (Shopee / Tokopedia Style)
+Layout:
+- Promo banner slider at top
+- Sticky search bar + filter row
+- Horizontal category chips
+- Product grid (2-3 columns)
+- Sort: Best Sellers, Newest, Price Low/High, Promo
+
+Product Card:
+- Image, name, price, promo badge
+- Rating + sold count
+- Quick add to cart
+
+Product Detail:
+- Image carousel
+- Price + discount display
+- Stock info
+- Variants (if any)
+- Related products
+
+6.2 Service Storefront (Lynk.id Style)
+Layout:
+- Profile header with banner
+- Quick action buttons (Book, Contact, WhatsApp)
+- Service list/grid with price and duration
+- Availability indicator
+- Booking CTA per service
+
+Service Detail:
+- Hero image
+- Price + duration
+- Calendar/time picker (if appointment)
+- Address input only if serviceDeliveryEnabled
+
+6.3 Restaurant Storefront (Unchanged)
+- Existing mode selection UI
+- Existing order flow
+
+============================================================
+7) CUSTOMER ORDER / CHECKOUT RULES
+============================================================
+7.1 Product + Service Checkout
+- If delivery enabled: require address.
+- If delivery disabled: hide address fields.
+- Show pickup/digital instructions if non-delivery.
+
+7.2 Restaurant Checkout
+- Unchanged; still uses dine-in/takeaway/delivery rules.
+
+============================================================
+8) ADMIN DASHBOARD PLAN
+============================================================
+8.1 Sidebar Visibility by MerchantType
+RESTAURANT:
+- Keep all existing items.
+
+PRODUCT:
+- Rename Menu -> Products
+- Rename Addons -> Variants
+- Hide Reservations, Kitchen, QR Tables
+
+SERVICE:
+- Rename Menu -> Services
+- Rename Reservations -> Bookings
+- Hide Kitchen, QR Tables
+
+8.2 Merchant Settings UI
+Add section:
+- Merchant Type (read-only if locked)
+- Delivery toggle (Product/Service only)
+
+============================================================
+9) ROUTING PLAN
+============================================================
+- /[merchantCode]
+  RESTAURANT -> existing mode selection page
+  PRODUCT -> product storefront page
+  SERVICE -> service storefront page
+
+- /[merchantCode]/order
+  RESTAURANT -> existing layout
+  PRODUCT/SERVICE -> specialized layout in OrderClientPage
+
+============================================================
+10) IMPLEMENTATION ORDER (SAFE ROLLOUT)
+============================================================
+1) Update schema.prisma (merchantType + delivery flags)
+2) Update public merchant API response
+3) Update registration UI + API
+4) Update merchant settings UI
+5) Add customer routing by merchantType
+6) Build product storefront UI
+7) Build service storefront UI
+8) Update checkout logic for address rules
+9) QA for each merchant type
+
+============================================================
+11) VALIDATION & TESTING CHECKLIST
+============================================================
+- Register restaurant merchant (unchanged)
+- Register product merchant with delivery on
+- Register product merchant with delivery off
+- Register service merchant with delivery on
+- Register service merchant with delivery off
+- Ensure /[merchantCode] renders correct UI
+- Ensure checkout requires/omits address correctly
+- Ensure admin sidebar hides irrelevant pages
+
+============================================================
+12) OPEN DECISIONS (NEED CONFIRMATION)
+============================================================
+- Is merchantType editable after registration?
+- Is service booking appointment-based or instant purchase?
+- Should product delivery use existing delivery fee rules or simplified flat shipping?
+- Do service orders appear in same order management views or in a separate booking view?
+
+============================================================
+END OF DOCUMENT
+============================================================

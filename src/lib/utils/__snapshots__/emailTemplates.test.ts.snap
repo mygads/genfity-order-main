@@ -102,7 +102,7 @@ exports[`emailTemplates > renders merchant email snapshots 1`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> or <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. All rights reserved.
@@ -222,7 +222,7 @@ exports[`emailTemplates > renders merchant email snapshots 2`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> or <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. All rights reserved.
@@ -327,7 +327,7 @@ exports[`emailTemplates > renders merchant email snapshots 3`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> or <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. All rights reserved.
@@ -431,7 +431,7 @@ exports[`emailTemplates > renders order completed (id) snapshot 1`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Butuh bantuan? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Butuh bantuan? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> atau <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. Semua hak dilindungi.
@@ -585,7 +585,7 @@ exports[`emailTemplates > renders order confirmation (en) snapshot 1`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> or <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. All rights reserved.
@@ -698,7 +698,7 @@ exports[`emailTemplates > renders staff welcome snapshot 1`] = `
                       powered by genfity.com
                     </p>
                     <p style="margin: 0 0 8px 0; font-size: 13px; color: #737373;">
-                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a>
+                      Need assistance? <a href="mailto:support@genfity.com" style="color: #171717; text-decoration: underline;">support@genfity.com</a> or <a href="mailto:genfity@gmail.com" style="color: #171717; text-decoration: underline;">genfity@gmail.com</a>
                     </p>
                     <p style="margin: 0; font-size: 12px; color: #a3a3a3;">
                       © 2026 Genfity Digital Solution. All rights reserved.

@@ -7,8 +7,8 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
-import { customerHistoryUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
-import { FaArrowLeft, FaChevronRight, FaFileAlt, FaShieldAlt, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
+import { customerHelpCenterUrl, customerHistoryUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
+import { FaArrowLeft, FaChevronRight, FaFileAlt, FaQuestionCircle, FaShieldAlt, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 /**
  * Profile Page - Burjo ESB Style
@@ -78,6 +78,10 @@ function ProfileContent() {
 
   const handleOrderHistory = () => {
     router.push(customerHistoryUrl(merchantCode, { mode, ref: customerProfileUrl(merchantCode, { mode }) }));
+  };
+
+  const handleHelpCenter = () => {
+    router.push(customerHelpCenterUrl(merchantCode, { mode, ref: customerProfileUrl(merchantCode, { mode }) }));
   };
 
   return (
@@ -160,6 +164,17 @@ function ProfileContent() {
             <FaFileAlt className="w-5 h-5 text-gray-600" />
             <span className="flex-1 text-left text-sm font-medium text-gray-700">
               {t('customer.profile.orderHistory')}
+            </span>
+          </button>
+
+          {/* Help Center */}
+          <button
+            onClick={handleHelpCenter}
+            className="w-full flex items-center gap-3 px-4 py-4 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow"
+          >
+            <FaQuestionCircle className="w-5 h-5 text-gray-600" />
+            <span className="flex-1 text-left text-sm font-medium text-gray-700">
+              {t('customer.profile.helpCenter')}
             </span>
           </button>
 

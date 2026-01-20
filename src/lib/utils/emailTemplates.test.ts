@@ -108,7 +108,7 @@ describe('emailTemplates', () => {
       merchantName: 'Wellard Kebab House',
       merchantCode: 'WKH',
       loginUrl: 'https://order.genfity.com/admin/login',
-      supportEmail: 'support@genfity.com',
+      supportEmail: 'support@genfity.com, genfity@gmail.com',
     });
 
     expect(html).toMatchSnapshot();

@@ -75,3 +75,12 @@ export function customerProfileUrl(
   const { mode, ref, ...rest } = options;
   return `/${normalized}/profile${buildQuery({ mode, ref, ...rest })}`;
 }
+
+export function customerHelpCenterUrl(
+  merchantCode: string,
+  options: { mode?: CustomerOrderMode; ref?: string } & QueryParams = {}
+): string {
+  const normalized = normalizeMerchantCode(merchantCode);
+  const { mode, ref, ...rest } = options;
+  return `/${normalized}/help-center${buildQuery({ mode, ref, ...rest })}`;
+}

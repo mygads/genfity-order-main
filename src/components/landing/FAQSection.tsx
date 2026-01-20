@@ -160,6 +160,15 @@ export default function FAQSection() {
                     </p>
                     <div className="flex flex-wrap justify-center gap-3">
                         <a
+                            href="mailto:support@genfity.com"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-[#173C82] hover:text-[#173C82] dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            support@genfity.com
+                        </a>
+                        <a
                             href="mailto:genfity@gmail.com"
                             className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-[#173C82] hover:text-[#173C82] dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
                         >

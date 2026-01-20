@@ -250,7 +250,7 @@ class EmailService {
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const dashboardUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
-    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com, genfity@gmail.com';
 
     const html = getPasswordNotificationTemplate({
       name: params.name,
@@ -328,7 +328,7 @@ class EmailService {
    * Send test email (for testing SMTP configuration)
    */
   async sendTestEmail(to: string): Promise<boolean> {
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     return this.sendEmail({
       to,
@@ -486,7 +486,7 @@ class EmailService {
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/login`;
-    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || 'support@genfity.com, genfity@gmail.com';
 
     const html = getCustomerWelcomeTemplate({
       name: params.name,
@@ -519,7 +519,7 @@ class EmailService {
     locale?: 'en' | 'id';
   }): Promise<boolean> {
     const { getPasswordResetOTPTemplate } = await import('@/lib/utils/emailTemplates');
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const locale = params.locale || 'en';
 
@@ -555,7 +555,7 @@ class EmailService {
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
     const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/login`;
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getStaffWelcomeTemplate({
       name: params.name,
@@ -591,7 +591,7 @@ class EmailService {
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getStaffInviteTemplate({
       name: params.name,
@@ -629,7 +629,7 @@ class EmailService {
       ? `${process.env.NEXT_PUBLIC_APP_URL}/admin/dashboard`
       : 'https://genfity.com/admin/dashboard';
 
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getPermissionUpdateTemplate({
       name: params.name,
@@ -663,7 +663,7 @@ class EmailService {
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getMerchantAccessDisabledTemplate({
       name: params.name,
@@ -696,7 +696,7 @@ class EmailService {
     merchantCountry?: string | null;
   }): Promise<boolean> {
     const locale = this.getMerchantEmailLocale(params.merchantCountry);
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getMerchantAccessRemovedTemplate({
       name: params.name,
@@ -727,7 +727,7 @@ class EmailService {
     locale?: 'en' | 'id';
   }): Promise<boolean> {
     const locale = params.locale || 'en';
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getUserDeactivatedByAdminTemplate({
       name: params.name,
@@ -759,7 +759,7 @@ class EmailService {
     merchantName?: string;
   }): Promise<boolean> {
     const locale = params.locale || this.getMerchantEmailLocale(params.merchantCountry);
-    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com';
+    const supportEmail = process.env.EMAIL_FROM || process.env.SMTP_FROM_EMAIL || 'support@genfity.com, genfity@gmail.com';
 
     const html = getPasswordChangedTemplate({
       name: params.name,

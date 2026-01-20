@@ -499,7 +499,7 @@ For questions, issues, or support:
 
 1. **Documentation**: Check `docs/` folder
 2. **GitHub Issues**: [Open an issue](https://github.com/YOUR_USERNAME/genfity-online-ordering/issues)
-3. **Email**: support@genfity.com
+3. **Email**: support@genfity.com or genfity@gmail.com
 
 ---
 
