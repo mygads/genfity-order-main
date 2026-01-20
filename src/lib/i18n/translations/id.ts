@@ -616,6 +616,7 @@ const id = {
   "customer.track.payDriverHint": "Bayar ke driver saat pesanan tiba.",
   "customer.track.payAtCashierHint": "Silakan bayar di kasir.",
   "customer.track.goBack": "Kembali",
+  "customer.track.queuePosition": "Posisi antrian: #{position}",
   "customer.track.estimated.pending": "~15-20 menit",
   "customer.track.estimated.accepted": "~10-15 menit",
   "customer.track.estimated.inProgress": "~5-10 menit",

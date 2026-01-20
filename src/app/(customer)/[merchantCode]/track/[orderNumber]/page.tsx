@@ -220,6 +220,17 @@ export default function OrderTrackPage() {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showSplitBill, setShowSplitBill] = useState(false);
 
+    const [waitEstimate, setWaitEstimate] = useState<{
+        minMinutes: number;
+        maxMinutes: number;
+        cappedAt60: boolean;
+        queueAhead: number;
+        queuePosition?: number | null;
+        basePrepMinutes: number | null;
+        status: OrderStatus;
+        isScheduled?: boolean;
+    } | null>(null);
+
     useEffect(() => {
         initializeData(merchantCode);
     }, [merchantCode, initializeData]);
@@ -229,6 +240,30 @@ export default function OrderTrackPage() {
     const [hasFeedback, setHasFeedback] = useState(false);
     const [feedbackChecked, setFeedbackChecked] = useState(false);
     const [completionTimeMinutes, setCompletionTimeMinutes] = useState<number | null>(null);
+
+    const fetchWaitTimeEstimate = useCallback(async (status: OrderStatus) => {
+        if (status === 'READY' || status === 'COMPLETED' || status === 'CANCELLED') {
+            setWaitEstimate(null);
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/public/orders/${orderNumber}/wait-time?token=${encodeURIComponent(token)}`
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+            if (!data?.success || !data?.data) return;
+
+            setWaitEstimate(data.data);
+        } catch {
+            // Best-effort only
+        }
+    }, [orderNumber, token]);
 
     // Fetch order data
     const fetchOrder = useCallback(async (showLoadingSpinner = false) => {
@@ -242,6 +277,10 @@ export default function OrderTrackPage() {
             if (!response.ok) {
                 setError(data.message || t('customer.errors.orderLoadFailed'));
                 return;
+            }
+
+            if (data?.data?.status) {
+                await fetchWaitTimeEstimate(data.data.status as OrderStatus);
             }
 
             // Convert decimal values
@@ -463,6 +502,11 @@ export default function OrderTrackPage() {
 
     // Calculate estimated wait time based on status
     const getEstimatedWaitTime = (status: OrderStatus): string => {
+        if (waitEstimate && waitEstimate.status === status && waitEstimate.maxMinutes >= 1) {
+            const unit = locale === 'id' ? 'menit' : 'min';
+            return `~${waitEstimate.minMinutes}-${waitEstimate.maxMinutes} ${unit}`;
+        }
+
         switch (status) {
             case 'PENDING':
                 return t('customer.track.estimated.pending');
@@ -726,11 +770,21 @@ export default function OrderTrackPage() {
                                         </h2>
 
                                         {currentDeliveryTimelineIndex < 4 && (
-                                            <div className="flex items-center justify-center gap-2 text-gray-600">
-                                                <FaClock className="w-5 h-5" />
-                                                <span className="text-sm font-medium">
-                                                    {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
-                                                </span>
+                                            <div className="text-gray-600">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <FaClock className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">
+                                                        {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
+                                                    </span>
+                                                </div>
+                                                {waitEstimate?.queuePosition && waitEstimate.queuePosition >= 1 && (
+                                                    <div className="mt-1 flex items-center justify-center gap-2 text-xs">
+                                                        <FaCalculator className="w-4 h-4" />
+                                                        <span>
+                                                            {t('customer.track.queuePosition', { position: waitEstimate.queuePosition })}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -823,11 +877,21 @@ export default function OrderTrackPage() {
                                         </h2>
 
                                         {!isCompleted && (
-                                            <div className="flex items-center justify-center gap-2 text-gray-600">
-                                                <FaClock className="w-5 h-5" />
-                                                <span className="text-sm font-medium">
-                                                    {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
-                                                </span>
+                                            <div className="text-gray-600">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <FaClock className="w-5 h-5" />
+                                                    <span className="text-sm font-medium">
+                                                        {t('customer.track.estimated')} {getEstimatedWaitTime(order.status)}
+                                                    </span>
+                                                </div>
+                                                {waitEstimate?.queuePosition && waitEstimate.queuePosition >= 1 && (
+                                                    <div className="mt-1 flex items-center justify-center gap-2 text-xs">
+                                                        <FaCalculator className="w-4 h-4" />
+                                                        <span>
+                                                            {t('customer.track.queuePosition', { position: waitEstimate.queuePosition })}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
 

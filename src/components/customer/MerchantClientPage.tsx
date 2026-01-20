@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import OutletInfoModal from '@/components/customer/OutletInfoModal';
 import RestaurantBanner from '@/components/customer/RestaurantBanner';
 import RestaurantInfoCard from '@/components/customer/RestaurantInfoCard';
@@ -11,6 +11,8 @@ import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
+import { getCustomerAuth } from '@/lib/utils/localStorage';
+import { Menu, User } from 'lucide-react';
 import { FaCalendarAlt, FaCheck, FaCheckCircle } from 'react-icons/fa';
 
 interface OpeningHour {
@@ -61,10 +63,34 @@ interface MerchantClientPageProps {
  */
 export default function MerchantClientPage({ merchant, merchantCode }: MerchantClientPageProps) {
     const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { showToast } = useToast();
     const { t } = useTranslation();
     const [showOutletInfo, setShowOutletInfo] = useState(false);
     const [showLanguageModal, setShowLanguageModal] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    useEffect(() => {
+        const auth = getCustomerAuth();
+        setIsLoggedIn(auth !== null);
+    }, []);
+
+    const refQuery = searchParams.toString();
+    const refPath = `${pathname}${refQuery ? `?${refQuery}` : ''}`;
+    const profileHref = `/${merchantCode}/profile?ref=${encodeURIComponent(refPath)}`;
+
+    const handleOpenProfile = () => {
+        router.push(profileHref);
+    };
+
+    // Match OrderPageHeader icon button style
+    const iconButtonClass = `
+        relative w-9 h-9 flex items-center justify-center rounded-full
+        bg-white shadow-sm
+        hover:bg-gray-50 active:scale-95
+        transition-all duration-200
+    `;
 
     // Use real-time store status hook (fetches from API, not cached ISR data)
     const {
@@ -156,6 +182,25 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     return (
         <>
+            {/* Top-right Profile shortcut (merchant home only) */}
+            <div className="fixed top-4 z-50 pointer-events-none" style={{ left: '50%', transform: 'translateX(-50%)', width: '100%', maxWidth: '500px' }}>
+                <div className="pointer-events-auto absolute top-0 right-4">
+                    <button
+                        type="button"
+                        onClick={handleOpenProfile}
+                        aria-label={tOr(t, 'customer.profile.title', 'Profile')}
+                        className={iconButtonClass}
+                        style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                    >
+                        {isLoggedIn ? (
+                            <User className="w-5 h-5 text-[#212529]" />
+                        ) : (
+                            <Menu className="w-5 h-5 text-[#212529]" />
+                        )}
+                    </button>
+                </div>
+            </div>
+
             {/* Special Hours Banner - Show when today has special hours */}
             {todaySpecialHour && !todaySpecialHour.isClosed && specialHourName && (
                 <div className="bg-blue-500 text-white px-4 py-2 text-center text-sm font-medium">

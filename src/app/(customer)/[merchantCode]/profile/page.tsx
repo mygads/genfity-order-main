@@ -7,7 +7,7 @@ import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState
 import PoweredByFooter from '@/components/common/PoweredByFooter';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import LanguageSelectorModal from '@/components/customer/LanguageSelectorModal';
-import { customerHistoryUrl, customerOrderUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
+import { customerHistoryUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
 import { FaArrowLeft, FaChevronRight, FaFileAlt, FaShieldAlt, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 
 /**
@@ -34,14 +34,26 @@ function ProfileContent() {
 
   const merchantCode = params.merchantCode as string;
   const mode = searchParams.get('mode') || 'dinein';
-  const ref = searchParams.get('ref') || customerOrderUrl(merchantCode, { mode });
+
+  const decodeRef = (value: string) => {
+    try {
+      return decodeURIComponent(value);
+    } catch {
+      return null;
+    }
+  };
+
+  const isSafeInternalPath = (value: string) => {
+    return value.startsWith('/') && !value.startsWith('//') && !value.includes('\0');
+  };
+
+  const rawRef = searchParams.get('ref');
+  const decodedRef = rawRef ? decodeRef(rawRef) : null;
+  const safeRef = decodedRef && isSafeInternalPath(decodedRef) ? decodedRef : null;
+  const fallbackRef = `/${merchantCode}`;
 
   const handleBack = () => {
-    if (ref) {
-      router.push(decodeURIComponent(ref));
-    } else {
-      router.back();
-    }
+    router.push(safeRef ?? fallbackRef);
   };
 
   const handleLogin = () => {

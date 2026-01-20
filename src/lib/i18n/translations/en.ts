@@ -621,6 +621,7 @@ const en = {
   "customer.track.payDriverHint": "Pay the driver when the order arrives.",
   "customer.track.payAtCashierHint": "Please pay at the cashier.",
   "customer.track.goBack": "Go Back",
+  "customer.track.queuePosition": "Queue position: #{position}",
   "customer.track.estimated.pending": "~15-20 min",
   "customer.track.estimated.accepted": "~10-15 min",
   "customer.track.estimated.inProgress": "~5-10 min",
