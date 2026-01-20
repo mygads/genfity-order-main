@@ -38,23 +38,26 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
         const { newType } = validation.data;
 
-        // Check if switch is allowed using the new service
-        const canSwitch = await subscriptionAutoSwitchService.canManualSwitch(merchantId);
-
-        if (newType === 'DEPOSIT' && !canSwitch.canSwitchToDeposit) {
-            return NextResponse.json({
-                success: false,
-                error: 'SWITCH_NOT_ALLOWED',
-                message: 'Cannot switch to Deposit mode: insufficient balance. Please top up first.',
-            }, { status: 400 });
+        const switchInfo = await subscriptionAutoSwitchService.canManualSwitch(merchantId);
+        if (newType === switchInfo.currentType) {
+            return NextResponse.json(
+                { success: false, error: 'SWITCH_NOT_ALLOWED', message: `Already on ${newType} mode` },
+                { status: 400 }
+            );
         }
 
-        if (newType === 'MONTHLY' && !canSwitch.canSwitchToMonthly) {
-            return NextResponse.json({
-                success: false,
-                error: 'SWITCH_NOT_ALLOWED',
-                message: 'Cannot switch to Monthly mode: no active monthly subscription. Please purchase a monthly plan first.',
-            }, { status: 400 });
+        const canSwitch = newType === 'MONTHLY'
+            ? switchInfo.canSwitchToMonthly
+            : switchInfo.canSwitchToDeposit;
+
+        if (!canSwitch) {
+            const message = newType === 'MONTHLY'
+                ? 'Monthly subscription is not active. Please renew first.'
+                : 'Deposit balance is empty. Please top up first.';
+            return NextResponse.json(
+                { success: false, error: 'SWITCH_NOT_ALLOWED', message },
+                { status: 400 }
+            );
         }
 
         // Perform the switch
@@ -68,6 +71,19 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     } catch (error) {
         console.error('Error switching subscription type:', error);
+        if (error instanceof Error) {
+            const message = error.message;
+            if (
+                message.includes('Monthly subscription is not active') ||
+                message.includes('Deposit balance is empty') ||
+                message.includes('Already on')
+            ) {
+                return NextResponse.json(
+                    { success: false, error: 'SWITCH_NOT_ALLOWED', message },
+                    { status: 400 }
+                );
+            }
+        }
         return NextResponse.json(
             { 
                 success: false, 

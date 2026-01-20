@@ -205,9 +205,12 @@ class SubscriptionCronService {
             for (const item of negativeBalanceMerchants) {
                 try {
                     // Suspend subscription
+                    const balanceLabel = `${item.currency === 'AUD' ? 'A$' : 'Rp'} ${Math.abs(item.balance).toLocaleString()}`;
                     await subscriptionRepository.suspendSubscription(
                         item.merchantId,
-                        `Negative balance: ${item.currency === 'AUD' ? 'A$' : 'Rp'} ${Math.abs(item.balance).toLocaleString()}`
+                        item.balance <= 0
+                            ? `Balance depleted: ${balanceLabel}`
+                            : `Negative balance: ${balanceLabel}`
                     );
 
                     // Close the store (isOpen=false, isManualOverride=true)
@@ -223,7 +226,7 @@ class SubscriptionCronService {
                             item.email,
                             item.name,
                             'NEGATIVE_BALANCE',
-                            'Your balance is negative. Please top up to continue service. Your store has been closed.'
+                            'Your balance is depleted. Please top up to continue service. Your store has been closed.'
                         );
                     }
 

@@ -9,6 +9,7 @@ import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import AlertDialog from "@/components/modals/AlertDialog";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/ContextualHint";
+import { useToast } from "@/context/ToastContext";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle, FaTicketAlt } from "react-icons/fa";
 import type { ReceiptSettings } from "@/lib/types/receiptSettings";
 
@@ -101,6 +102,7 @@ type UsageSummary = {
 export default function SubscriptionPage() {
     const { t, locale } = useTranslation();
     const { showHint } = useContextualHint();
+    const { showError, showWarning } = useToast();
     const [switching, setSwitching] = useState(false);
     const [switchModalOpen, setSwitchModalOpen] = useState(false);
     const [switchErrorOpen, setSwitchErrorOpen] = useState(false);
@@ -200,6 +202,31 @@ export default function SubscriptionPage() {
     };
 
     const handleSwitch = async (newType: 'DEPOSIT' | 'MONTHLY') => {
+        if (!canSwitch) {
+            showWarning(t('subscription.switch.blockedGeneric'), t('common.warning'));
+            return;
+        }
+
+        if (newType === subscription?.type) {
+            const typeLabel = newType === 'MONTHLY'
+                ? (locale === 'id' ? 'Bulanan' : 'Monthly')
+                : (locale === 'id' ? 'Deposit' : 'Deposit');
+            showWarning(t('subscription.switch.alreadyOn').replace('{type}', typeLabel), t('common.warning'));
+            return;
+        }
+
+        const canProceed = newType === 'MONTHLY'
+            ? canSwitch.canSwitchToMonthly
+            : canSwitch.canSwitchToDeposit;
+
+        if (!canProceed) {
+            const message = newType === 'MONTHLY'
+                ? t('subscription.switch.blockedMonthly')
+                : t('subscription.switch.blockedDeposit');
+            showWarning(message, t('common.warning'));
+            return;
+        }
+
         // Open confirmation modal instead of browser confirm
         setPendingSwitchType(newType);
         setSwitchModalOpen(true);
@@ -273,7 +300,12 @@ export default function SubscriptionPage() {
             if (data.success) {
                 window.location.reload();
             } else {
-                setSwitchErrorMessage(data.message || (locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type'));
+                const message = data.message || (locale === 'id' ? 'Gagal mengganti tipe langganan' : 'Failed to switch subscription type');
+                if (data.error === 'SWITCH_NOT_ALLOWED') {
+                    showError(message, t('common.error'));
+                    return;
+                }
+                setSwitchErrorMessage(message);
                 setSwitchErrorOpen(true);
             }
         } catch {
@@ -368,6 +400,14 @@ export default function SubscriptionPage() {
         if (isActive) return locale === 'id' ? 'Aktif' : 'Active';
         if (subscription.status === 'SUSPENDED') return locale === 'id' ? 'Ditangguhkan' : 'Suspended';
         return locale === 'id' ? 'Dibatalkan' : 'Cancelled';
+    };
+
+    const getSwitchBlockMessage = (type: 'DEPOSIT' | 'MONTHLY') => {
+        if (!canSwitch) return t('subscription.switch.blockedGeneric');
+        if (type === 'MONTHLY') {
+            return canSwitch.canSwitchToMonthly ? '' : t('subscription.switch.blockedMonthly');
+        }
+        return canSwitch.canSwitchToDeposit ? '' : t('subscription.switch.blockedDeposit');
     };
 
     return (
@@ -686,7 +726,7 @@ export default function SubscriptionPage() {
                                     : 'border-gray-200 dark:border-gray-600'
                                     } ${!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit ? 'hover:shadow-md cursor-pointer hover:border-emerald-300' : ''}`}
                                 onClick={() => {
-                                    if (!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit) {
+                                    if (!isDeposit && !isTrial) {
                                         handleSwitch('DEPOSIT');
                                     }
                                 }}
@@ -711,18 +751,24 @@ export default function SubscriptionPage() {
                                     {locale === 'id' ? 'Bayar sesuai pemakaian' : 'Pay as you go'}
                                 </p>
                                 {/* Switch button for non-deposit mode */}
-                                {!isDeposit && !isTrial && canSwitch?.canSwitchToDeposit && (
+                                {!isDeposit && !isTrial && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleSwitch('DEPOSIT');
                                         }}
-                                        disabled={switching}
-                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                        disabled={switching || !canSwitch?.canSwitchToDeposit}
+                                        title={!canSwitch?.canSwitchToDeposit ? getSwitchBlockMessage('DEPOSIT') : undefined}
+                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <FaExchangeAlt className="w-3 h-3" />
                                         {locale === 'id' ? 'Beralih' : 'Switch'}
                                     </button>
+                                )}
+                                {!isDeposit && !isTrial && !canSwitch?.canSwitchToDeposit && (
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {getSwitchBlockMessage('DEPOSIT')}
+                                    </p>
                                 )}
                             </div>
 
@@ -733,7 +779,7 @@ export default function SubscriptionPage() {
                                     : 'border-gray-200 dark:border-gray-600'
                                     } ${!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly ? 'hover:shadow-md cursor-pointer hover:border-blue-300' : ''}`}
                                 onClick={() => {
-                                    if (!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly) {
+                                    if (!isMonthly && !isTrial) {
                                         handleSwitch('MONTHLY');
                                     }
                                 }}
@@ -758,18 +804,24 @@ export default function SubscriptionPage() {
                                     {locale === 'id' ? 'Tanpa biaya per pesanan' : 'No per-order fee'}
                                 </p>
                                 {/* Switch button for non-monthly mode */}
-                                {!isMonthly && !isTrial && canSwitch?.canSwitchToMonthly && (
+                                {!isMonthly && !isTrial && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             handleSwitch('MONTHLY');
                                         }}
-                                        disabled={switching}
-                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+                                        disabled={switching || !canSwitch?.canSwitchToMonthly}
+                                        title={!canSwitch?.canSwitchToMonthly ? getSwitchBlockMessage('MONTHLY') : undefined}
+                                        className="mt-3 flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <FaExchangeAlt className="w-3 h-3" />
                                         {locale === 'id' ? 'Beralih' : 'Switch'}
                                     </button>
+                                )}
+                                {!isMonthly && !isTrial && !canSwitch?.canSwitchToMonthly && (
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                                        {getSwitchBlockMessage('MONTHLY')}
+                                    </p>
                                 )}
                             </div>
                         </div>

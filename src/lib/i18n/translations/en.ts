@@ -3462,10 +3462,21 @@ const en = {
   "admin.superadmin.merchantBalance.adjustBalance": "Adjust Balance",
   "admin.superadmin.merchantBalance.extend": "Extend",
   "admin.superadmin.merchantBalance.manageSubscription": "Manage Subscription",
+  "admin.superadmin.merchantBalance.suspendNow": "Suspend Now",
+  "admin.superadmin.merchantBalance.suspending": "Suspending...",
   "admin.superadmin.merchantBalance.showingMerchants": "Showing {count} merchant(s)",
   "admin.superadmin.merchantBalance.errorLoading": "Error Loading Data",
   "admin.superadmin.merchantBalance.errorMessage": "Failed to load merchants",
   "admin.superadmin.merchantBalance.retry": "Retry",
+  "admin.superadmin.merchantBalance.suspendConfirmTitle": "Suspend Merchant",
+  "admin.superadmin.merchantBalance.suspendConfirmMessage": "Suspend {merchant} now?\n\nReason: {reason}",
+  "admin.superadmin.merchantBalance.suspendConfirmButton": "Suspend",
+  "admin.superadmin.merchantBalance.suspendCancelButton": "Cancel",
+  "admin.superadmin.merchantBalance.suspendReasonMonthlyExpired": "Monthly subscription expired while balance remains.",
+  "admin.superadmin.merchantBalance.suspendReasonBalanceExpired": "Balance is exhausted and subscription days are expired.",
+  "admin.superadmin.merchantBalance.suspendReason": "Suspended by admin due to expired subscription.",
+  "admin.superadmin.merchantBalance.suspendSuccess": "Merchant suspended successfully.",
+  "admin.superadmin.merchantBalance.suspendError": "Failed to suspend merchant.",
   // Balance Modal
   "admin.superadmin.merchantBalance.modal.addBalanceTitle": "Add Balance",
   "admin.superadmin.merchantBalance.modal.adjustBalanceTitle": "Adjust Balance",
@@ -3815,6 +3826,10 @@ const en = {
   "subscription.switch.switchToMonthly": "Switch to Monthly",
   "subscription.switch.confirmDeposit": "Switch to Deposit mode? You can top up balance after switching.",
   "subscription.switch.confirmMonthly": "Switch to Monthly subscription? Your balance will be preserved.",
+  "subscription.switch.blockedDeposit": "Deposit balance is empty. Top up to switch.",
+  "subscription.switch.blockedMonthly": "Monthly subscription is not active. Renew to switch.",
+  "subscription.switch.blockedGeneric": "Switch is not available yet.",
+  "subscription.switch.alreadyOn": "You are already on {type} mode.",
 
   // Transaction History
   "subscription.transactions.title": "Transaction History",
@@ -4127,6 +4142,10 @@ const en = {
   "subscription.alert.renewCta": "Please renew your subscription to continue operations.",
   "subscription.alert.renewButton": "Renew Subscription",
   "subscription.alert.contactOwner": "Please contact the store owner to renew the subscription.",
+  "subscription.alert.pendingSuspensionTitle": "Store will be suspended tonight",
+  "subscription.alert.pendingSuspensionDeposit": "Your deposit balance is zero. The store will be suspended tonight unless you top up.",
+  "subscription.alert.pendingSuspensionMonthly": "Your monthly subscription has expired. The store will be suspended tonight unless you renew.",
+  "subscription.alert.pendingSuspensionTrial": "Your trial has ended. The store will be suspended tonight unless you upgrade.",
 
   // Grace Period
   "subscription.grace.title": "Subscription Expiring Soon",

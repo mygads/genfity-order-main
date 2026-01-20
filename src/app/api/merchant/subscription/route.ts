@@ -73,6 +73,8 @@ async function handleGet(req: NextRequest, context: AuthContext) {
                         trialEndsAt: null,
                         currentPeriodEnd: null,
                         suspendReason: 'No active subscription',
+                        pendingSuspension: false,
+                        pendingSuspensionReason: null,
                     },
                     balance: null,
                     pricing: {
@@ -88,6 +90,20 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         // Get pricing for this merchant's currency
         const pricing = await subscriptionService.getPlanPricing(status.currency);
 
+        const pendingSuspension =
+            status.status === 'ACTIVE' &&
+            !status.isValid &&
+            !status.inGracePeriod &&
+            (status.type === 'DEPOSIT' || status.type === 'MONTHLY' || status.type === 'TRIAL');
+
+        const pendingSuspensionReason = pendingSuspension
+            ? status.type === 'DEPOSIT'
+                ? 'DEPOSIT_DEPLETED'
+                : status.type === 'MONTHLY'
+                    ? 'MONTHLY_EXPIRED'
+                    : 'TRIAL_EXPIRED'
+            : null;
+
         return NextResponse.json({
             success: true,
             data: {
@@ -99,6 +115,8 @@ async function handleGet(req: NextRequest, context: AuthContext) {
                     trialEndsAt: status.trialEndsAt,
                     currentPeriodEnd: status.currentPeriodEnd,
                     suspendReason: status.suspendReason,
+                    pendingSuspension,
+                    pendingSuspensionReason,
                 },
                 balance: status.type === 'DEPOSIT' ? {
                     amount: status.balance,

@@ -338,7 +338,7 @@ class SubscriptionRepository {
     }
 
     /**
-     * Get merchants with negative balance (deposit mode only)
+     * Get merchants with depleted balance (deposit mode only)
      * These should be auto-suspended at midnight
      */
     async getNegativeBalanceMerchants() {
@@ -357,13 +357,13 @@ class SubscriptionRepository {
             },
         });
 
-        // Filter to only those with negative balance
+            // Filter to only those with depleted balance (<= 0)
         const result = [];
         for (const sub of subscriptions) {
             if (!sub.merchant.merchantBalance) continue;
             
             const balance = Number(sub.merchant.merchantBalance.balance);
-            if (balance < 0) {
+            if (balance <= 0) {
                 result.push({
                     merchantId: sub.merchantId,
                     code: sub.merchant.code,

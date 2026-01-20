@@ -2,9 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAuth } from "@/hooks/useAuth";
 import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
+import { useMerchant } from "@/context/MerchantContext";
+import { useToast } from "@/context/ToastContext";
+import { clearAdminAuth } from "@/lib/utils/adminAuth";
+import { clearDriverAuth } from "@/lib/utils/driverAuth";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
 interface SuspendedAlertProps {
     reason?: string;
@@ -19,15 +25,57 @@ interface SuspendedAlertProps {
  * Not dismissible - requires action
  */
 export default function SuspendedAlert({ reason, type, graceDaysRemaining }: SuspendedAlertProps) {
+    const router = useRouter();
     const { t } = useTranslation();
-    const { hasPermission } = useAuth();
+    const { hasPermission, user } = useAuth();
+    const { merchant } = useMerchant();
+    const { showError } = useToast();
     const [isDismissed, setIsDismissed] = useState(false);
+    const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+    const [isLeaving, setIsLeaving] = useState(false);
 
     const canManageSubscription = hasPermission(STAFF_PERMISSIONS.SUBSCRIPTION);
+    const isMerchantStaff = user?.role === 'MERCHANT_STAFF';
 
     if (isDismissed) {
         return null;
     }
+
+    const executeLeaveMerchant = async () => {
+        if (!merchant?.id || isLeaving) return;
+        setIsLeaving(true);
+        try {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                clearAdminAuth();
+                clearDriverAuth();
+                router.push('/admin/login');
+                return;
+            }
+
+            const response = await fetch('/api/merchant/staff/leave', {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ merchantId: merchant.id }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                throw new Error(data?.message || t("admin.staff.leaveMerchantError"));
+            }
+
+            clearAdminAuth();
+            clearDriverAuth();
+            router.push('/admin/login');
+        } catch (err) {
+            showError(err instanceof Error ? err.message : t("admin.staff.leaveMerchantError"), t("common.error"));
+        } finally {
+            setIsLeaving(false);
+        }
+    };
 
     // If in grace period, show grace period warning instead
     if (graceDaysRemaining !== undefined && graceDaysRemaining > 0) {
@@ -73,6 +121,16 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                             <div className="text-sm text-brand-700 dark:text-brand-300">
                                 {t("subscription.alert.contactOwner")}
                             </div>
+                        )}
+                        {isMerchantStaff && merchant?.id && (
+                            <button
+                                type="button"
+                                onClick={() => setLeaveConfirmOpen(true)}
+                                disabled={isLeaving}
+                                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 font-medium transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30 text-sm sm:text-base"
+                            >
+                                {isLeaving ? t("common.pleaseWait") : t("admin.staff.leaveMerchant")}
+                            </button>
                         )}
                         <button
                             type="button"
@@ -149,6 +207,16 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                             {t("subscription.alert.contactOwner")}
                         </div>
                     )}
+                    {isMerchantStaff && merchant?.id && (
+                        <button
+                            type="button"
+                            onClick={() => setLeaveConfirmOpen(true)}
+                            disabled={isLeaving}
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-red-200 bg-red-50 text-red-700 font-medium transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-900/40 dark:bg-red-900/20 dark:text-red-300 dark:hover:bg-red-900/30 text-sm sm:text-base"
+                        >
+                            {isLeaving ? t("common.pleaseWait") : t("admin.staff.leaveMerchant")}
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={() => setIsDismissed(true)}
@@ -162,6 +230,19 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                     </button>
                 </div>
             </div>
+            <ConfirmDialog
+                isOpen={leaveConfirmOpen}
+                title={t("admin.staff.leaveMerchant")}
+                message={t("admin.staff.leaveMerchantConfirm")}
+                confirmText={t("admin.staff.leaveMerchant")}
+                cancelText={t("common.cancel")}
+                variant="warning"
+                onConfirm={() => {
+                    setLeaveConfirmOpen(false);
+                    executeLeaveMerchant();
+                }}
+                onCancel={() => setLeaveConfirmOpen(false)}
+            />
         </div>
     );
 }

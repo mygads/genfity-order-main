@@ -3458,10 +3458,21 @@ const id = {
   "admin.superadmin.merchantBalance.adjustBalance": "Atur Saldo",
   "admin.superadmin.merchantBalance.extend": "Perpanjang",
   "admin.superadmin.merchantBalance.manageSubscription": "Kelola Langganan",
+  "admin.superadmin.merchantBalance.suspendNow": "Suspend Sekarang",
+  "admin.superadmin.merchantBalance.suspending": "Menyuspend...",
   "admin.superadmin.merchantBalance.showingMerchants": "Menampilkan {count} merchant",
   "admin.superadmin.merchantBalance.errorLoading": "Error Memuat Data",
   "admin.superadmin.merchantBalance.errorMessage": "Gagal memuat merchant",
   "admin.superadmin.merchantBalance.retry": "Coba Lagi",
+  "admin.superadmin.merchantBalance.suspendConfirmTitle": "Suspend Merchant",
+  "admin.superadmin.merchantBalance.suspendConfirmMessage": "Suspend {merchant} sekarang?\n\nAlasan: {reason}",
+  "admin.superadmin.merchantBalance.suspendConfirmButton": "Suspend",
+  "admin.superadmin.merchantBalance.suspendCancelButton": "Batal",
+  "admin.superadmin.merchantBalance.suspendReasonMonthlyExpired": "Langganan bulanan sudah kedaluwarsa sementara saldo masih ada.",
+  "admin.superadmin.merchantBalance.suspendReasonBalanceExpired": "Saldo habis dan hari langganan sudah kedaluwarsa.",
+  "admin.superadmin.merchantBalance.suspendReason": "Disuspend oleh admin karena langganan kedaluwarsa.",
+  "admin.superadmin.merchantBalance.suspendSuccess": "Merchant berhasil disuspend.",
+  "admin.superadmin.merchantBalance.suspendError": "Gagal menyuspend merchant.",
   // Balance Modal
   "admin.superadmin.merchantBalance.modal.addBalanceTitle": "Tambah Saldo",
   "admin.superadmin.merchantBalance.modal.adjustBalanceTitle": "Atur Saldo",
@@ -3811,6 +3822,10 @@ const id = {
   "subscription.switch.switchToMonthly": "Beralih ke Bulanan",
   "subscription.switch.confirmDeposit": "Beralih ke mode Deposit? Anda dapat top up saldo setelah beralih.",
   "subscription.switch.confirmMonthly": "Beralih ke langganan Bulanan? Saldo Anda akan tetap tersimpan.",
+  "subscription.switch.blockedDeposit": "Saldo deposit kosong. Top up untuk beralih.",
+  "subscription.switch.blockedMonthly": "Langganan bulanan belum aktif. Perpanjang untuk beralih.",
+  "subscription.switch.blockedGeneric": "Beralih belum tersedia saat ini.",
+  "subscription.switch.alreadyOn": "Anda sudah menggunakan mode {type}.",
 
   // Transaction History
   "subscription.transactions.title": "Riwayat Transaksi",
@@ -4123,6 +4138,10 @@ const id = {
   "subscription.alert.renewCta": "Silakan perbarui langganan untuk melanjutkan operasional.",
   "subscription.alert.renewButton": "Perbarui Langganan",
   "subscription.alert.contactOwner": "Silakan hubungi owner toko untuk memperbarui langganan.",
+  "subscription.alert.pendingSuspensionTitle": "Toko akan disuspend malam ini",
+  "subscription.alert.pendingSuspensionDeposit": "Saldo deposit Anda 0. Toko akan disuspend malam ini jika belum top up.",
+  "subscription.alert.pendingSuspensionMonthly": "Langganan bulanan Anda telah berakhir. Toko akan disuspend malam ini jika belum diperpanjang.",
+  "subscription.alert.pendingSuspensionTrial": "Masa trial Anda telah berakhir. Toko akan disuspend malam ini jika belum upgrade.",
 
   // Grace Period
   "subscription.grace.title": "Langganan Segera Berakhir",

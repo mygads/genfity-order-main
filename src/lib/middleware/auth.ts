@@ -21,6 +21,9 @@ function isMerchantLockExempt(pathname: string, method: string): boolean {
   // Allow billing and balance management while locked.
   if (pathname.startsWith('/api/merchant/balance')) return true;
 
+  // Allow subscription payment requests (topup/renew/cancel) while locked.
+  if (pathname.startsWith('/api/merchant/payment-request')) return true;
+
   // Allow querying lock state so the UI can render the correct lock reason.
   if (pathname === '/api/merchant/lock-status' && method === 'GET') return true;
 

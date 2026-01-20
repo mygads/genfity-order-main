@@ -5,7 +5,7 @@
  * Auto-switch Rules:
  * 1. If TRIAL expired + has balance → switch to DEPOSIT
  * 2. If TRIAL expired + has MONTHLY subscription → switch to MONTHLY
- * 3. If MONTHLY expired + has balance → switch to DEPOSIT
+ * 3. If MONTHLY expired → await nightly suspension (no cross-switch)
  * 4. If DEPOSIT with zero balance + has active MONTHLY → switch to MONTHLY
  * 5. On payment verification: activate appropriate mode
  * 6. Auto-open store when subscription becomes active
@@ -301,7 +301,7 @@ class SubscriptionAutoSwitchService {
   private async handleMonthlySubscription(
     merchantId: bigint,
     subscription: { type: string; status: string; trialEndsAt: Date | null; currentPeriodEnd: Date | null },
-    balance: number,
+    _balance: number,
     merchant: { id: bigint; code: string; name: string; isOpen: boolean; isActive: boolean }
   ): Promise<SubscriptionCheckResult> {
     const now = new Date();
@@ -321,85 +321,9 @@ class SubscriptionAutoSwitchService {
       return this.noChangeResult(merchantId, merchant, subscription, 'Monthly subscription still valid');
     }
 
-    // Monthly expired - check if has balance to fallback to DEPOSIT
-    if (balance > 0) {
-      // Has balance - switch to DEPOSIT
-      await subscriptionRepository.upgradeToDeposit(merchantId);
-
-      // Record history
-      await subscriptionHistoryService.recordAutoSwitch(
-        merchantId,
-        'MONTHLY',
-        subscription.status,
-        'DEPOSIT',
-        'ACTIVE',
-        'Monthly expired, switched to Deposit (has balance)',
-        balance,
-        null
-      );
-
-      // Send notification
-      await this.sendAutoSwitchNotification(
-        merchantId,
-        merchant.name,
-        'MONTHLY',
-        'DEPOSIT',
-        'Monthly subscription expired, switched to Deposit mode'
-      );
-
-      // Auto-open store
-      const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
-
-      return {
-        merchantId,
-        merchantCode: merchant.code,
-        merchantName: merchant.name,
-        previousType: 'MONTHLY',
-        previousStatus: subscription.status,
-        newType: 'DEPOSIT',
-        newStatus: 'ACTIVE',
-        action: 'AUTO_SWITCHED',
-        reason: 'Monthly expired, switched to Deposit (has balance)',
-        storeOpened,
-      };
-    }
-
-    // No balance - suspend subscription
-    await subscriptionRepository.suspendSubscription(merchantId, 'Monthly subscription expired - insufficient balance');
-
-    // Close store immediately when subscription is suspended
-    await subscriptionRepository.closeMerchantStore(
-      merchantId,
-      'Store closed due to expired monthly subscription'
-    );
-
-    // Record history
-    await subscriptionHistoryService.recordSuspension(
-      merchantId,
-      'MONTHLY',
-      'Monthly subscription expired with no balance',
-      balance
-    );
-
-    // Send suspension notification
-    await this.sendSuspensionNotification(
-      merchantId,
-      merchant.name,
-      'Monthly subscription expired with no balance'
-    );
-
-    return {
-      merchantId,
-      merchantCode: merchant.code,
-      merchantName: merchant.name,
-      previousType: 'MONTHLY',
-      previousStatus: subscription.status,
-      newType: 'MONTHLY',
-      newStatus: 'SUSPENDED',
-      action: 'SUSPENDED',
-      reason: 'Monthly expired with no balance',
-      storeOpened: false,
-    };
+    // Monthly expired - DO NOT auto-switch to deposit (policy: no cross-switch).
+    // Suspension/closure is handled by nightly cron to avoid daytime disruptions.
+    return this.noChangeResult(merchantId, merchant, subscription, 'Monthly expired; awaiting nightly suspension');
   }
 
   /**
@@ -415,7 +339,7 @@ class SubscriptionAutoSwitchService {
 
     // Check if balance is zero or negative
     if (balance <= 0) {
-      // Check if has active monthly to fallback
+      // Check if has active monthly to fallback (allowed)
       if (subscription.currentPeriodEnd && subscription.currentPeriodEnd > now) {
         // Has active monthly - switch to MONTHLY
         await subscriptionRepository.updateMerchantSubscription(merchantId, {
@@ -463,42 +387,8 @@ class SubscriptionAutoSwitchService {
         };
       }
 
-      // No monthly fallback - suspend
-      await subscriptionRepository.suspendSubscription(merchantId, 'Deposit balance exhausted');
-
-      // Close store immediately when subscription is suspended
-      await subscriptionRepository.closeMerchantStore(
-        merchantId,
-        'Store closed due to exhausted deposit balance'
-      );
-
-      // Record history
-      await subscriptionHistoryService.recordSuspension(
-        merchantId,
-        'DEPOSIT',
-        'Deposit balance exhausted with no monthly subscription',
-        balance
-      );
-
-      // Send suspension notification
-      await this.sendSuspensionNotification(
-        merchantId,
-        merchant.name,
-        'Deposit balance exhausted with no active monthly subscription'
-      );
-
-      return {
-        merchantId,
-        merchantCode: merchant.code,
-        merchantName: merchant.name,
-        previousType: 'DEPOSIT',
-        previousStatus: subscription.status,
-        newType: 'DEPOSIT',
-        newStatus: 'SUSPENDED',
-        action: 'SUSPENDED',
-        reason: 'Deposit balance exhausted with no monthly subscription',
-        storeOpened: false,
-      };
+      // No monthly fallback - DO NOT suspend immediately. Nightly cron handles it.
+      return this.noChangeResult(merchantId, merchant, subscription, 'Deposit balance exhausted; awaiting nightly suspension');
     }
 
     // Balance is positive - subscription is valid
@@ -515,10 +405,14 @@ class SubscriptionAutoSwitchService {
     merchant: { id: bigint; code: string; name: string; isOpen: boolean; isActive: boolean }
   ): Promise<SubscriptionCheckResult | null> {
     const now = new Date();
+    const hasActiveMonthly = !!(subscription.currentPeriodEnd && subscription.currentPeriodEnd > now);
+    const hasBalance = balance > 0;
 
-    // Check if has active monthly period
-    if (subscription.currentPeriodEnd && subscription.currentPeriodEnd > now) {
-      // Reactivate as MONTHLY
+    if (subscription.type === 'MONTHLY') {
+      if (!hasActiveMonthly) {
+        return null;
+      }
+
       await subscriptionRepository.updateMerchantSubscription(merchantId, {
         type: 'MONTHLY',
         status: 'ACTIVE',
@@ -526,17 +420,15 @@ class SubscriptionAutoSwitchService {
         suspendReason: null,
       });
 
-      // Record history
       await subscriptionHistoryService.recordReactivation(
         merchantId,
         subscription.type,
         'MONTHLY',
-        'Reactivated as Monthly (has active period)',
+        'Reactivated as Monthly (days added)',
         balance,
         subscription.currentPeriodEnd
       );
 
-      // Send reactivation notification
       await this.sendReactivationNotification(
         merchantId,
         merchant.name,
@@ -555,27 +447,142 @@ class SubscriptionAutoSwitchService {
         newType: 'MONTHLY',
         newStatus: 'ACTIVE',
         action: 'REACTIVATED',
-        reason: 'Reactivated as Monthly (has active period)',
+        reason: 'Reactivated as Monthly (days added)',
         storeOpened,
       };
     }
 
-    // Check if has balance
-    if (balance > 0) {
-      // Reactivate as DEPOSIT
+    if (subscription.type === 'DEPOSIT') {
+      if (hasBalance) {
+        await subscriptionRepository.upgradeToDeposit(merchantId);
+
+        await subscriptionHistoryService.recordReactivation(
+          merchantId,
+          subscription.type,
+          'DEPOSIT',
+          'Reactivated as Deposit (balance added)',
+          balance,
+          null
+        );
+
+        await this.sendReactivationNotification(
+          merchantId,
+          merchant.name,
+          'DEPOSIT',
+          'Subscription reactivated with Deposit mode'
+        );
+
+        const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+
+        return {
+          merchantId,
+          merchantCode: merchant.code,
+          merchantName: merchant.name,
+          previousType: subscription.type,
+          previousStatus: 'SUSPENDED',
+          newType: 'DEPOSIT',
+          newStatus: 'ACTIVE',
+          action: 'REACTIVATED',
+          reason: 'Reactivated as Deposit (balance added)',
+          storeOpened,
+        };
+      }
+
+      if (!hasBalance && hasActiveMonthly) {
+        await subscriptionRepository.updateMerchantSubscription(merchantId, {
+          type: 'MONTHLY',
+          status: 'ACTIVE',
+          suspendedAt: null,
+          suspendReason: null,
+        });
+
+        await subscriptionHistoryService.recordReactivation(
+          merchantId,
+          subscription.type,
+          'MONTHLY',
+          'Reactivated as Monthly (days added)',
+          balance,
+          subscription.currentPeriodEnd
+        );
+
+        await this.sendReactivationNotification(
+          merchantId,
+          merchant.name,
+          'MONTHLY',
+          'Subscription reactivated with Monthly mode'
+        );
+
+        const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+
+        return {
+          merchantId,
+          merchantCode: merchant.code,
+          merchantName: merchant.name,
+          previousType: subscription.type,
+          previousStatus: 'SUSPENDED',
+          newType: 'MONTHLY',
+          newStatus: 'ACTIVE',
+          action: 'REACTIVATED',
+          reason: 'Reactivated as Monthly (days added)',
+          storeOpened,
+        };
+      }
+
+      return null;
+    }
+
+    if (hasActiveMonthly) {
+      await subscriptionRepository.updateMerchantSubscription(merchantId, {
+        type: 'MONTHLY',
+        status: 'ACTIVE',
+        suspendedAt: null,
+        suspendReason: null,
+      });
+
+      await subscriptionHistoryService.recordReactivation(
+        merchantId,
+        subscription.type,
+        'MONTHLY',
+        'Reactivated as Monthly (days added)',
+        balance,
+        subscription.currentPeriodEnd
+      );
+
+      await this.sendReactivationNotification(
+        merchantId,
+        merchant.name,
+        'MONTHLY',
+        'Subscription reactivated with Monthly mode'
+      );
+
+      const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+
+      return {
+        merchantId,
+        merchantCode: merchant.code,
+        merchantName: merchant.name,
+        previousType: subscription.type,
+        previousStatus: 'SUSPENDED',
+        newType: 'MONTHLY',
+        newStatus: 'ACTIVE',
+        action: 'REACTIVATED',
+        reason: 'Reactivated as Monthly (days added)',
+        storeOpened,
+      };
+    }
+
+    if (hasBalance) {
       await subscriptionRepository.upgradeToDeposit(merchantId);
 
-      // Record history
       await subscriptionHistoryService.recordReactivation(
         merchantId,
         subscription.type,
         'DEPOSIT',
-        'Reactivated as Deposit (has balance)',
+        'Reactivated as Deposit (balance added)',
         balance,
         null
       );
 
-      // Send reactivation notification
       await this.sendReactivationNotification(
         merchantId,
         merchant.name,
@@ -594,7 +601,7 @@ class SubscriptionAutoSwitchService {
         newType: 'DEPOSIT',
         newStatus: 'ACTIVE',
         action: 'REACTIVATED',
-        reason: 'Reactivated as Deposit (has balance)',
+        reason: 'Reactivated as Deposit (balance added)',
         storeOpened,
       };
     }
@@ -631,25 +638,23 @@ class SubscriptionAutoSwitchService {
 
     const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
     const balanceRecord = await balanceRepository.getMerchantBalance(merchantId);
-    const balance = balanceRecord ? Number(balanceRecord.balance) : 0;
 
     const previousType = subscription?.type || 'NONE';
     const previousStatus = subscription?.status || 'NONE';
 
-    // Determine what mode to switch to
-    let newType: 'DEPOSIT' | 'MONTHLY';
-    let switchReason: string;
+    // Determine what mode to activate WITHOUT cross-switching
+    let newType: 'DEPOSIT' | 'MONTHLY' = (subscription?.type as 'DEPOSIT' | 'MONTHLY') || 'DEPOSIT';
+    let newStatus: 'ACTIVE' | 'SUSPENDED' = (subscription?.status as 'ACTIVE' | 'SUSPENDED') || 'ACTIVE';
+    let action: SubscriptionCheckResult['action'] = 'NO_CHANGE';
+    let reason = 'Payment verified; no mode change';
+    let storeOpened = false;
 
     if (paymentType === 'DEPOSIT_TOPUP') {
-      // For deposit top-up:
-      // - If currently on TRIAL or SUSPENDED, switch to DEPOSIT
-      // - If currently on MONTHLY (active), stay on MONTHLY (balance is backup)
-      // - If currently on DEPOSIT, stay on DEPOSIT
-      
-      if (!subscription || subscription.type === 'TRIAL' || subscription.status === 'SUSPENDED') {
+      if (!subscription || subscription.type === 'TRIAL') {
         newType = 'DEPOSIT';
-        switchReason = 'Deposit top-up verified, activated Deposit mode';
-        
+        newStatus = 'ACTIVE';
+        reason = 'Deposit top-up verified, activated Deposit mode';
+        action = 'AUTO_SWITCHED';
         await subscriptionRepository.updateMerchantSubscription(merchantId, {
           type: 'DEPOSIT',
           status: 'ACTIVE',
@@ -657,35 +662,29 @@ class SubscriptionAutoSwitchService {
           suspendedAt: null,
           suspendReason: null,
         });
-      } else if (subscription.type === 'MONTHLY' && subscription.status === 'ACTIVE') {
-        // Keep monthly, balance is just backup
-        newType = 'MONTHLY';
-        switchReason = 'Deposit top-up verified, staying on Monthly (balance is backup)';
-      } else {
-        // Currently on DEPOSIT, just reactivate if needed
+        storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+      } else if (subscription.type === 'DEPOSIT') {
         newType = 'DEPOSIT';
-        switchReason = 'Deposit top-up verified, reactivated Deposit mode';
-        
-        await subscriptionRepository.updateMerchantSubscription(merchantId, {
-          status: 'ACTIVE',
-          suspendedAt: null,
-          suspendReason: null,
-        });
+        newStatus = 'ACTIVE';
+        reason = 'Deposit top-up verified, reactivated Deposit mode';
+        action = subscription.status === 'SUSPENDED' ? 'REACTIVATED' : 'NO_CHANGE';
+        if (subscription.status === 'SUSPENDED') {
+          await subscriptionRepository.reactivateSubscription(merchantId);
+        }
+        storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+      } else {
+        // Current mode MONTHLY: do not switch or reopen
+        newType = 'MONTHLY';
+        newStatus = subscription.status as 'ACTIVE' | 'SUSPENDED';
+        reason = 'Deposit top-up verified; staying on Monthly mode (no cross-switch)';
       }
     } else {
-      // For monthly subscription:
-      // - If currently on TRIAL or SUSPENDED, switch to MONTHLY
-      // - If currently on DEPOSIT (active with balance), stay on DEPOSIT (monthly is backup)
-      // - If currently on MONTHLY, just ensure it's active
-      
-      // NOTE: Period extension is already done by PaymentRequestService
-      // Here we only handle mode switching
-      
-      if (!subscription || subscription.type === 'TRIAL' || subscription.status === 'SUSPENDED') {
+      // MONTHLY_SUBSCRIPTION
+      if (!subscription || subscription.type === 'TRIAL') {
         newType = 'MONTHLY';
-        switchReason = 'Monthly subscription verified, activated Monthly mode';
-        
-        // Just switch type and activate, period is already set
+        newStatus = 'ACTIVE';
+        reason = 'Monthly subscription verified, activated Monthly mode';
+        action = 'AUTO_SWITCHED';
         await subscriptionRepository.updateMerchantSubscription(merchantId, {
           type: 'MONTHLY',
           status: 'ACTIVE',
@@ -693,28 +692,23 @@ class SubscriptionAutoSwitchService {
           suspendedAt: null,
           suspendReason: null,
         });
-      } else if (subscription.type === 'DEPOSIT' && subscription.status === 'ACTIVE' && balance > 0) {
-        // Keep deposit, monthly period is backup
-        // Period is already extended by PaymentRequestService
-        newType = 'DEPOSIT';
-        switchReason = 'Monthly subscription verified, staying on Deposit (monthly is backup)';
-      } else {
-        // Switch to monthly or ensure monthly is active
-        // Period is already set by PaymentRequestService
+        storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+      } else if (subscription.type === 'MONTHLY') {
         newType = 'MONTHLY';
-        switchReason = 'Monthly subscription verified, activated Monthly mode';
-        
-        await subscriptionRepository.updateMerchantSubscription(merchantId, {
-          type: 'MONTHLY',
-          status: 'ACTIVE',
-          suspendedAt: null,
-          suspendReason: null,
-        });
+        newStatus = 'ACTIVE';
+        reason = 'Monthly subscription verified, reactivated Monthly mode';
+        action = subscription.status === 'SUSPENDED' ? 'REACTIVATED' : 'NO_CHANGE';
+        if (subscription.status === 'SUSPENDED') {
+          await subscriptionRepository.reactivateSubscription(merchantId);
+        }
+        storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+      } else {
+        // Current mode DEPOSIT: do not switch or reopen
+        newType = 'DEPOSIT';
+        newStatus = subscription.status as 'ACTIVE' | 'SUSPENDED';
+        reason = 'Monthly subscription verified; staying on Deposit mode (no cross-switch)';
       }
     }
-
-    // Auto-open store after payment verification
-    const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
 
     return {
       merchantId,
@@ -723,16 +717,16 @@ class SubscriptionAutoSwitchService {
       previousType,
       previousStatus,
       newType,
-      newStatus: 'ACTIVE',
-      action: previousType === newType && previousStatus === 'ACTIVE' ? 'NO_CHANGE' : 'AUTO_SWITCHED',
-      reason: switchReason,
+      newStatus,
+      action,
+      reason,
       storeOpened,
     };
   }
 
   /**
    * Manual switch between DEPOSIT and MONTHLY
-   * Only allowed when both are available
+   * Only allowed when target resource is available
    */
   async manualSwitch(merchantId: bigint, targetType: 'DEPOSIT' | 'MONTHLY'): Promise<SubscriptionCheckResult> {
     const merchant = await prisma.merchant.findUnique({
@@ -756,15 +750,19 @@ class SubscriptionAutoSwitchService {
     const previousType = subscription.type;
     const previousStatus = subscription.status;
 
-    // Validate switch is allowed
-    if (targetType === 'DEPOSIT') {
-      if (balance <= 0) {
-        throw new Error('Cannot switch to Deposit mode: insufficient balance');
-      }
-    } else if (targetType === 'MONTHLY') {
-      if (!subscription.currentPeriodEnd || subscription.currentPeriodEnd <= now) {
-        throw new Error('Cannot switch to Monthly mode: no active monthly subscription');
-      }
+    const hasActiveMonthly = !!(subscription.currentPeriodEnd && subscription.currentPeriodEnd > now);
+    const hasPositiveBalance = balance > 0;
+
+    if (targetType === subscription.type) {
+      throw new Error(`Already on ${targetType} mode`);
+    }
+
+    if (targetType === 'MONTHLY' && !hasActiveMonthly) {
+      throw new Error('Monthly subscription is not active. Please renew first.');
+    }
+
+    if (targetType === 'DEPOSIT' && !hasPositiveBalance) {
+      throw new Error('Deposit balance is empty. Please top up first.');
     }
 
     // Perform switch
@@ -775,6 +773,12 @@ class SubscriptionAutoSwitchService {
       suspendReason: null,
     });
 
+    const storeOpened = await this.autoOpenStore(merchantId, merchant.isOpen);
+
+    const newStatus: 'ACTIVE' | 'SUSPENDED' = 'ACTIVE';
+    const action: SubscriptionCheckResult['action'] = 'AUTO_SWITCHED';
+    const reason = `Manually switched to ${targetType} mode`;
+
     return {
       merchantId,
       merchantCode: merchant.code,
@@ -782,10 +786,10 @@ class SubscriptionAutoSwitchService {
       previousType,
       previousStatus,
       newType: targetType,
-      newStatus: 'ACTIVE',
-      action: 'AUTO_SWITCHED',
-      reason: `Manually switched to ${targetType} mode`,
-      storeOpened: false,
+      newStatus,
+      action,
+      reason,
+      storeOpened,
     };
   }
 

@@ -12,6 +12,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useToast } from "@/hooks/useToast";
 import ToastContainer from "@/components/ui/ToastContainer";
 import SubscriptionStatusBadge from "@/components/subscription/SubscriptionStatusBadge";
+import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { StatusToggle } from "@/components/common/StatusToggle";
@@ -47,6 +48,7 @@ interface MerchantsApiResponse {
 
 type SortField = 'name' | 'code' | 'balance' | 'daysRemaining' | 'status';
 type SortDirection = 'asc' | 'desc';
+type SuspensionReason = 'monthlyExpiredWithBalance' | 'balanceAndDaysExpired';
 
 export default function MerchantBalancePage() {
   const router = useRouter();
@@ -79,6 +81,12 @@ export default function MerchantBalancePage() {
   const [suspendReason, setSuspendReason] = useState('');
   const [monthlyPeriodMonths, setMonthlyPeriodMonths] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [suspendSubmittingId, setSuspendSubmittingId] = useState<string | null>(null);
+  const [suspendModal, setSuspendModal] = useState<{
+    isOpen: boolean;
+    merchant: MerchantWithBalance | null;
+    reason: SuspensionReason | null;
+  }>({ isOpen: false, merchant: null, reason: null });
 
   // Fetch merchants
   const {
@@ -107,6 +115,35 @@ export default function MerchantBalancePage() {
     const diffTime = endDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  }, []);
+
+  const getSuspendEligibility = useCallback((merchant: MerchantWithBalance, daysRemaining: number | null) => {
+    const balanceValue = merchant.balance ?? 0;
+    const subType = merchant.subscriptionStatus?.type;
+    const isSuspended = merchant.subscriptionStatus?.status === 'SUSPENDED';
+
+    if (!subType || isSuspended) {
+      return { eligible: false, reason: null } as const;
+    }
+
+    const isExpired = daysRemaining !== null && daysRemaining <= 0;
+    const hasNoMonthlyDays = daysRemaining === null;
+
+    if (subType === 'MONTHLY') {
+      if (isExpired && balanceValue > 0) {
+        return { eligible: true, reason: 'monthlyExpiredWithBalance' as const };
+      }
+      return { eligible: false, reason: null } as const;
+    }
+
+    if (subType === 'DEPOSIT') {
+      if (balanceValue <= 0 && (isExpired || hasNoMonthlyDays)) {
+        return { eligible: true, reason: 'balanceAndDaysExpired' as const };
+      }
+      return { eligible: false, reason: null } as const;
+    }
+
+    return { eligible: false, reason: null } as const;
   }, []);
 
   // Filter and sort merchants
@@ -205,6 +242,7 @@ export default function MerchantBalancePage() {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
+        setSuspendSubmittingId(null);
         router.push('/admin/login');
         return;
       }
@@ -311,6 +349,48 @@ export default function MerchantBalancePage() {
       showError(t("common.error"), err instanceof Error ? err.message : t("admin.superadmin.merchantBalance.modal.subscriptionError"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSuspendMerchant = async () => {
+    if (!suspendModal.merchant || suspendSubmittingId) return;
+
+    setSuspendSubmittingId(suspendModal.merchant.id);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        router.push('/admin/login');
+        return;
+      }
+
+      const response = await fetch(
+        `/api/admin/merchants/${suspendModal.merchant.id}/subscription`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            status: 'SUSPENDED',
+            suspendReason: t("admin.superadmin.merchantBalance.suspendReason"),
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to suspend merchant');
+      }
+
+      showSuccess(t("common.success"), t("admin.superadmin.merchantBalance.suspendSuccess"));
+      setSuspendModal({ isOpen: false, merchant: null, reason: null });
+      fetchMerchants();
+    } catch (err) {
+      showError(t("common.error"), err instanceof Error ? err.message : t("admin.superadmin.merchantBalance.suspendError"));
+    } finally {
+      setSuspendSubmittingId(null);
     }
   };
 
@@ -497,6 +577,8 @@ export default function MerchantBalancePage() {
                 ) : (
                   merchants.map((merchant) => {
                     const daysRemaining = calculateDaysRemaining(merchant.subscriptionEndsAt);
+                    const { eligible: canSuspendNow, reason: suspendReasonKey } = getSuspendEligibility(merchant, daysRemaining);
+                    const isSuspending = suspendSubmittingId === merchant.id;
                     return (
                     <tr key={merchant.id} className="hover:bg-gray-50 dark:hover:bg-white/2">
                       <td className="px-5 py-4">
@@ -592,6 +674,19 @@ export default function MerchantBalancePage() {
                             <FaCalendarPlus className="h-3.5 w-3.5" />
                             {t("admin.superadmin.merchantBalance.manageSubscription")}
                           </button>
+                          {canSuspendNow && suspendReasonKey && (
+                            <button
+                              onClick={() => setSuspendModal({ isOpen: true, merchant, reason: suspendReasonKey })}
+                              disabled={isSuspending}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-red-100 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-200 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-red-900/30 dark:text-red-400 dark:hover:bg-red-900/50"
+                              title={t("admin.superadmin.merchantBalance.suspendNow")}
+                            >
+                              <FaTimes className="h-3.5 w-3.5" />
+                              {isSuspending
+                                ? t("admin.superadmin.merchantBalance.suspending")
+                                : t("admin.superadmin.merchantBalance.suspendNow")}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -896,6 +991,26 @@ export default function MerchantBalancePage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={suspendModal.isOpen}
+        title={t("admin.superadmin.merchantBalance.suspendConfirmTitle")}
+        message={
+          suspendModal.merchant
+            ? t("admin.superadmin.merchantBalance.suspendConfirmMessage", {
+                merchant: suspendModal.merchant.name,
+                reason: suspendModal.reason === 'monthlyExpiredWithBalance'
+                  ? t("admin.superadmin.merchantBalance.suspendReasonMonthlyExpired")
+                  : t("admin.superadmin.merchantBalance.suspendReasonBalanceExpired"),
+              })
+            : ''
+        }
+        confirmText={t("admin.superadmin.merchantBalance.suspendConfirmButton")}
+        cancelText={t("admin.superadmin.merchantBalance.suspendCancelButton")}
+        variant="danger"
+        onConfirm={handleSuspendMerchant}
+        onCancel={() => setSuspendModal({ isOpen: false, merchant: null, reason: null })}
+      />
     </div>
   );
 }
