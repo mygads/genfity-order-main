@@ -10,6 +10,7 @@
 
 import { useSWRWithAuth } from '@/hooks/useSWRWithAuth';
 import { useAuth } from '@/hooks/useAuth';
+import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 
 interface SubscriptionData {
     subscription: {
@@ -46,14 +47,17 @@ interface UseSubscriptionStatusResult {
  * }
  */
 export function useSubscriptionStatus(): UseSubscriptionStatusResult {
-    const { user } = useAuth();
+    const { user, hasPermission } = useAuth();
     
     // Only fetch for merchant users (MERCHANT_OWNER or MERCHANT_STAFF)
     const isMerchantUser = user?.role === 'MERCHANT_OWNER' || user?.role === 'MERCHANT_STAFF';
+    const canViewSubscription = Boolean(
+        isMerchantUser && (user?.role === 'MERCHANT_OWNER' || hasPermission(STAFF_PERMISSIONS.SUBSCRIPTION))
+    );
     
     const { data, error, isLoading, mutate } = useSWRWithAuth<{ success: boolean; data: SubscriptionData }>(
-        // Only fetch if user is a merchant user, otherwise pass null to disable fetching
-        isMerchantUser ? '/api/merchant/subscription' : null,
+        // Only fetch if user can view subscription (owners or staff with permission)
+        canViewSubscription ? '/api/merchant/subscription' : null,
         {
             revalidateOnFocus: false,
             refreshInterval: 5 * 60 * 1000, // Refresh every 5 minutes
@@ -61,7 +65,7 @@ export function useSubscriptionStatus(): UseSubscriptionStatusResult {
     );
 
     // For non-merchant users (super admin, customer), return default values without errors
-    if (!isMerchantUser) {
+    if (!isMerchantUser || !canViewSubscription) {
         return {
             isLoading: false,
             error: null,

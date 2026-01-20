@@ -17,6 +17,7 @@ import { MerchantsPageSkeleton } from "@/components/common/SkeletonLoaders";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaMoneyBillWave, FaCalendarPlus, FaTimes, FaSortUp, FaSortDown, FaSort } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface Merchant {
   id: string;
@@ -70,7 +71,13 @@ export default function MerchantBalancePage() {
 
   const [adjustmentAmount, setAdjustmentAmount] = useState('');
   const [adjustmentDescription, setAdjustmentDescription] = useState('');
+  const [balanceAction, setBalanceAction] = useState<'add' | 'deduct'>('add');
   const [subscriptionDays, setSubscriptionDays] = useState('');
+  const [subscriptionAction, setSubscriptionAction] = useState<'extend' | 'reduce'>('extend');
+  const [subscriptionType, setSubscriptionType] = useState<'CURRENT' | 'TRIAL' | 'DEPOSIT' | 'MONTHLY'>('CURRENT');
+  const [subscriptionStatus, setSubscriptionStatus] = useState<'CURRENT' | 'ACTIVE' | 'SUSPENDED' | 'CANCELLED'>('CURRENT');
+  const [suspendReason, setSuspendReason] = useState('');
+  const [monthlyPeriodMonths, setMonthlyPeriodMonths] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   // Fetch merchants
@@ -174,13 +181,9 @@ export default function MerchantBalancePage() {
       : <FaSortDown className="ml-1 h-3 w-3 text-brand-500" />;
   };
 
-  // Format currency
-  const formatCurrency = (amount: number | undefined, currency: string) => {
+  const formatBalance = (amount: number | undefined, currency: string) => {
     if (amount === undefined || amount === null) return '-';
-    if (currency === 'AUD') {
-      return `A$${amount.toLocaleString('en-AU', { minimumFractionDigits: 2 })}`;
-    }
-    return `Rp ${amount.toLocaleString('id-ID')}`;
+    return formatCurrency(amount, currency);
   };
 
   // Fetch function for refresh
@@ -191,6 +194,12 @@ export default function MerchantBalancePage() {
   // Handle balance adjustment
   const handleBalanceAdjustment = async () => {
     if (!balanceModal.merchant || !adjustmentAmount) return;
+
+    const parsedAmount = Number(adjustmentAmount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      showError(t("common.error"), t("admin.superadmin.merchantBalance.modal.amountInvalid"));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -209,8 +218,8 @@ export default function MerchantBalancePage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            amount: parseFloat(adjustmentAmount),
-            description: adjustmentDescription || 'Manual balance adjustment by admin',
+            amount: balanceAction === 'deduct' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount),
+            description: adjustmentDescription || t("admin.superadmin.merchantBalance.modal.defaultDescription"),
           }),
         }
       );
@@ -221,13 +230,14 @@ export default function MerchantBalancePage() {
         throw new Error(data.message || 'Failed to adjust balance');
       }
 
-      showSuccess('Success', `Balance adjusted successfully`);
+      showSuccess(t("common.success"), t("admin.superadmin.merchantBalance.modal.adjustSuccess"));
       setBalanceModal({ isOpen: false, merchant: null });
       setAdjustmentAmount('');
       setAdjustmentDescription('');
+      setBalanceAction('add');
       fetchMerchants();
     } catch (err) {
-      showError('Error', err instanceof Error ? err.message : 'An error occurred');
+      showError(t("common.error"), err instanceof Error ? err.message : t("admin.superadmin.merchantBalance.modal.adjustError"));
     } finally {
       setSubmitting(false);
     }
@@ -235,7 +245,22 @@ export default function MerchantBalancePage() {
 
   // Handle subscription extension
   const handleSubscriptionExtend = async () => {
-    if (!subscriptionModal.merchant || !subscriptionDays) return;
+    if (!subscriptionModal.merchant) return;
+
+    const hasDays = Boolean(subscriptionDays);
+    const hasTypeChange = subscriptionType !== 'CURRENT';
+    const hasStatusChange = subscriptionStatus !== 'CURRENT';
+
+    if (!hasDays && !hasTypeChange && !hasStatusChange) {
+      showError(t("common.error"), t("admin.superadmin.merchantBalance.modal.noSubscriptionChanges"));
+      return;
+    }
+
+    const parsedDays = hasDays ? Number(subscriptionDays) : 0;
+    if (hasDays && (!Number.isFinite(parsedDays) || parsedDays <= 0)) {
+      showError(t("common.error"), t("admin.superadmin.merchantBalance.modal.daysInvalid"));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -254,7 +279,15 @@ export default function MerchantBalancePage() {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            extendDays: parseInt(subscriptionDays),
+            type: hasTypeChange ? subscriptionType : undefined,
+            status: hasStatusChange && subscriptionType === 'CURRENT' ? subscriptionStatus : undefined,
+            suspendReason: subscriptionStatus === 'SUSPENDED' ? suspendReason.trim() || undefined : undefined,
+            monthlyPeriodMonths: subscriptionType === 'MONTHLY' && monthlyPeriodMonths
+              ? parseInt(monthlyPeriodMonths)
+              : undefined,
+            adjustDays: hasDays
+              ? (subscriptionAction === 'reduce' ? -Math.abs(parsedDays) : Math.abs(parsedDays))
+              : undefined,
           }),
         }
       );
@@ -265,12 +298,17 @@ export default function MerchantBalancePage() {
         throw new Error(data.message || 'Failed to extend subscription');
       }
 
-      showSuccess('Success', `Subscription extended by ${subscriptionDays} days`);
+      showSuccess(t("common.success"), t("admin.superadmin.merchantBalance.modal.subscriptionSuccess"));
       setSubscriptionModal({ isOpen: false, merchant: null });
       setSubscriptionDays('');
+      setSubscriptionAction('extend');
+      setSubscriptionType('CURRENT');
+      setSubscriptionStatus('CURRENT');
+      setSuspendReason('');
+      setMonthlyPeriodMonths('');
       fetchMerchants();
     } catch (err) {
-      showError('Error', err instanceof Error ? err.message : 'An error occurred');
+      showError(t("common.error"), err instanceof Error ? err.message : t("admin.superadmin.merchantBalance.modal.subscriptionError"));
     } finally {
       setSubmitting(false);
     }
@@ -483,7 +521,7 @@ export default function MerchantBalancePage() {
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatCurrency(merchant.balance, merchant.currency || 'AUD')}
+                          {formatBalance(merchant.balance, merchant.currency || 'AUD')}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -526,20 +564,33 @@ export default function MerchantBalancePage() {
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => setBalanceModal({ isOpen: true, merchant })}
+                            onClick={() => {
+                              setBalanceModal({ isOpen: true, merchant });
+                              setBalanceAction('add');
+                              setAdjustmentAmount('');
+                              setAdjustmentDescription('');
+                            }}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50"
-                            title={t("admin.superadmin.merchantBalance.addBalance")}
+                            title={t("admin.superadmin.merchantBalance.adjustBalance")}
                           >
                             <FaMoneyBillWave className="h-3.5 w-3.5" />
-                            {t("admin.superadmin.merchantBalance.addBalance")}
+                            {t("admin.superadmin.merchantBalance.adjustBalance")}
                           </button>
                           <button
-                            onClick={() => setSubscriptionModal({ isOpen: true, merchant })}
+                            onClick={() => {
+                              setSubscriptionModal({ isOpen: true, merchant });
+                              setSubscriptionAction('extend');
+                              setSubscriptionDays('');
+                              setSubscriptionType('CURRENT');
+                              setSubscriptionStatus('CURRENT');
+                              setSuspendReason('');
+                              setMonthlyPeriodMonths('');
+                            }}
                             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-100 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:hover:bg-blue-900/50"
-                            title={t("admin.superadmin.merchantBalance.extend")}
+                            title={t("admin.superadmin.merchantBalance.manageSubscription")}
                           >
                             <FaCalendarPlus className="h-3.5 w-3.5" />
-                            {t("admin.superadmin.merchantBalance.extend")}
+                            {t("admin.superadmin.merchantBalance.manageSubscription")}
                           </button>
                         </div>
                       </td>
@@ -567,7 +618,7 @@ export default function MerchantBalancePage() {
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t("admin.superadmin.merchantBalance.modal.addBalanceTitle")} - {balanceModal.merchant.name}
+                {t("admin.superadmin.merchantBalance.modal.adjustBalanceTitle")} - {balanceModal.merchant.name}
               </h3>
               <button
                 onClick={() => setBalanceModal({ isOpen: false, merchant: null })}
@@ -580,6 +631,35 @@ export default function MerchantBalancePage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("admin.superadmin.merchantBalance.modal.action")}
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBalanceAction('add')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      balanceAction === 'add'
+                        ? 'border-green-500 bg-green-50 text-green-700 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {t("admin.superadmin.merchantBalance.modal.actionAdd")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBalanceAction('deduct')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      balanceAction === 'deduct'
+                        ? 'border-red-500 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {t("admin.superadmin.merchantBalance.modal.actionDeduct")}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   {t("admin.superadmin.merchantBalance.modal.amount")} ({balanceModal.merchant.currency || 'AUD'})
                 </label>
                 <input
@@ -587,16 +667,20 @@ export default function MerchantBalancePage() {
                   value={adjustmentAmount}
                   onChange={(e) => setAdjustmentAmount(e.target.value)}
                   placeholder={t("admin.superadmin.merchantBalance.modal.amountPlaceholder")}
+                  min="0"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
-                <div className="mt-2 flex gap-2">
-                  {[50000, 100000, 200000, 500000].map((amount) => (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(balanceModal.merchant?.currency === 'AUD'
+                    ? [5, 10, 25, 50, 100]
+                    : [50000, 100000, 200000, 500000]
+                  ).map((amount) => (
                     <button
                       key={amount}
                       onClick={() => setAdjustmentAmount(amount.toString())}
                       className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-green-300 hover:bg-green-50 hover:text-green-600 dark:border-gray-600 dark:text-gray-300"
                     >
-                      +{balanceModal.merchant?.currency === 'AUD' ? `$${amount/1000}` : `${(amount/1000).toFixed(0)}k`}
+                      {balanceAction === 'deduct' ? '-' : '+'}{formatCurrency(amount, balanceModal.merchant?.currency || 'AUD')}
                     </button>
                   ))}
                 </div>
@@ -621,6 +705,7 @@ export default function MerchantBalancePage() {
                     setBalanceModal({ isOpen: false, merchant: null });
                     setAdjustmentAmount('');
                     setAdjustmentDescription('');
+                    setBalanceAction('add');
                   }}
                   className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
@@ -631,7 +716,9 @@ export default function MerchantBalancePage() {
                   disabled={submitting || !adjustmentAmount}
                   className="flex-1 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? t("admin.superadmin.merchantBalance.modal.processing") : t("admin.superadmin.merchantBalance.modal.addBalanceBtn")}
+                  {submitting
+                    ? t("admin.superadmin.merchantBalance.modal.processing")
+                    : t("admin.superadmin.merchantBalance.modal.adjustBalanceBtn")}
                 </button>
               </div>
             </div>
@@ -645,7 +732,7 @@ export default function MerchantBalancePage() {
           <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-gray-800">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {t("admin.superadmin.merchantBalance.modal.extendTitle")} - {subscriptionModal.merchant.name}
+                {t("admin.superadmin.merchantBalance.modal.manageTitle")} - {subscriptionModal.merchant.name}
               </h3>
               <button
                 onClick={() => setSubscriptionModal({ isOpen: false, merchant: null })}
@@ -658,14 +745,113 @@ export default function MerchantBalancePage() {
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {t("admin.superadmin.merchantBalance.modal.daysToExtend")}
+                  {t("admin.superadmin.merchantBalance.modal.subscriptionType")}
+                </label>
+                <select
+                  value={subscriptionType}
+                  onChange={(e) => setSubscriptionType(e.target.value as typeof subscriptionType)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="CURRENT">{t("admin.superadmin.merchantBalance.modal.keepCurrent")}</option>
+                  <option value="TRIAL">{t("admin.superadmin.merchantBalance.modal.typeTrial")}</option>
+                  <option value="DEPOSIT">{t("admin.superadmin.merchantBalance.modal.typeDeposit")}</option>
+                  <option value="MONTHLY">{t("admin.superadmin.merchantBalance.modal.typeMonthly")}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("admin.superadmin.merchantBalance.modal.subscriptionStatus")}
+                </label>
+                <select
+                  value={subscriptionStatus}
+                  onChange={(e) => setSubscriptionStatus(e.target.value as typeof subscriptionStatus)}
+                  disabled={subscriptionType !== 'CURRENT'}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:disabled:bg-gray-700/60"
+                >
+                  <option value="CURRENT">{t("admin.superadmin.merchantBalance.modal.keepCurrent")}</option>
+                  <option value="ACTIVE">{t("admin.superadmin.merchantBalance.modal.statusActive")}</option>
+                  <option value="SUSPENDED">{t("admin.superadmin.merchantBalance.modal.statusSuspended")}</option>
+                  <option value="CANCELLED">{t("admin.superadmin.merchantBalance.modal.statusCancelled")}</option>
+                </select>
+                {subscriptionType !== 'CURRENT' && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {t("admin.superadmin.merchantBalance.modal.statusDisabledHint")}
+                  </p>
+                )}
+              </div>
+
+              {subscriptionStatus === 'SUSPENDED' && subscriptionType === 'CURRENT' && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t("admin.superadmin.merchantBalance.modal.suspendReason")}
+                  </label>
+                  <input
+                    type="text"
+                    value={suspendReason}
+                    onChange={(e) => setSuspendReason(e.target.value)}
+                    placeholder={t("admin.superadmin.merchantBalance.modal.suspendReasonPlaceholder")}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              )}
+
+              {subscriptionType === 'MONTHLY' && (
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {t("admin.superadmin.merchantBalance.modal.monthlyPeriod")}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="24"
+                    value={monthlyPeriodMonths}
+                    onChange={(e) => setMonthlyPeriodMonths(e.target.value)}
+                    placeholder={t("admin.superadmin.merchantBalance.modal.monthlyPeriodPlaceholder")}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("admin.superadmin.merchantBalance.modal.daysAdjust")}
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionAction('extend')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      subscriptionAction === 'extend'
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-500 dark:bg-blue-900/30 dark:text-blue-300'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {t("admin.superadmin.merchantBalance.modal.actionExtend")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionAction('reduce')}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      subscriptionAction === 'reduce'
+                        ? 'border-red-500 bg-red-50 text-red-700 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300'
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {t("admin.superadmin.merchantBalance.modal.actionReduce")}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {t("admin.superadmin.merchantBalance.modal.daysToAdjust")}
                 </label>
                 <input
                   type="number"
                   value={subscriptionDays}
                   onChange={(e) => setSubscriptionDays(e.target.value)}
                   placeholder={t("admin.superadmin.merchantBalance.modal.daysPlaceholder")}
-                  min="1"
+                  min="0"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 />
                 <div className="mt-2 flex gap-2">
@@ -675,7 +861,7 @@ export default function MerchantBalancePage() {
                       onClick={() => setSubscriptionDays(days.toString())}
                       className="rounded-lg border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 dark:border-gray-600 dark:text-gray-300"
                     >
-                      {days}d
+                      {subscriptionAction === 'reduce' ? '-' : '+'}{days}d
                     </button>
                   ))}
                 </div>
@@ -686,6 +872,11 @@ export default function MerchantBalancePage() {
                   onClick={() => {
                     setSubscriptionModal({ isOpen: false, merchant: null });
                     setSubscriptionDays('');
+                    setSubscriptionAction('extend');
+                    setSubscriptionType('CURRENT');
+                    setSubscriptionStatus('CURRENT');
+                    setSuspendReason('');
+                    setMonthlyPeriodMonths('');
                   }}
                   className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
                 >
@@ -693,10 +884,12 @@ export default function MerchantBalancePage() {
                 </button>
                 <button
                   onClick={handleSubscriptionExtend}
-                  disabled={submitting || !subscriptionDays}
+                  disabled={submitting}
                   className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {submitting ? t("admin.superadmin.merchantBalance.modal.processing") : t("admin.superadmin.merchantBalance.modal.extendBtn")}
+                  {submitting
+                    ? t("admin.superadmin.merchantBalance.modal.processing")
+                    : t("admin.superadmin.merchantBalance.modal.subscriptionBtn")}
                 </button>
               </div>
             </div>

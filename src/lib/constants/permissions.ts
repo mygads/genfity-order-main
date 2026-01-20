@@ -231,7 +231,6 @@ export const PATH_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/admin/dashboard/reports': STAFF_PERMISSIONS.REPORTS,
   '/admin/dashboard/revenue': STAFF_PERMISSIONS.REVENUE,
   '/admin/dashboard/analytics/sales': STAFF_PERMISSIONS.REVENUE,
-  '/admin/dashboard/merchant/view': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/admin/dashboard/merchant/edit': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/admin/dashboard/qr-tables': STAFF_PERMISSIONS.QR_TABLES,
   '/admin/dashboard/subscription': STAFF_PERMISSIONS.SUBSCRIPTION,

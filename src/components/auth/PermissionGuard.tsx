@@ -39,6 +39,8 @@ export default function PermissionGuard() {
       return;
     }
 
+    if (pathname === '/admin/dashboard/merchant/view') return;
+
     const required = getPermissionForPath(pathname);
     if (!required) return;
 

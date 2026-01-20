@@ -69,7 +69,10 @@ export class MenuBuilderService {
         : null;
       let imageUrl = input.imageUrl;
       let imageThumbUrl = input.imageThumbUrl;
-      let imageThumbMeta = input.imageThumbMeta ?? undefined;
+      let imageThumbMeta: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined =
+        input.imageThumbMeta === null
+          ? Prisma.JsonNull
+          : input.imageThumbMeta ?? undefined;
 
       if (stockPhotoId) {
         const stockPhoto = await tx.stockPhoto.findUnique({
@@ -82,7 +85,7 @@ export class MenuBuilderService {
 
         imageUrl = stockPhoto.imageUrl;
         imageThumbUrl = stockPhoto.thumbnailUrl;
-        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.DbNull;
+        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.JsonNull;
       }
 
       // 1. Create the menu
@@ -255,7 +258,10 @@ export class MenuBuilderService {
         : previousStockPhotoId;
       let imageUrl = input.imageUrl;
       let imageThumbUrl = input.imageThumbUrl;
-      let imageThumbMeta = input.imageThumbMeta ?? undefined;
+      let imageThumbMeta: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput | undefined =
+        input.imageThumbMeta === null
+          ? Prisma.JsonNull
+          : input.imageThumbMeta ?? undefined;
 
       if (hasStockPhotoUpdate && nextStockPhotoId) {
         const stockPhoto = await tx.stockPhoto.findUnique({
@@ -268,7 +274,7 @@ export class MenuBuilderService {
 
         imageUrl = stockPhoto.imageUrl;
         imageThumbUrl = stockPhoto.thumbnailUrl;
-        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.DbNull;
+        imageThumbMeta = stockPhoto.thumbnailMeta ?? Prisma.JsonNull;
       }
 
       // 2. Update the menu

@@ -18,8 +18,14 @@ const updateSubscriptionSchema = z.object({
     type: z.enum(['TRIAL', 'DEPOSIT', 'MONTHLY']).optional(),
     status: z.enum(['ACTIVE', 'SUSPENDED', 'CANCELLED']).optional(),
     extendDays: z.number().min(1).max(365).optional(),
+    adjustDays: z.number().min(-365).max(365).refine((value) => value !== 0, {
+        message: 'Adjust days cannot be 0',
+    }).optional(),
     monthlyPeriodMonths: z.number().min(1).max(24).optional(), // For MONTHLY type
     suspendReason: z.string().max(500).optional(),
+}).refine((data) => !(data.extendDays && data.adjustDays), {
+    message: 'Use either extendDays or adjustDays',
+    path: ['extendDays'],
 });
 
 async function handleGet(
@@ -78,7 +84,7 @@ async function handlePut(
             );
         }
 
-        const { type, status, extendDays, monthlyPeriodMonths, suspendReason } = validation.data;
+        const { type, status, extendDays, adjustDays, monthlyPeriodMonths, suspendReason } = validation.data;
 
         // Handle subscription type change
         if (type) {
@@ -109,15 +115,17 @@ async function handlePut(
             }
         }
 
-        // Handle extend trial/period via repository directly
-        if (extendDays) {
+        const daysDelta = typeof adjustDays === 'number' ? adjustDays : extendDays;
+
+        // Handle adjust trial/period via repository directly
+        if (typeof daysDelta === 'number') {
             const subscription = await subscriptionRepository.getMerchantSubscription(merchantId);
             if (subscription) {
                 let newExpiryDate: Date | null = null;
                 
                 if (subscription.type === 'TRIAL' && subscription.trialEndsAt) {
                     const newTrialEnd = new Date(subscription.trialEndsAt);
-                    newTrialEnd.setDate(newTrialEnd.getDate() + extendDays);
+                    newTrialEnd.setDate(newTrialEnd.getDate() + daysDelta);
                     await subscriptionRepository.updateMerchantSubscription(merchantId, {
                         trialEndsAt: newTrialEnd,
                     });
@@ -126,7 +134,7 @@ async function handlePut(
                     // Extend monthly subscription by days
                     const currentEnd = subscription.currentPeriodEnd || new Date();
                     const newEnd = new Date(currentEnd);
-                    newEnd.setDate(newEnd.getDate() + extendDays);
+                    newEnd.setDate(newEnd.getDate() + daysDelta);
                     await subscriptionRepository.updateMerchantSubscription(merchantId, {
                         currentPeriodEnd: newEnd,
                     });
@@ -134,7 +142,7 @@ async function handlePut(
                 }
 
                 // Send email notification for subscription extension
-                if (newExpiryDate) {
+                if (newExpiryDate && daysDelta > 0) {
                     const merchant = await prisma.merchant.findUnique({
                         where: { id: merchantId },
                         select: { name: true, email: true, country: true, timezone: true },
@@ -150,7 +158,7 @@ async function handlePut(
                             await emailService.sendSubscriptionExtensionNotification({
                                 to: merchant.email,
                                 merchantName: merchant.name,
-                                daysExtended: extendDays,
+                                daysExtended: daysDelta,
                                 newExpiryDate: newExpiryDate,
                                 merchantCountry: merchant.country,
                                 merchantTimezone: merchant.timezone,
