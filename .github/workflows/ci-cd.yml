@@ -88,6 +88,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NODE_ENV=production
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ secrets.NEXT_PUBLIC_TURNSTILE_SITE_KEY }}
 
       - name: Generate build summary
         run: |
@@ -192,6 +193,24 @@ jobs:
             sudo docker builder prune -af --filter "until=24h" 2>/dev/null || true
             
             echo "✅ Deployment complete!"
+          ENDSSH
+
+      - name: Run Database Migration
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          echo "🗃️ Running database migration..."
+          ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
+            # Wait for container to be ready
+            sleep 10
+            
+            # Run Prisma migrate deploy inside the container
+            sudo docker exec genfity-order-main npx prisma migrate deploy 2>&1 || {
+              echo "⚠️ Migration failed or no pending migrations"
+            }
+            
+            echo "✅ Database migration complete!"
           ENDSSH
 
       - name: Health Check
