@@ -1,0 +1,40 @@
+{
+  "crons": [
+    {
+      "name": "Subscription Processing",
+      "path": "/api/cron/subscriptions",
+      "schedule": "0 0 * * *",
+      "description": "Process subscription renewals and expirations at midnight"
+    },
+    {
+      "name": "Stock Reset",
+      "path": "/api/cron/stock-reset",
+      "schedule": "0 0 * * *",
+      "description": "Reset daily stock limits at midnight"
+    },
+    {
+      "name": "Data Cleanup",
+      "path": "/api/cron/cleanup",
+      "schedule": "0 2 * * *",
+      "description": "Clean expired sessions, old data at 2 AM"
+    },
+    {
+      "name": "Subscription Cleanup",
+      "path": "/api/cron/subscription-cleanup",
+      "schedule": "0 3 * * *",
+      "description": "Clean up expired subscription data at 3 AM"
+    },
+    {
+      "name": "Push Subscription Cleanup",
+      "path": "/api/cron/push-subscription-cleanup",
+      "schedule": "0 4 * * *",
+      "description": "Clean up expired push subscriptions at 4 AM"
+    },
+    {
+      "name": "Notification Retry",
+      "path": "/api/cron/notification-retry",
+      "schedule": "*/15 * * * *",
+      "description": "Retry failed notifications every 15 minutes"
+    }
+  ]
+}

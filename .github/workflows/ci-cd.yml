@@ -29,7 +29,7 @@ on:
       deploy_only:
         description: 'Skip build, deploy existing image'
         required: false
-        default: 'false'
+        default: false
         type: boolean
 
 env:
@@ -261,6 +261,100 @@ jobs:
             sudo docker logs genfity-order-main --tail 50
             exit 1
           ENDSSH
+
+      - name: Setup Cron Jobs
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          echo "⏰ Setting up cron jobs..."
+          
+          # Copy cron-config.json from repo to server
+          echo "📦 Copying cron-config.json to server..."
+          scp cron-config.json $VPS_USER@$VPS_HOST:~/genfity/genfity-order-main/cron-config.json
+          
+          # Copy setup script to server and execute
+          cat > /tmp/setup-cron.sh << 'SCRIPT'
+          #!/bin/bash
+          set -e
+          APP_NAME="genfity-order-main"
+          APP_URL="http://localhost:8091"
+          CRON_CONFIG="$HOME/genfity/$APP_NAME/cron-config.json"
+          
+          # Install jq if not present
+          if ! command -v jq &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y jq
+          fi
+          
+          # Get CRON_SECRET from .env
+          CRON_SECRET=$(grep "^CRON_SECRET=" $HOME/genfity/$APP_NAME/.env 2>/dev/null | cut -d'=' -f2-)
+          
+          if [ -z "$CRON_SECRET" ]; then
+            echo "⚠️ CRON_SECRET not found, skipping cron setup"
+            exit 0
+          fi
+          
+          # Create cron runner script
+          CRON_RUNNER="/opt/cron-scripts/run-cron-${APP_NAME}.sh"
+          sudo mkdir -p /opt/cron-scripts
+          sudo tee "$CRON_RUNNER" > /dev/null << 'EOF'
+          #!/bin/bash
+          APP_URL="$1"
+          CRON_PATH="$2"
+          CRON_SECRET="$3"
+          LOG_FILE="/var/log/cron-genfity-order-main.log"
+          TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+          FULL_URL="${APP_URL}${CRON_PATH}"
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$FULL_URL" -H "Content-Type: application/json" -H "x-cron-secret: ${CRON_SECRET}" -H "Authorization: Bearer ${CRON_SECRET}" --max-time 300 2>&1)
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d' | head -c 200)
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "[$TIMESTAMP] OK ${CRON_PATH} - HTTP $HTTP_CODE" >> "$LOG_FILE"
+          else
+            echo "[$TIMESTAMP] FAIL ${CRON_PATH} - HTTP $HTTP_CODE - $BODY" >> "$LOG_FILE"
+          fi
+          EOF
+          sudo chmod +x "$CRON_RUNNER"
+          
+          # Remove old cron jobs for this app
+          CRON_MARKER="# CRON:${APP_NAME}"
+          (crontab -l 2>/dev/null | grep -v "$CRON_MARKER") | crontab - 2>/dev/null || true
+          
+          # Add new cron jobs
+          CRON_COUNT=$(jq -r '.crons | length' "$CRON_CONFIG" 2>/dev/null || echo "0")
+          
+          if [ "$CRON_COUNT" = "0" ] || [ "$CRON_COUNT" = "null" ]; then
+            echo "⚠️ No cron jobs found in config"
+            exit 0
+          fi
+          
+          echo "📅 Found $CRON_COUNT cron jobs"
+          
+          NEW_CRONTAB=$(crontab -l 2>/dev/null || true)
+          
+          for i in $(seq 0 $((CRON_COUNT - 1))); do
+            CRON_PATH=$(jq -r ".crons[$i].path" "$CRON_CONFIG")
+            CRON_SCHEDULE=$(jq -r ".crons[$i].schedule" "$CRON_CONFIG")
+            CRON_NAME=$(jq -r ".crons[$i].name // .crons[$i].path" "$CRON_CONFIG")
+            
+            if [ -n "$CRON_PATH" ] && [ "$CRON_PATH" != "null" ]; then
+              CRON_ENTRY="${CRON_SCHEDULE} ${CRON_RUNNER} ${APP_URL} ${CRON_PATH} ${CRON_SECRET} ${CRON_MARKER}"
+              NEW_CRONTAB="${NEW_CRONTAB}
+          ${CRON_ENTRY}"
+              echo "  ✓ ${CRON_NAME}: ${CRON_SCHEDULE}"
+            fi
+          done
+          
+          echo "$NEW_CRONTAB" | crontab -
+          
+          echo ""
+          echo "✅ Cron jobs installed!"
+          echo "📋 Active cron jobs:"
+          crontab -l | grep "$CRON_MARKER" | wc -l
+          SCRIPT
+          
+          scp /tmp/setup-cron.sh $VPS_USER@$VPS_HOST:/tmp/setup-cron.sh
+          ssh $VPS_USER@$VPS_HOST "chmod +x /tmp/setup-cron.sh && /tmp/setup-cron.sh"
 
       - name: Generate deployment summary
         if: success()
