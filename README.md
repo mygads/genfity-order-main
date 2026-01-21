@@ -273,6 +273,53 @@ genfity-online-ordering/
 
 ---
 
+## ⏰ Automated Background Jobs
+
+The system includes automated cron jobs for maintenance and processing tasks. Configuration is managed via `cron-config.json` in the repository root.
+
+### Available Cron Jobs
+
+| Job | Schedule | Description |
+|-----|----------|-------------|
+| **Subscription Processing** | `0 0 * * *` | Process subscription renewals and expirations at midnight |
+| **Stock Reset** | `0 0 * * *` | Reset daily stock limits at midnight |
+| **Data Cleanup** | `0 2 * * *` | Clean expired sessions and old data at 2 AM |
+| **Subscription Cleanup** | `0 3 * * *` | Clean up expired subscription data at 3 AM |
+| **Push Subscription Cleanup** | `0 4 * * *` | Clean up expired push subscriptions at 4 AM |
+| **Notification Retry** | `*/15 * * * *` | Retry failed notifications every 15 minutes |
+
+### Adding New Cron Jobs
+
+1. **Create API endpoint**: Add route in `src/app/api/cron/`
+2. **Update config**: Edit `cron-config.json`:
+   ```json
+   {
+     "crons": [
+       {
+         "name": "New Job",
+         "path": "/api/cron/new-job",
+         "schedule": "0 6 * * *",
+         "description": "Runs at 6 AM daily"
+       }
+     ]
+   }
+   ```
+3. **Deploy**: Push changes and deploy - CI/CD will automatically setup the cron job
+
+### Monitoring Cron Jobs
+
+Cron execution logs are stored at `/var/log/cron-genfity-order-main.log` on the server:
+
+```bash
+# View recent cron executions
+ssh user@server "tail -f /var/log/cron-genfity-order-main.log"
+
+# Check active cron jobs
+ssh user@server "crontab -l | grep 'CRON:genfity-order-main'"
+```
+
+---
+
 ## 🔐 Security Features
 
 ### Implemented Security
