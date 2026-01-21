@@ -24,6 +24,7 @@ import {
 } from 'react-icons/fa';
 import { useTutorial } from '../TutorialContext';
 import type { TutorialId } from '../types';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 
 // ============================================
 // WIZARD STEPS CONFIGURATION
@@ -137,6 +138,7 @@ export function QuickSetupWizard({
   onComplete,
   onDismiss,
 }: QuickSetupWizardProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(forceShow);
   const [currentStep, setCurrentStep] = useState(0);
@@ -318,21 +320,21 @@ export function QuickSetupWizard({
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              🎉 Setup Complete!
+              {t('tutorial.wizard.completeTitle')}
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-300">
-              Your restaurant is ready to accept orders. Customers can now browse your menu and place orders!
+              {t('tutorial.wizard.completeDescription')}
             </p>
             
             {/* Stats */}
             <div className="mt-6 grid grid-cols-2 gap-4">
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
                 <div className="text-2xl font-bold text-brand-500">{completedSteps.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Steps Completed</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('tutorial.wizard.stepsCompleted')}</div>
               </div>
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
-                <div className="text-2xl font-bold text-green-500">Ready</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Store Status</div>
+                <div className="text-2xl font-bold text-green-500">{t('tutorial.wizard.ready')}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{t('tutorial.wizard.storeStatus')}</div>
               </div>
             </div>
             
@@ -343,7 +345,7 @@ export function QuickSetupWizard({
               }}
               className="mt-6 w-full rounded-lg bg-brand-500 px-6 py-3 font-medium text-white transition-colors hover:bg-brand-600"
             >
-              Start Accepting Orders
+              {t('tutorial.wizard.startAcceptingOrders')}
             </button>
           </div>
           
@@ -381,6 +383,9 @@ export function QuickSetupWizard({
   }
 
   const currentStepData = WIZARD_STEPS[currentStep];
+  const stepTitle = tOr(t, `tutorial.wizard.steps.${currentStepData.id}.title`, currentStepData.title);
+  const stepDescription = tOr(t, `tutorial.wizard.steps.${currentStepData.id}.description`, currentStepData.description);
+  const stepOptionalLabel = t('tutorial.wizard.optional');
   const progress = (completedSteps.length / WIZARD_STEPS.length) * 100;
   const totalMinutes = WIZARD_STEPS.reduce((sum, s) => sum + s.estimatedMinutes, 0);
   const remainingMinutes = WIZARD_STEPS.filter(s => !completedSteps.includes(s.id)).reduce((sum, s) => sum + s.estimatedMinutes, 0);
@@ -399,14 +404,16 @@ export function QuickSetupWizard({
               <FaRocket className="h-4 w-4 text-white" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-white">Quick Setup</h2>
-              <p className="text-xs text-white/80">{remainingMinutes} min remaining</p>
+              <h2 className="text-sm font-semibold text-white">{t('tutorial.wizard.title')}</h2>
+              <p className="text-xs text-white/80">
+                {t('tutorial.wizard.remainingMinutes', { minutes: remainingMinutes })}
+              </p>
             </div>
           </div>
           <button
             onClick={handleDismiss}
             className="rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <FaTimes className="h-4 w-4" />
           </button>
@@ -418,6 +425,7 @@ export function QuickSetupWizard({
             const isCompleted = completedSteps.includes(step.id);
             const isCurrent = index === currentStep;
             const StepIcon = step.icon;
+            const stepTitleText = tOr(t, `tutorial.wizard.steps.${step.id}.title`, step.title);
             
             return (
               <React.Fragment key={step.id}>
@@ -426,7 +434,7 @@ export function QuickSetupWizard({
                   className={`flex flex-col items-center gap-1 ${
                     isCurrent ? '' : 'opacity-60 hover:opacity-100'
                   }`}
-                  title={step.title}
+                  title={stepTitleText}
                 >
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
                     isCompleted
@@ -457,19 +465,19 @@ export function QuickSetupWizard({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                  {currentStepData.title}
+                  {stepTitle}
                 </h3>
                 {currentStepData.isOptional && (
                   <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-                    Optional
+                    {stepOptionalLabel}
                   </span>
                 )}
               </div>
               <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                {currentStepData.description}
+                {stepDescription}
               </p>
               <div className="mt-1 text-xs text-gray-400">
-                ⏱ ~{currentStepData.estimatedMinutes} min
+                {t('tutorial.wizard.estimatedMinutes', { minutes: currentStepData.estimatedMinutes })}
               </div>
             </div>
           </div>
@@ -479,7 +487,7 @@ export function QuickSetupWizard({
             {completedSteps.includes(currentStepData.id) ? (
               <div className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-400">
                 <FaCheck className="h-3 w-3" />
-                <span className="font-medium">Completed</span>
+                <span className="font-medium">{t('tutorial.wizard.completed')}</span>
               </div>
             ) : (
               <>
@@ -488,13 +496,13 @@ export function QuickSetupWizard({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600"
                 >
                   <FaPlay className="h-3 w-3" />
-                  Start Tutorial
+                  {t('tutorial.ui.startTutorial')}
                 </button>
                 <button
                   onClick={() => handleStepComplete(currentStepData.id)}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
-                  Mark Done
+                  {t('tutorial.wizard.markDone')}
                 </button>
               </>
             )}
@@ -509,7 +517,7 @@ export function QuickSetupWizard({
             className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs text-gray-600 transition-colors hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
           >
             <FaArrowLeft className="h-3 w-3" />
-            Prev
+            {t('tutorial.ui.previous')}
           </button>
           
           <div className="flex items-center gap-2">
@@ -518,7 +526,7 @@ export function QuickSetupWizard({
                 onClick={handleSkipStep}
                 className="rounded-lg px-3 py-1.5 text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-200"
               >
-                Skip
+                {t('tutorial.ui.skip')}
               </button>
             )}
             <button
@@ -537,14 +545,14 @@ export function QuickSetupWizard({
             >
               {completedSteps.includes(currentStepData.id) ? (
                 currentStep < WIZARD_STEPS.length - 1 ? (
-                  <>Next <FaArrowRight className="h-2.5 w-2.5" /></>
+                  <>{t('tutorial.ui.next')} <FaArrowRight className="h-2.5 w-2.5" /></>
                 ) : (
-                  <>Finish <FaCheck className="h-2.5 w-2.5" /></>
+                  <>{t('tutorial.ui.finish')} <FaCheck className="h-2.5 w-2.5" /></>
                 )
               ) : (
                 <>
                   <FaPlay className="h-2.5 w-2.5" />
-                  Start
+                  {t('tutorial.ui.start')}
                 </>
               )}
             </button>
@@ -565,6 +573,7 @@ interface SetupWizardButtonProps {
 }
 
 export function SetupWizardButton({ className }: SetupWizardButtonProps) {
+  const { t } = useTranslation();
   const [showWizard, setShowWizard] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -583,7 +592,7 @@ export function SetupWizardButton({ className }: SetupWizardButtonProps) {
         className={`relative inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 ${className}`}
       >
         <FaRocket className={`h-4 w-4 ${isComplete ? 'text-green-500' : 'text-brand-500'}`} />
-        <span>Setup Wizard</span>
+        <span>{t('tutorial.wizard.buttonLabel')}</span>
         
         {/* Progress indicator */}
         {!isComplete && progress > 0 && (

@@ -42,6 +42,7 @@ export {
   orderHistorySteps,
   ordersQueueSteps,
 } from './order-tutorials';
+export { reservationsSteps } from './reservations-tutorials';
 
 // Reports & Revenue Tutorials
 export {

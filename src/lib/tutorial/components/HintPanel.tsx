@@ -12,6 +12,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
 import { getTutorialById } from '../tutorials';
 import type { TutorialId } from '../types';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import {
   FaLightbulb,
   FaChevronDown,
@@ -95,6 +96,7 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export function HintPanelButton() {
+  const { t } = useTranslation();
   const { 
     showHintPanel, 
     toggleHintPanel, 
@@ -116,12 +118,12 @@ export function HintPanelButton() {
           ? 'bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400'
           : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
       }`}
-      title="Tutorials & Help"
+      title={t('tutorial.ui.hintPanelToggleTitle')}
       aria-expanded={showHintPanel}
       aria-haspopup="true"
     >
       <FaLightbulb className={`w-5 h-5 ${showHintPanel ? 'text-brand-500' : ''}`} />
-      <span className="hidden md:inline text-sm font-medium">Help</span>
+      <span className="hidden md:inline text-sm font-medium">{t('tutorial.ui.help')}</span>
       <FaChevronDown 
         className={`w-3 h-3 transition-transform duration-200 ${showHintPanel ? 'rotate-180' : ''}`} 
       />
@@ -135,6 +137,7 @@ export function HintPanelButton() {
 }
 
 export function HintPanel() {
+  const { t } = useTranslation();
   const {
     showHintPanel,
     toggleHintPanel,
@@ -230,11 +233,13 @@ export function HintPanel() {
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-base sm:text-lg flex items-center gap-2">
             <FaLightbulb className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden xs:inline">Tutorials &amp; Help</span>
-            <span className="xs:hidden">Help</span>
+            <span className="hidden xs:inline">{t('tutorial.ui.hintPanelTitle')}</span>
+            <span className="xs:hidden">{t('tutorial.ui.help')}</span>
           </h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm opacity-90">{completedCount}/{availableTutorials.length} done</span>
+            <span className="text-xs sm:text-sm opacity-90">
+              {t('tutorial.ui.completedCount', { completed: completedCount, total: availableTutorials.length })}
+            </span>
             <button
               onClick={toggleHintPanel}
               className="p-1 hover:bg-white/20 rounded-lg transition-colors touch-manipulation"
@@ -251,14 +256,14 @@ export function HintPanel() {
           {!hasCompletedOnboarding && (
             <div className="mb-2 p-2.5 sm:p-3 bg-brand-50 dark:bg-brand-900/20 rounded-lg border border-brand-200 dark:border-brand-800">
               <p className="text-xs sm:text-sm text-brand-700 dark:text-brand-300 mb-2">
-                🎉 Welcome! Complete onboarding to get started.
+                {t('tutorial.onboarding.welcome')}
               </p>
               <button
                 onClick={() => handleStartTutorial('onboarding')}
                 className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors touch-manipulation"
               >
                 <FaPlay className="w-3 h-3" />
-                Start Onboarding
+                {t('tutorial.onboarding.start')}
               </button>
             </div>
           )}
@@ -266,6 +271,8 @@ export function HintPanel() {
           {availableTutorials.map((tutorial) => {
             const isCompleted = isTutorialCompleted(tutorial.id);
             const icon = iconMap[tutorial.icon] || <FaLightbulb className="w-4 h-4" />;
+            const tutorialName = tOr(t, `tutorials.${tutorial.id}.name`, tutorial.name);
+            const tutorialDescription = tOr(t, `tutorials.${tutorial.id}.description`, tutorial.description);
 
             return (
               <div
@@ -299,14 +306,14 @@ export function HintPanel() {
                         : 'text-gray-900 dark:text-white'
                     }`}
                   >
-                    {tutorial.name}
+                    {tutorialName}
                   </h4>
                   <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate hidden xs:block">
-                    {tutorial.description}
+                    {tutorialDescription}
                   </p>
                   {tutorial.estimatedTime && (
                     <span className="text-[10px] sm:text-xs text-gray-400 dark:text-gray-500">
-                      ~{tutorial.estimatedTime} min
+                      {t('tutorial.ui.estimatedTime', { minutes: tutorial.estimatedTime })}
                     </span>
                   )}
                 </div>
@@ -322,7 +329,7 @@ export function HintPanel() {
                       ? 'text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 active:bg-gray-300'
                       : 'text-brand-500 hover:text-brand-600 hover:bg-brand-100 dark:hover:bg-brand-900/30 active:bg-brand-200'
                   }`}
-                  title={isCompleted ? 'Replay tutorial' : 'Start tutorial'}
+                  title={isCompleted ? t('tutorial.ui.replayTutorial') : t('tutorial.ui.startTutorial')}
                 >
                   {isCompleted ? (
                     <FaRedo className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -340,19 +347,19 @@ export function HintPanel() {
       <div className="border-t border-gray-200 dark:border-gray-700 p-2 sm:p-3 shrink-0">
         {showResetConfirm ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Reset progress?</span>
+            <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">{t('tutorial.ui.resetConfirm')}</span>
             <div className="flex-1" />
             <button
               onClick={() => setShowResetConfirm(false)}
               className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 touch-manipulation"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleReset}
               className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-red-500 hover:bg-red-600 active:bg-red-700 text-white rounded-lg transition-colors touch-manipulation"
             >
-              Reset
+              {t('tutorial.ui.reset')}
             </button>
           </div>
         ) : (
@@ -361,8 +368,8 @@ export function HintPanel() {
             className="w-full flex items-center justify-center gap-2 px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 active:bg-gray-200 rounded-lg transition-colors touch-manipulation"
           >
             <FaRedo className="w-3 h-3" />
-            <span className="hidden xs:inline">Reset Tutorial Progress</span>
-            <span className="xs:hidden">Reset</span>
+            <span className="hidden xs:inline">{t('tutorial.ui.resetProgress')}</span>
+            <span className="xs:hidden">{t('tutorial.ui.reset')}</span>
           </button>
         )}
       </div>

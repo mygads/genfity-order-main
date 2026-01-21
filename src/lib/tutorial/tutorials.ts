@@ -33,6 +33,7 @@ import {
   kitchenDisplaySteps,
   orderHistorySteps,
   ordersQueueSteps,
+  reservationsSteps,
   // Reports
   revenueDashboardSteps,
   reportsSteps,
@@ -249,6 +250,17 @@ export const TUTORIALS: Tutorial[] = [
     estimatedTime: 3,
   },
   {
+    id: 'reservations',
+    name: 'Reservations',
+    description: 'Manage table reservations and preorders',
+    icon: 'FaCalendarCheck',
+    steps: reservationsSteps,
+    roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
+    requiredPermissions: ['ORDERS'],
+    order: 16,
+    estimatedTime: 2,
+  },
+  {
     id: 'kitchen-display',
     name: 'Kitchen Display',
     description: 'Kitchen order management',
@@ -256,7 +268,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: kitchenDisplaySteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['KITCHEN_DISPLAY'],
-    order: 16,
+    order: 17,
     estimatedTime: 2,
   },
   {
@@ -267,7 +279,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: orderHistorySteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['ORDERS'],
-    order: 17,
+    order: 18,
     estimatedTime: 2,
   },
   {
@@ -278,7 +290,7 @@ export const TUTORIALS: Tutorial[] = [
     steps: ordersQueueSteps,
     roles: ['MERCHANT_OWNER', 'MERCHANT_STAFF'],
     requiredPermissions: ['ORDERS'],
-    order: 18,
+    order: 19,
     estimatedTime: 2,
   },
 
@@ -518,7 +530,7 @@ export function getTutorialsByCategory(): Record<string, Tutorial[]> {
     'Menu Items': TUTORIALS.filter(t => t.id.includes('menu') && !t.id.includes('menu-books') && !t.id.includes('menu-book')),
     'Addons': TUTORIALS.filter(t => t.id.includes('addon')),
     'Settings': TUTORIALS.filter(t => ['merchant-settings', 'qr-tables', 'stock-management'].includes(t.id)),
-    'Orders': TUTORIALS.filter(t => ['active-orders', 'kitchen-display', 'order-history', 'orders-queue'].includes(t.id)),
+    'Orders': TUTORIALS.filter(t => ['active-orders', 'reservations', 'kitchen-display', 'order-history', 'orders-queue'].includes(t.id)),
     'Reports & Analytics': TUTORIALS.filter(t => ['revenue-dashboard', 'reports', 'analytics', 'superadmin-analytics'].includes(t.id)),
     'Other Features': TUTORIALS.filter(t => ['staff-management', 'special-prices', 'special-price-form', 'menu-books', 'menu-book-form', 'customers-management'].includes(t.id)),
     'Quick Tips': TUTORIALS.filter(t => ['keyboard-shortcuts', 'bulk-operations', 'search-filter', 'dark-mode', 'mobile-usage', 'view-modes', 'daily-operations'].includes(t.id)),

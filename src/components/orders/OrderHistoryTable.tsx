@@ -272,7 +272,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
       {/* Filters & Search */}
       <div className="flex flex-wrap items-center gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-50">
+        <div className="relative flex-1 min-w-50" data-tutorial="order-search">
           <input
             type="text"
             placeholder={t('admin.history.filters.searchPlaceholder')}
@@ -413,10 +413,11 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                   </td>
                 </tr>
               ) : (
-                paginatedOrders.map((order) => (
+                paginatedOrders.map((order, index) => (
                   <tr
                     key={order.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors"
+                    data-tutorial={index === 0 ? 'history-order-card' : undefined}
                   >
                     <td className="px-4 py-3 text-sm font-medium text-gray-800 dark:text-white/90">
                       <div className="flex flex-wrap items-center gap-2">
@@ -528,6 +529,7 @@ export const OrderHistoryTable: React.FC<OrderHistoryTableProps> = ({
                             onClick={() => onPrintReceipt(order.id)}
                             title={t('admin.history.actions.printReceipt')}
                             aria-label={t('admin.history.actions.printReceipt')}
+                            data-tutorial={index === 0 ? 'reprint-btn' : undefined}
                           />
                         )}
                         <TableActionButton

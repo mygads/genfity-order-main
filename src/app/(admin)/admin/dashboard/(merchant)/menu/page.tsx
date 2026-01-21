@@ -1025,6 +1025,7 @@ function MerchantMenuPageContent() {
                             onClick={() => setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
                             title="Actions"
                             aria-label="Actions"
+                            data-tutorial={index === 0 ? "menu-actions-btn" : undefined}
                           />
 
                           {openDropdownId === item.id && (

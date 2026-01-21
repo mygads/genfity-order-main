@@ -29,6 +29,7 @@ export type TutorialId =
   | 'stock-management'        // Manage stock overview
   // Order Management
   | 'active-orders'           // Active orders management
+  | 'reservations'            // Table reservations management
   | 'kitchen-display'         // Kitchen display system
   | 'order-history'           // View order history
   | 'orders-queue'            // Queue/lounge display for ready orders

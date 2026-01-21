@@ -16,6 +16,15 @@ export const onboardingSteps: TutorialStep[] = [
     image: '/images/logo/logo.png',
   },
   {
+    id: 'getting-started-checklist',
+    title: 'Getting Started Checklist',
+    description: 'Track your setup progress here. Tap any item to open the right page.',
+    targetSelector: '[data-tutorial="getting-started-checklist"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+    navigateTo: '/admin/dashboard',
+  },
+  {
     id: 'sidebar-intro',
     title: 'Your Dashboard Sidebar',
     description: 'This is your main navigation. Here you\'ll find all the tools to manage your restaurant: orders, menu items, categories, settings, and more.',

@@ -13,6 +13,7 @@ import { FaLightbulb, FaTimes, FaArrowRight, FaInfoCircle } from 'react-icons/fa
 import { usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
 import type { TutorialId } from '../types';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 
 export interface ContextualHintConfig {
   /** Unique identifier for this hint */
@@ -67,10 +68,13 @@ function saveDismissedHint(hintId: string): void {
 }
 
 export function ContextualHint({ config, onDismiss, isVisible = true }: ContextualHintProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const { startTutorial, isOverlayVisible } = useTutorial();
+  const title = tOr(t, `tutorial.contextualHints.${config.id}.title`, config.title);
+  const message = tOr(t, `tutorial.contextualHints.${config.id}.message`, config.message);
 
   // Check if hint was already dismissed
   useEffect(() => {
@@ -200,7 +204,7 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <h4 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                {config.title}
+                {title}
               </h4>
               <button
                 onClick={handleDismiss}
@@ -210,7 +214,7 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
               </button>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-0.5 sm:mt-1 leading-relaxed">
-              {config.message}
+              {message}
             </p>
 
             {/* Action Button - Responsive */}
@@ -219,7 +223,7 @@ export function ContextualHint({ config, onDismiss, isVisible = true }: Contextu
                 onClick={handleStartTutorial}
                 className="mt-2 sm:mt-3 inline-flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm font-medium text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 transition-colors touch-manipulation"
               >
-                <span>Start Tutorial</span>
+                <span>{t('tutorial.ui.startTutorial')}</span>
                 <FaArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
               </button>
             )}

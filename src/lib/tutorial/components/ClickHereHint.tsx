@@ -12,6 +12,7 @@ import { createPortal } from 'react-dom';
 import { FaTimes, FaArrowRight, FaHandPointer } from 'react-icons/fa';
 import { useTutorial } from '../TutorialContext';
 import type { TutorialId } from '../types';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 
 export interface ClickHereHintConfig {
   /** Unique ID for this hint */
@@ -68,11 +69,16 @@ function saveDismissedHint(hintId: string): void {
 }
 
 export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHintProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const { startTutorial, isOverlayVisible } = useTutorial();
+  const message = tOr(t, `tutorial.clickHints.${config.id}.message`, config.message);
+  const subText = config.subText
+    ? tOr(t, `tutorial.clickHints.${config.id}.subText`, config.subText)
+    : undefined;
 
   // Calculate target element position
   const calculatePosition = useCallback(() => {
@@ -280,16 +286,16 @@ export function ClickHereHint({ config, onDismiss, onButtonClick }: ClickHereHin
           <div className="flex items-start gap-1.5 sm:gap-2">
             <FaHandPointer className="w-3 h-3 sm:w-4 sm:h-4 mt-0.5 shrink-0 animate-pulse" />
             <div>
-              <p className="text-xs sm:text-sm font-semibold">{config.message}</p>
-              {config.subText && (
-                <p className="text-[10px] sm:text-xs text-white/80 mt-0.5 sm:mt-1">{config.subText}</p>
+              <p className="text-xs sm:text-sm font-semibold">{message}</p>
+              {subText && (
+                <p className="text-[10px] sm:text-xs text-white/80 mt-0.5 sm:mt-1">{subText}</p>
               )}
             </div>
           </div>
 
           {/* Click to continue prompt - Hidden on very small screens */}
           <div className="mt-1.5 sm:mt-2 hidden xs:flex items-center gap-1 text-[10px] sm:text-xs text-white/70">
-            <span>Click the button to continue</span>
+            <span>{t('tutorial.ui.clickToContinue')}</span>
             <FaArrowRight className="w-2 h-2 sm:w-2.5 sm:h-2.5" />
           </div>
 

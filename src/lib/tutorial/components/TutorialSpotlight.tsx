@@ -14,6 +14,7 @@ import { useTutorial } from '../TutorialContext';
 import { createPortal } from 'react-dom';
 import { FaArrowLeft, FaArrowRight, FaTimes, FaLightbulb, FaKeyboard, FaHandPointLeft, FaHandPointRight } from 'react-icons/fa';
 import { AnimatedPointer, type PointerIconName } from './AnimatedPointer';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 
 interface SpotlightRect {
   top: number;
@@ -121,6 +122,7 @@ function useDeviceOrientation() {
 export function TutorialSpotlight() {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useTranslation();
   const {
     activeTutorial,
     currentStep,
@@ -634,6 +636,22 @@ export function TutorialSpotlight() {
   const isLastStep = currentStepIndex === totalSteps - 1;
   const isCenterPosition = currentStep.position === 'center' || !currentStep.targetSelector;
 
+  const stepTitleKey = `tutorial.steps.${activeTutorial.id}.${currentStep.id}.title`;
+  const stepDescriptionKey = `tutorial.steps.${activeTutorial.id}.${currentStep.id}.description`;
+  const stepActionKey = `tutorial.steps.${activeTutorial.id}.${currentStep.id}.action`;
+  const stepPointerKey = `tutorial.steps.${activeTutorial.id}.${currentStep.id}.pointer`;
+  const stepTitle = tOr(t, stepTitleKey, currentStep.title);
+  const stepDescription = tOr(t, stepDescriptionKey, currentStep.description);
+  const stepActionText = currentStep.actionText
+    ? tOr(t, stepActionKey, currentStep.actionText)
+    : undefined;
+  const stepPointerLabel = currentStep.pointerLabel
+    ? tOr(t, stepPointerKey, currentStep.pointerLabel)
+    : undefined;
+  const tutorialName = tOr(t, `tutorials.${activeTutorial.id}.name`, activeTutorial.name);
+  const defaultActionLabel = isLastStep ? t('tutorial.ui.finish') : t('tutorial.ui.next');
+  const actionLabel = stepActionText || defaultActionLabel;
+
   return createPortal(
     <div className="fixed inset-0 z-9999" role="dialog" aria-modal="true">
       {/* Overlay Background with Spotlight Cutout */}
@@ -734,7 +752,7 @@ export function TutorialSpotlight() {
         <AnimatedPointer
           targetSelector={currentStep.targetSelector}
           direction={currentStep.pointerDirection || 'right'}
-          label={currentStep.pointerLabel}
+          label={stepPointerLabel}
           icon={currentStep.pointerIcon as PointerIconName}
           visible={true}
           mobileOptimized={true}
@@ -781,9 +799,7 @@ export function TutorialSpotlight() {
         {/* Step Indicator Badge - Floating at top */}
         <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
           <div className="flex items-center gap-1 px-2 sm:px-3 py-1 bg-brand-500 text-white text-[10px] sm:text-xs font-semibold rounded-full shadow-lg whitespace-nowrap">
-            <span>Step {currentStepIndex + 1}</span>
-            <span className="opacity-70">of</span>
-            <span>{totalSteps}</span>
+            <span>{t('tutorial.ui.stepIndicator', { current: currentStepIndex + 1, total: totalSteps })}</span>
           </div>
         </div>
 
@@ -795,11 +811,11 @@ export function TutorialSpotlight() {
             </div>
             <div className="min-w-0">
               <h3 className="text-sm sm:text-base md:text-lg font-semibold text-gray-900 dark:text-white truncate">
-                {currentStep.title}
+                {stepTitle}
               </h3>
-              {activeTutorial.name && (
+              {tutorialName && (
                 <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-                  {activeTutorial.name}
+                  {tutorialName}
                 </span>
               )}
             </div>
@@ -808,7 +824,7 @@ export function TutorialSpotlight() {
             <button
               onClick={skipTutorial}
               className="p-1 sm:p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation"
-              title="Skip tutorial (Esc)"
+              title={t('tutorial.ui.skipTitle')}
             >
               <FaTimes className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
@@ -829,7 +845,7 @@ export function TutorialSpotlight() {
 
         {/* Description - Responsive text */}
         <p className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm leading-relaxed mb-3 sm:mb-4">
-          {currentStep.description}
+          {stepDescription}
         </p>
 
         {/* Navigation Buttons - Responsive */}
@@ -843,7 +859,7 @@ export function TutorialSpotlight() {
               }`}
           >
             <FaArrowLeft className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-            <span className="hidden xs:inline">Back</span>
+            <span className="hidden xs:inline">{t('tutorial.ui.back')}</span>
           </button>
 
           <div className="flex items-center gap-1.5 sm:gap-2">
@@ -852,20 +868,14 @@ export function TutorialSpotlight() {
                 onClick={skipTutorial}
                 className="px-2 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors touch-manipulation hidden xs:block"
               >
-                Skip
+                {t('tutorial.ui.skip')}
               </button>
             )}
             <button
               onClick={handleNext}
               className="flex items-center gap-1 sm:gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-500 hover:bg-brand-600 active:bg-brand-700 text-white text-xs sm:text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow touch-manipulation"
             >
-              <span>
-                {currentStep.actionText
-                  ? currentStep.actionText
-                  : isLastStep
-                    ? 'Finish'
-                    : 'Next'}
-              </span>
+              <span>{actionLabel}</span>
               {!isLastStep && <FaArrowRight className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
             </button>
           </div>
@@ -878,21 +888,25 @@ export function TutorialSpotlight() {
             className="w-full flex items-center justify-center gap-2 text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
           >
             <FaKeyboard className="w-3 h-3" />
-            <span>{showKeyboardHints ? 'Hide' : 'Show'} keyboard shortcuts</span>
+            <span>
+              {showKeyboardHints
+                ? t('tutorial.ui.hideKeyboardShortcuts')
+                : t('tutorial.ui.showKeyboardShortcuts')}
+            </span>
           </button>
           {showKeyboardHints && (
             <div className="flex items-center justify-center gap-3 md:gap-4 text-[10px] md:text-xs text-gray-400 dark:text-gray-500 mt-2 animate-fade-in">
               <span>
                 <kbd className="px-1 md:px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[9px] md:text-[10px] font-mono">←</kbd>{' '}
-                Back
+                {t('tutorial.ui.back')}
               </span>
               <span>
                 <kbd className="px-1 md:px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[9px] md:text-[10px] font-mono">→</kbd>{' '}
-                Next
+                {t('tutorial.ui.next')}
               </span>
               <span>
                 <kbd className="px-1 md:px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-[9px] md:text-[10px] font-mono">Esc</kbd>{' '}
-                Skip
+                {t('tutorial.ui.skip')}
               </span>
             </div>
           )}
@@ -904,12 +918,12 @@ export function TutorialSpotlight() {
             <div className="flex items-center justify-center gap-4 text-[10px] text-gray-400 dark:text-gray-500">
               <span className="flex items-center gap-1">
                 <FaHandPointRight className="w-3 h-3 animate-bounce-x" />
-                Swipe
+                {t('tutorial.ui.swipe')}
               </span>
               <span className="text-gray-300 dark:text-gray-600">•</span>
               <span className="flex items-center gap-1">
                 <FaHandPointLeft className="w-3 h-3 animate-bounce-x-reverse" />
-                Navigate
+                {t('tutorial.ui.navigate')}
               </span>
             </div>
           </div>

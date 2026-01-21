@@ -14,6 +14,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useTutorial } from '../TutorialContext';
 import { getTutorialById } from '../tutorials';
 import type { TutorialId } from '../types';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 
 // ============================================
 // TIPS DATA
@@ -234,6 +235,7 @@ export function TipsOfTheDay({
   delayMs = 2000,
   canDismissPermanently = true,
 }: TipsOfTheDayProps) {
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [show, setShow] = useState(false);
   const [currentTip, setCurrentTip] = useState<Tip | null>(null);
@@ -386,11 +388,14 @@ export function TipsOfTheDay({
   };
 
   const categoryLabels = {
-    productivity: 'Productivity',
-    feature: 'Feature',
-    shortcut: 'Shortcut',
-    'best-practice': 'Best Practice',
+    productivity: t('tutorial.tipCategories.productivity'),
+    feature: t('tutorial.tipCategories.feature'),
+    shortcut: t('tutorial.tipCategories.shortcut'),
+    'best-practice': t('tutorial.tipCategories.bestPractice'),
   };
+
+  const tipTitle = tOr(t, `tutorial.tips.${currentTip.id}.title`, currentTip.title);
+  const tipMessage = tOr(t, `tutorial.tips.${currentTip.id}.message`, currentTip.message);
 
   return createPortal(
     <div
@@ -399,7 +404,7 @@ export function TipsOfTheDay({
         : 'opacity-100 translate-y-0 scale-100'
         }`}
       role="dialog"
-      aria-label="Tip of the Day"
+      aria-label={t('tutorial.ui.tipOfTheDay')}
     >
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800">
         {/* Header */}
@@ -408,12 +413,12 @@ export function TipsOfTheDay({
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
               <FaLightbulb className="h-4 w-4 text-white" />
             </div>
-            <span className="text-sm font-semibold text-white">Tip of the Day</span>
+            <span className="text-sm font-semibold text-white">{t('tutorial.ui.tipOfTheDay')}</span>
           </div>
           <button
             onClick={() => handleDismiss()}
             className="rounded-lg p-1.5 text-white/80 transition-colors hover:bg-white/20 hover:text-white"
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             <FaTimes className="h-4 w-4" />
           </button>
@@ -428,10 +433,10 @@ export function TipsOfTheDay({
 
           {/* Title & Message */}
           <h4 className="mt-3 text-lg font-semibold text-gray-900 dark:text-white">
-            {currentTip.title}
+            {tipTitle}
           </h4>
           <p className="mt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-            {currentTip.message}
+            {tipMessage}
           </p>
 
           {/* Tutorial Button */}
@@ -441,7 +446,7 @@ export function TipsOfTheDay({
               className="mt-4 inline-flex items-center gap-2 rounded-lg bg-brand-50 px-4 py-2 text-sm font-medium text-brand-600 transition-colors hover:bg-brand-100 dark:bg-brand-900/30 dark:text-brand-400 dark:hover:bg-brand-900/50"
             >
               <FaPlay className="h-3 w-3" />
-              <span>Start Tutorial</span>
+              <span>{t('tutorial.ui.startTutorial')}</span>
             </button>
           )}
         </div>
@@ -453,7 +458,7 @@ export function TipsOfTheDay({
             <button
               onClick={handlePrevTip}
               className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              aria-label="Previous tip"
+              aria-label={t('tutorial.ui.previousTip')}
             >
               <FaArrowLeft className="h-3.5 w-3.5" />
             </button>
@@ -463,7 +468,7 @@ export function TipsOfTheDay({
             <button
               onClick={handleNextTip}
               className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-200 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300"
-              aria-label="Next tip"
+              aria-label={t('tutorial.ui.nextTip')}
             >
               <FaArrowRight className="h-3.5 w-3.5" />
             </button>
@@ -475,7 +480,7 @@ export function TipsOfTheDay({
               onClick={() => handleDismiss(true)}
               className="text-xs text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             >
-              Don&apos;t show again
+              {t('tutorial.ui.dismissPermanently')}
             </button>
           )}
         </div>

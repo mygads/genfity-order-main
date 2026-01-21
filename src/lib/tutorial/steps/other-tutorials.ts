@@ -29,6 +29,14 @@ export const staffManagementSteps: TutorialStep[] = [
     spotlightPadding: 8,
   },
   {
+    id: 'staff-actions',
+    title: 'Staff Actions Panel',
+    description: 'Search, filter, and manage staff actions here.',
+    targetSelector: '[data-tutorial="staff-actions"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
     id: 'staff-search',
     title: 'Search Staff',
     description: 'Use the search bar to quickly find staff members by name or email.',
@@ -55,6 +63,54 @@ export const staffManagementSteps: TutorialStep[] = [
     spotlightPadding: 8,
     showPointer: true,
     pointerDirection: 'up',
+  },
+  {
+    id: 'add-staff-modal',
+    title: 'Add Staff Form',
+    description: 'Fill in the new staff member details.',
+    targetSelector: '[data-tutorial="add-staff-modal"]',
+    position: 'right',
+    spotlightPadding: 12,
+  },
+  {
+    id: 'staff-name',
+    title: 'Staff Name',
+    description: 'Enter the staff member\'s full name.',
+    targetSelector: '[data-tutorial="staff-name-input"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'staff-email',
+    title: 'Staff Email',
+    description: 'Add a valid email for login and notifications.',
+    targetSelector: '[data-tutorial="staff-email-input"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'staff-phone',
+    title: 'Staff Phone',
+    description: 'Enter a phone number if needed.',
+    targetSelector: '[data-tutorial="staff-phone-input"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'staff-password',
+    title: 'Staff Password',
+    description: 'Set a temporary password for the staff member.',
+    targetSelector: '[data-tutorial="staff-password-input"]',
+    position: 'right',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'staff-submit',
+    title: 'Create Staff Account',
+    description: 'Submit the form to create the staff account.',
+    targetSelector: '[data-tutorial="staff-submit-btn"]',
+    position: 'top',
+    spotlightPadding: 8,
   },
   {
     id: 'invite-staff',
@@ -129,6 +185,14 @@ export const specialPricesSteps: TutorialStep[] = [
     spotlightPadding: 8,
   },
   {
+    id: 'special-prices-empty',
+    title: 'No Specials Yet',
+    description: 'If this list is empty, create your first special price.',
+    targetSelector: '[data-tutorial="special-prices-empty"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+  {
     id: 'special-prices-list',
     title: 'Special Prices List',
     description: 'View all your special prices here. Active specials are highlighted. Click to edit or delete.',
@@ -151,6 +215,22 @@ export const specialPricesSteps: TutorialStep[] = [
 // ============================================
 
 export const specialPriceFormSteps: TutorialStep[] = [
+  {
+    id: 'special-price-create-page',
+    title: 'Create Special Price Page',
+    description: 'Set up a new special price promotion here.',
+    targetSelector: '[data-tutorial="special-price-create-page"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
+    id: 'special-price-basic-info',
+    title: 'Basic Information',
+    description: 'Enter the name and optional details for your special price.',
+    targetSelector: '[data-tutorial="special-price-basic-info"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
   {
     id: 'special-price-form-overview',
     title: 'Special Price Form',
@@ -256,6 +336,14 @@ export const menuBooksSteps: TutorialStep[] = [
     spotlightPadding: 8,
   },
   {
+    id: 'menu-books-empty',
+    title: 'No Menu Books Yet',
+    description: 'Create your first menu book to start organizing menus.',
+    targetSelector: '[data-tutorial="menu-books-empty"]',
+    position: 'top',
+    spotlightPadding: 8,
+  },
+  {
     id: 'menu-books-list',
     title: 'Menu Books List',
     description: 'View all your menu books here. Click any menu book to edit or manage its items.',
@@ -278,6 +366,14 @@ export const menuBooksSteps: TutorialStep[] = [
 // ============================================
 
 export const menuBookFormSteps: TutorialStep[] = [
+  {
+    id: 'menu-book-create-page',
+    title: 'Create Menu Book Page',
+    description: 'Set up a new menu book here.',
+    targetSelector: '[data-tutorial="menu-book-create-page"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
   {
     id: 'menu-book-form-overview',
     title: 'Menu Book Form',
@@ -357,6 +453,14 @@ export const customersManagementSteps: TutorialStep[] = [
     spotlightPadding: 8,
   },
   {
+    id: 'customers-container',
+    title: 'Customers Workspace',
+    description: 'All customer tools live inside this workspace.',
+    targetSelector: '[data-tutorial="customers-container"]',
+    position: 'bottom',
+    spotlightPadding: 8,
+  },
+  {
     id: 'customers-search',
     title: 'Search Customers',
     description: 'Use the search bar to find customers by name, email, or phone number.',
@@ -431,8 +535,8 @@ export const linkMenuToAddonSteps: TutorialStep[] = [
   {
     id: 'click-edit-menu',
     title: 'Edit Menu Item',
-    description: 'Click the "Edit" button to modify this menu item.',
-    targetSelector: '[data-tutorial="menu-edit-btn"]',
+    description: 'Click the actions button (three dots), then choose "Edit" to modify this menu item.',
+    targetSelector: '[data-tutorial="menu-actions-btn"]',
     position: 'left',
     spotlightPadding: 8,
     showPointer: true,

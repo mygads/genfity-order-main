@@ -703,7 +703,7 @@ export default function MerchantReservationsPanel(props: {
 
       {/* Table View (matching menu page styling) */}
       {!loading && !error && filteredReservations.length > 0 && (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-tutorial="reservations-list">
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-gray-50 text-left dark:bg-gray-900/50">
@@ -731,7 +731,7 @@ export default function MerchantReservationsPanel(props: {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-              {paginatedReservations.map((r) => {
+              {paginatedReservations.map((r, index) => {
                 const preorderItems = Array.isArray(r.preorder?.items) ? r.preorder.items : [];
                 const preorderCount = preorderItems.reduce(
                   (sum: number, it: ReservationPreorderItem) => sum + (Number(it?.quantity) || 1),
@@ -740,7 +740,11 @@ export default function MerchantReservationsPanel(props: {
                 const rowError = actionError[r.id];
 
                 return (
-                  <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
+                  <tr
+                    key={r.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-900/30"
+                    data-tutorial={index === 0 ? 'reservation-card' : undefined}
+                  >
                     {/* Date/Time Column */}
                     <td className="px-4 py-4">
                       <div className="text-sm font-medium text-gray-800 dark:text-white/90">
@@ -825,6 +829,7 @@ export default function MerchantReservationsPanel(props: {
                               aria-label={t('admin.reservations.accept')}
                               onClick={() => openAcceptModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
+                              data-tutorial={index === 0 ? 'reservation-accept-btn' : undefined}
                             />
                             <TableActionButton
                               icon={FaBan}
@@ -834,6 +839,7 @@ export default function MerchantReservationsPanel(props: {
                               aria-label={t('admin.reservations.cancel')}
                               onClick={() => openCancelModal(r.id)}
                               disabled={acceptingId === r.id || cancellingId === r.id}
+                              data-tutorial={index === 0 ? 'reservation-cancel-btn' : undefined}
                             />
                             <TableActionButton
                               icon={FaExternalLinkAlt}
@@ -853,6 +859,7 @@ export default function MerchantReservationsPanel(props: {
                                     : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order.id)}`;
                                 router.push(target);
                               }}
+                              data-tutorial={index === 0 ? 'reservation-view-btn' : undefined}
                             />
                           </>
                         ) : (
@@ -875,6 +882,7 @@ export default function MerchantReservationsPanel(props: {
                                     : `/admin/dashboard/orders?orderId=${encodeURIComponent(r.order.id)}`;
                                 router.push(target);
                               }}
+                              data-tutorial={index === 0 ? 'reservation-view-btn' : undefined}
                             />
                           </>
                         )}

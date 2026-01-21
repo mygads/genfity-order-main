@@ -165,14 +165,6 @@ export const analyticsSteps: TutorialStep[] = [
     spotlightPadding: 8,
   },
   {
-    id: 'addon-analytics',
-    title: 'Addon Analytics',
-    description: 'Discover which addons are most popular and which generate the most additional revenue.',
-    targetSelector: '[data-tutorial="addon-analytics"]',
-    position: 'right',
-    spotlightPadding: 8,
-  },
-  {
     id: 'trends',
     title: 'Trends & Patterns',
     description: 'Identify weekly patterns, seasonal trends, and changes in customer behavior over time.',

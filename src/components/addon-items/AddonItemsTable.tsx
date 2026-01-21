@@ -113,7 +113,7 @@ export default function AddonItemsTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-          {items.map((item) => (
+          {items.map((item, index) => (
             <tr key={item.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
               <td className="px-4 py-4">
                 <div>
@@ -165,6 +165,7 @@ export default function AddonItemsTable({
                     onClick={() => onEdit(item)}
                     title={t("common.edit")}
                     aria-label={t("common.edit")}
+                    data-tutorial={index === 0 ? "addon-item-edit-btn" : undefined}
                   />
                   <TableActionButton
                     icon={FaTrash}
