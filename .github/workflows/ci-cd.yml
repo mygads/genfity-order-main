@@ -205,8 +205,8 @@ jobs:
             # Wait for container to be ready
             sleep 10
             
-            # Run Prisma migrate deploy inside the container
-            sudo docker exec genfity-order-main npx prisma migrate deploy 2>&1 || {
+            # Run Prisma migrate deploy using the installed version in node_modules
+            sudo docker exec genfity-order-main node_modules/.bin/prisma migrate deploy 2>&1 || {
               echo "⚠️ Migration failed or no pending migrations"
             }
             
