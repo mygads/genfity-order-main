@@ -205,8 +205,21 @@ jobs:
             # Wait for container to be ready
             sleep 10
             
-            # Run Prisma migrate deploy using the installed version in node_modules
-            sudo docker exec genfity-order-main node_modules/.bin/prisma migrate deploy 2>&1 || {
+            # Get DATABASE_URL from the app's env file
+            DATABASE_URL=$(grep "^DATABASE_URL=" ~/genfity/genfity-order-main/.env | cut -d'=' -f2-)
+            
+            # Run migration using a temporary container with full Prisma CLI
+            # This uses the prisma folder from the main container
+            sudo docker run --rm \
+              --network genfity-network \
+              --add-host=host.docker.internal:host-gateway \
+              -e DATABASE_URL="$DATABASE_URL" \
+              -v $(sudo docker inspect genfity-order-main --format='{{.GraphDriver.Data.MergedDir}}')/app/prisma:/app/prisma:ro \
+              node:20-alpine sh -c "
+                cd /app && \
+                npm install prisma@6 --save-dev --silent 2>/dev/null && \
+                npx prisma migrate deploy
+              " 2>&1 || {
               echo "⚠️ Migration failed or no pending migrations"
             }
             
