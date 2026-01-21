@@ -58,6 +58,9 @@ COPY --from=builder /app/prisma ./prisma
 # Copy entire node_modules from builder (includes pnpm structure with prisma)
 COPY --from=builder /app/node_modules ./node_modules
 
+# Copy healthcheck script
+COPY healthcheck.js ./healthcheck.js
+
 # Set correct permissions
 RUN chown -R nextjs:nodejs /app
 
