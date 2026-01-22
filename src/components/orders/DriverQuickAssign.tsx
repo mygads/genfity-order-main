@@ -7,6 +7,7 @@ import { useToast } from '@/context/ToastContext';
 import { hasStaffPermission, isMerchantStaff } from '@/lib/utils/adminAuth';
 import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 import { FaTimes } from 'react-icons/fa';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 type Driver = {
   id: string;
@@ -56,7 +57,7 @@ export default function DriverQuickAssign(props: {
         return;
       }
 
-      const response = await fetch(`/api/merchant/orders/${props.orderId}/delivery/assign`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${props.orderId}/delivery/assign`), {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,

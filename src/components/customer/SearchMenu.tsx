@@ -16,6 +16,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDebounce } from '@/hooks/useDebounce';
 import Image from 'next/image';
 import { CloseIcon } from '@/icons';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 // SVG Search Icon (inline because it's not in icons)
 const SearchIcon = ({ className }: { className?: string }) => (
@@ -119,13 +120,14 @@ export default function SearchMenu({
       }
 
       const response = await fetch(
-        `/api/public/menu/${merchantCode}/search?${params.toString()}`
+        buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/search?${params.toString()}`)
       );
 
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setResults(data.data.menus || []);
+          const menus = data.data?.menus ?? data.data ?? [];
+          setResults(Array.isArray(menus) ? menus : []);
         }
       }
     } catch (error) {

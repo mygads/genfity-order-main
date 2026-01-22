@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface ModeAvailabilityResult {
     isAvailable: boolean;
@@ -42,7 +43,7 @@ export function useModeAvailability(
     const checkAvailability = useCallback(async () => {
         try {
             // Fetch merchant info which has mode schedules
-            const response = await fetch(`/api/public/merchants/${merchantCode}`);
+            const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`));
             const data = await response.json();
 
             if (!data.success) {

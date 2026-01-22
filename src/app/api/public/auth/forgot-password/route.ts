@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import crypto from 'crypto';
 import emailService from '@/lib/services/EmailService';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
 
 /**
  * Forgot Password API Endpoint (Customer)
@@ -122,13 +123,36 @@ export async function POST(request: NextRequest) {
         // ✅ Send email with verification code
         const acceptLanguage = request.headers.get('accept-language') || '';
         const locale = acceptLanguage.toLowerCase().startsWith('id') ? 'id' : 'en';
-        const emailSent = await emailService.sendPasswordResetOTP({
-            to: customer.email,
-            name: customer.name || 'Customer',
-            code: verificationCode,
-            expiresInMinutes: CODE_EXPIRY_MINUTES,
-            locale,
-        });
+        let emailSent = false;
+
+        try {
+            const queued = await enqueueNotificationJob({
+                kind: 'email.password_reset_otp',
+                payload: {
+                    kind: 'email.password_reset_otp',
+                    to: customer.email,
+                    name: customer.name || 'Customer',
+                    code: verificationCode,
+                    expiresInMinutes: CODE_EXPIRY_MINUTES,
+                    locale,
+                },
+            });
+
+            emailSent = queued.ok;
+        } catch (err) {
+            console.error('❌ [FORGOT-PASSWORD] Failed to enqueue OTP email:', err);
+        }
+
+        // Fallback: direct send if queue is disabled/unavailable
+        if (!emailSent) {
+            emailSent = await emailService.sendPasswordResetOTP({
+                to: customer.email,
+                name: customer.name || 'Customer',
+                code: verificationCode,
+                expiresInMinutes: CODE_EXPIRY_MINUTES,
+                locale,
+            });
+        }
 
         if (emailSent) {
             console.log('✅ [FORGOT-PASSWORD] Email sent successfully to:', emailTrimmed);

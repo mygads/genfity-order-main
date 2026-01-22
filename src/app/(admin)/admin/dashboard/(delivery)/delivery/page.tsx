@@ -5,7 +5,7 @@ import { DashboardSkeleton } from '@/components/common/SkeletonLoaders';
 import DeliveryDriverDashboard from '@/components/dashboard/DeliveryDriverDashboard';
 
 export default function DeliveryDashboardPage() {
-  const { data, isLoading } = useSWR('/api/admin/dashboard');
+  const { data, isLoading } = useSWR('/api/admin/dashboard', { refreshInterval: 15000 });
 
   if (isLoading || !data?.success) {
     return <DashboardSkeleton />;

@@ -4,6 +4,8 @@
  * Intended for client components only.
  */
 
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+
 export type ReceiptPrintFailureReason = 'popup_blocked' | 'fetch_failed';
 
 export type ReceiptPrintResult =
@@ -17,7 +19,7 @@ export async function openMerchantOrderReceiptHtmlAndPrint(orderId: string | num
     const token = localStorage.getItem('accessToken');
     if (!token) return { ok: false, reason: 'fetch_failed' };
 
-    const res = await fetch(`/api/merchant/orders/${encodeURIComponent(String(orderId))}/receipt-html`, {
+    const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/${encodeURIComponent(String(orderId))}/receipt-html`), {
       headers: {
         Authorization: `Bearer ${token}`,
       },

@@ -13,6 +13,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface MenuItem {
   id: string;
@@ -100,7 +101,7 @@ export default function MenuSearch({
     setIsLoading(true);
     try {
       const response = await fetch(
-        `/api/public/merchants/${merchantCode}/menus/search?q=${encodeURIComponent(searchQuery)}`
+        buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/search?q=${encodeURIComponent(searchQuery)}`)
       );
       const data = await response.json();
 

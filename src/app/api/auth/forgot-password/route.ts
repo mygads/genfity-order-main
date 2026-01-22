@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import authService from '@/lib/services/AuthService';
 import { sendPasswordResetEmail } from '@/lib/utils/emailSender';
 import { handleError } from '@/lib/middleware/errorHandler';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,12 +46,30 @@ export async function POST(request: NextRequest) {
     const resetPath = client === 'driver' ? '/driver/reset-password' : '/admin/reset-password';
     const resetUrl = `${appBaseUrl}${resetPath}?token=${resetToken}`;
 
-    // Send email with reset link
-    await sendPasswordResetEmail({
-      to: email,
-      resetUrl,
-      expiresAt,
-    });
+    // Send email with reset link (async via RabbitMQ when available)
+    let queuedOk = false;
+    try {
+      const queued = await enqueueNotificationJob({
+        kind: 'email.password_reset_link',
+        payload: {
+          kind: 'email.password_reset_link',
+          to: email,
+          resetUrl,
+          expiresAt: expiresAt.toISOString(),
+        },
+      });
+      queuedOk = queued.ok;
+    } catch (err) {
+      console.error('[forgot-password] failed to enqueue reset email:', err);
+    }
+
+    if (!queuedOk) {
+      await sendPasswordResetEmail({
+        to: email,
+        resetUrl,
+        expiresAt,
+      });
+    }
 
     return NextResponse.json(
       {
@@ -58,6 +77,7 @@ export async function POST(request: NextRequest) {
         message: 'Password reset email sent',
         data: {
           email,
+          queued: queuedOk,
         },
       },
       { status: 200 }

@@ -8,6 +8,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { FaExclamationTriangle, FaInfoCircle, FaMapMarkerAlt, FaMagic, FaMapMarkedAlt, FaHome, FaCrosshairs, FaBuilding, FaLayerGroup, FaStickyNote, FaSearch } from 'react-icons/fa';
 
 type MapLike = {
@@ -166,9 +167,12 @@ export default function DeliveryAddressPicker({
 
     setIsGeocoding(true);
     try {
-      const res = await fetch(`/api/public/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`, {
+      const res = await fetch(
+        buildOrderApiUrl(`/api/public/geocode/reverse?lat=${encodeURIComponent(String(lat))}&lng=${encodeURIComponent(String(lng))}`),
+        {
         signal: controller.signal,
-      });
+        }
+      );
       const json = await res.json();
       if (!res.ok || !json?.success) {
         throw new Error(json?.message || 'Failed to resolve address');
@@ -207,7 +211,7 @@ export default function DeliveryAddressPicker({
 
     setIsSearching(true);
     try {
-      const res = await fetch(`/api/public/geocode/forward?q=${encodeURIComponent(q)}`);
+      const res = await fetch(buildOrderApiUrl(`/api/public/geocode/forward?q=${encodeURIComponent(q)}`));
       const json = await res.json();
       if (!res.ok || !json?.success) {
         throw new Error(json?.message || 'Failed to search address');

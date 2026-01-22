@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef, useMemo } from 'react';
 import useSWR, { mutate as globalMutate } from 'swr';
 import { extractAddonDataFromMenus, type CachedAddonCategory } from '@/lib/utils/addonExtractor';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 /**
  * GENFITY - Customer Data Context (SWR-Powered)
@@ -240,6 +241,10 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
   // SWR HOOKS - Only fetch when merchantCode is set
   // ============================================
 
+  const merchantKey = useMemo(() => {
+    return merchantCode ? buildOrderApiUrl(`/api/public/merchants/${merchantCode}`) : null;
+  }, [merchantCode]);
+
   // Merchant Info SWR
   const {
     data: merchantData,
@@ -247,7 +252,7 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     isValidating: isMerchantValidating,
     isLoading: isMerchantLoading,
   } = useSWR(
-    merchantCode ? `/api/public/merchants/${merchantCode}` : null,
+    merchantKey,
     fetcher,
     {
       ...SWR_CONFIG,
@@ -263,6 +268,10 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     }
   );
 
+  const menusKey = useMemo(() => {
+    return merchantCode ? buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus`) : null;
+  }, [merchantCode]);
+
   // Menus SWR
   const {
     data: menusData,
@@ -270,7 +279,7 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     isValidating: isMenusValidating,
     isLoading: isMenusLoading,
   } = useSWR(
-    merchantCode ? `/api/public/merchants/${merchantCode}/menus` : null,
+    menusKey,
     fetcher,
     {
       ...SWR_CONFIG,
@@ -291,6 +300,10 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     }
   );
 
+  const categoriesKey = useMemo(() => {
+    return merchantCode ? buildOrderApiUrl(`/api/public/merchants/${merchantCode}/categories`) : null;
+  }, [merchantCode]);
+
   // Categories SWR
   const {
     data: categoriesData,
@@ -298,7 +311,7 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     isValidating: isCategoriesValidating,
     isLoading: isCategoriesLoading,
   } = useSWR(
-    merchantCode ? `/api/public/merchants/${merchantCode}/categories` : null,
+    categoriesKey,
     fetcher,
     {
       ...SWR_CONFIG,
@@ -448,9 +461,9 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     
     // Trigger SWR revalidation for all keys
     await Promise.all([
-      globalMutate(`/api/public/merchants/${code}`),
-      globalMutate(`/api/public/merchants/${code}/menus`),
-      globalMutate(`/api/public/merchants/${code}/categories`),
+      globalMutate(buildOrderApiUrl(`/api/public/merchants/${code}`)),
+      globalMutate(buildOrderApiUrl(`/api/public/merchants/${code}/menus`)),
+      globalMutate(buildOrderApiUrl(`/api/public/merchants/${code}/categories`)),
     ]);
     
     console.log('✅ [CUSTOMER DATA] Refresh triggered');
@@ -476,8 +489,10 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
     console.log('📡 [SSE] Updating stock in real-time:', stockUpdates.length, 'items');
     
     // Update the SWR cache optimistically
+    if (!menusKey) return;
+
     globalMutate(
-      `/api/public/merchants/${merchantCode}/menus`,
+      menusKey,
       (currentData: { success: boolean; data: MenuItem[] } | undefined) => {
         if (!currentData?.success) return currentData;
         
@@ -493,7 +508,7 @@ export function CustomerDataProvider({ children }: CustomerDataProviderProps) {
       },
       { revalidate: false } // Don't refetch, just update cache
     );
-  }, [merchantCode, menusData?.success]);
+  }, [merchantCode, menusData?.success, menusKey]);
 
   // ============================================
   // PRELOAD HELPERS (Hover-based prefetch)

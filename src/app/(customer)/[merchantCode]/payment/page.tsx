@@ -16,6 +16,7 @@ import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaTag, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
 import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
@@ -386,7 +387,7 @@ export default function PaymentPage() {
 
     try {
       const isAuthed = Boolean(auth?.accessToken);
-      const endpoint = isAuthed ? '/api/customer/vouchers/validate' : '/api/public/vouchers/validate';
+      const endpoint = isAuthed ? '/api/customer/vouchers/validate' : buildOrderApiUrl('/api/public/vouchers/validate');
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -525,7 +526,7 @@ export default function PaymentPage() {
         setAvailableScheduledSlotsError('');
 
         const res = await fetch(
-          `/api/public/merchants/${encodeURIComponent(merchantCode)}/available-times?mode=${encodeURIComponent(modeParam)}`,
+          buildOrderApiUrl(`/api/public/merchants/${encodeURIComponent(merchantCode)}/available-times?mode=${encodeURIComponent(modeParam)}`),
           { signal: controller.signal }
         );
 
@@ -788,7 +789,7 @@ export default function PaymentPage() {
 
         console.log('📦 Reservation Payload:', JSON.stringify(reservationPayload, null, 2));
 
-        const reservationResponse = await fetch('/api/public/reservations', {
+        const reservationResponse = await fetch(buildOrderApiUrl('/api/public/reservations'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -889,7 +890,7 @@ export default function PaymentPage() {
       // ========================================
       // STEP 3: Create Order
       // ========================================
-      const orderResponse = await fetch('/api/public/orders', {
+      const orderResponse = await fetch(buildOrderApiUrl('/api/public/orders'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

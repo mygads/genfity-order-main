@@ -9,6 +9,7 @@ import ReservationPreorderItemModal from '@/components/customer/ReservationPreor
 import { FaCalendarAlt, FaChevronLeft, FaMinus, FaPlus, FaSpinner } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface Category {
   id: string;
@@ -261,7 +262,7 @@ export default function ReservationClientPage(props: {
 
     setSubmitting(true);
     try {
-      const res = await fetch('/api/public/reservations', {
+      const res = await fetch(buildOrderApiUrl('/api/public/reservations'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

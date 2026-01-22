@@ -109,7 +109,11 @@ export default function GroupDashboard({
 
     const handleLeave = async () => {
         // Get the mode before leaving
-        const groupMode = session?.orderType === 'DINE_IN' ? 'dinein' : 'takeaway';
+        const groupMode = session?.orderType === 'DINE_IN'
+            ? 'dinein'
+            : session?.orderType === 'DELIVERY'
+                ? 'delivery'
+                : 'takeaway';
 
         setIsProcessing(true);
         await leaveSession();
@@ -124,7 +128,11 @@ export default function GroupDashboard({
 
     const handleCancel = async () => {
         // Get the mode before cancelling
-        const groupMode = session?.orderType === 'DINE_IN' ? 'dinein' : 'takeaway';
+        const groupMode = session?.orderType === 'DINE_IN'
+            ? 'dinein'
+            : session?.orderType === 'DELIVERY'
+                ? 'delivery'
+                : 'takeaway';
 
         await cancelSession();
 
@@ -139,13 +147,13 @@ export default function GroupDashboard({
         <>
             {/* Overlay */}
             <div
-                className={`fixed inset-0 bg-black/50 z-[100] transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+                className={`fixed inset-0 bg-black/50 z-100 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
                 onClick={handleClose}
             />
 
             {/* Bottom Sheet */}
-            <div className={`fixed inset-x-0 bottom-0 z-[100] flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
+            <div className={`fixed inset-x-0 bottom-0 z-100 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+                <div className="w-full max-w-125 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
                     {/* Header - White style matching Table Number modal */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                         <div className="flex items-center gap-2">
@@ -487,9 +495,9 @@ function ConfirmModal({
     isProcessing,
 }: ConfirmModalProps) {
     return (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center">
+        <div className="fixed inset-0 z-110 flex items-end justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
-            <div className="relative bg-white rounded-t-2xl p-4 w-full max-w-[500px] shadow-xl animate-slideUp">
+            <div className="relative bg-white rounded-t-2xl p-4 w-full max-w-125 shadow-xl animate-slideUp">
                 <h3 className="text-lg font-bold text-gray-900 mb-2">
                     {title}
                 </h3>

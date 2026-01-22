@@ -10,6 +10,7 @@ import { OrderSummaryCashSkeleton } from '@/components/common/SkeletonLoaders';
 import NewOrderConfirmationModal from '@/components/modals/NewOrderConfirmationModal';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
 import { customerTrackUrl } from '@/lib/utils/customerRoutes';
@@ -173,7 +174,7 @@ export default function OrderSummaryCashPage() {
 
       try {
         // Fetch merchant info for currency
-        const merchantResponse = await fetch(`/api/public/merchants/${merchantCode}`);
+        const merchantResponse = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`));
         const merchantData = await merchantResponse.json();
 
         if (merchantData.success) {
@@ -188,7 +189,7 @@ export default function OrderSummaryCashPage() {
         }
 
         // Fetch order details
-        const response = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`);
+        const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`));
         const data = await response.json();
 
         if (!response.ok) {
@@ -300,9 +301,41 @@ export default function OrderSummaryCashPage() {
   useEffect(() => {
     if (!orderNumber || !order || order.status !== 'PENDING') return;
 
+    const wsBase = getOrderWsBaseUrl();
+    if (wsBase && trackingToken) {
+      const wsUrl = `${wsBase}/ws/public/order?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(trackingToken)}`;
+      const ws = new WebSocket(wsUrl);
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data as string);
+          if (payload?.type !== 'order.refresh') return;
+
+          const newStatus = payload?.status;
+          if (['ACCEPTED', 'IN_PROGRESS', 'READY', 'COMPLETED'].includes(newStatus)) {
+            router.replace(
+              customerTrackUrl(merchantCode, orderNumber, {
+                back: trackBack,
+                ref: trackRef,
+                mode,
+                token: trackingToken,
+              })
+            );
+          }
+        } catch {
+          // ignore parse errors
+        }
+      };
+
+      // If WS is available, do not start polling.
+      return () => {
+        ws.close();
+      };
+    }
+
     const checkOrderStatus = async () => {
       try {
-        const response = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`);
+        const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(trackingToken)}`));
         if (!response.ok) return;
 
         const data = await response.json();

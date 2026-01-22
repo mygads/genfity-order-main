@@ -5,6 +5,7 @@
 
 import { mutate } from 'swr';
 import useSWRMutation from 'swr/mutation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 /**
  * Example: Optimistic Menu Status Toggle
@@ -68,7 +69,7 @@ export function useOptimisticOrderUpdate() {
     ordersKey,
     async (url, { arg }: { arg: { orderId: string; status: string } }) => {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${arg.orderId}/status`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/${arg.orderId}/status`), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -27,6 +27,8 @@ import { generateOrderReceiptPdfBuffer } from '@/lib/utils/orderReceiptPdfEmail'
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { buildOrderTrackingUrl } from '@/lib/utils/orderTrackingLinks.server';
 import { resolveAssetUrl } from '@/lib/utils/assetUrl';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
+import { randomUUID } from 'crypto';
 
 // Track initialization to prevent duplicate logs
 let isInitialized = false;
@@ -112,8 +114,11 @@ class EmailService {
 
       // Verify SMTP connectivity once so misconfigurations show up in logs.
       // (Do not block startup; log any issues asynchronously.)
+      const skipVerify =
+        process.env.SKIP_SMTP_VERIFY === 'true' ||
+        process.env.NEXT_PHASE === 'phase-production-build';
       const maybeVerify = (this.transporter as unknown as { verify?: () => Promise<unknown> })?.verify;
-      if (typeof maybeVerify === 'function') {
+      if (!skipVerify && typeof maybeVerify === 'function') {
         maybeVerify
           .call(this.transporter)
           .then(() => {
@@ -185,7 +190,44 @@ class EmailService {
       content: Buffer;
       contentType?: string;
     }>;
+    disableQueue?: boolean;
   }): Promise<boolean> {
+    const canEnqueue =
+      !options.disableQueue &&
+      Boolean(this.transporter) &&
+      Boolean(process.env.RABBITMQ_URL) &&
+      process.env.RABBITMQ_WORKER !== '1';
+
+    if (canEnqueue) {
+      const fromName = process.env.SMTP_FROM_NAME || 'Genfity Order';
+      const fromEmail = options.from || process.env.SMTP_FROM_EMAIL || 'noreply@genfity.com';
+      const from = fromEmail.includes('<') ? fromEmail : `${fromName} <${fromEmail}>`;
+
+      try {
+        const queued = await enqueueNotificationJob({
+          kind: 'email.raw',
+          payload: {
+            kind: 'email.raw',
+            idempotencyKey: randomUUID(),
+            to: options.to,
+            subject: options.subject,
+            html: options.html,
+            from,
+            attachments: options.attachments?.map((a) => ({
+              filename: a.filename,
+              contentBase64: a.content.toString('base64'),
+              contentType: a.contentType,
+            })),
+          },
+        });
+
+        if (queued.ok) return true;
+      } catch (err) {
+        console.error('[EmailService] failed to enqueue email job:', err);
+      }
+      // Fallback to direct sending below.
+    }
+
     if (!this.transporter) {
       if (!hasLoggedTransporterMissingOnSend) {
         console.error(
@@ -470,7 +512,9 @@ class EmailService {
       console.error('[EmailService] Failed generating PDF receipt attachment:', error);
     }
 
-    return this.sendEmail({ to: params.to, subject, html, attachments });
+    // Completed-order emails are handled by a dedicated queue (fee charging/idempotency)
+    // and should never be routed through the generic email.raw queue.
+    return this.sendEmail({ to: params.to, subject, html, attachments, disableQueue: true });
   }
 
   /**

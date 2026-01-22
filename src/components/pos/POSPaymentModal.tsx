@@ -34,6 +34,7 @@ import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
 import { formatCurrency, formatDateTimeInTimeZone, formatFullOrderNumber } from '@/lib/utils/format';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 // ============================================
 // TYPES
@@ -345,7 +346,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
       setIsLoadingVoucherTemplates(true);
       try {
         const token = localStorage.getItem('accessToken');
-        const res = await fetch('/api/merchant/orders/pos/voucher-templates', {
+        const res = await fetch(buildOrderApiUrl('/api/merchant/orders/pos/voucher-templates'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -512,7 +513,7 @@ export const POSPaymentModal: React.FC<POSPaymentModalProps> = ({
     try {
       const token = localStorage.getItem('accessToken');
 
-      const res = await fetch('/api/merchant/orders/pos/validate-voucher-template', {
+      const res = await fetch(buildOrderApiUrl('/api/merchant/orders/pos/validate-voucher-template'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

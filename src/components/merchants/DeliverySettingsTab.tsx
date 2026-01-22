@@ -9,6 +9,7 @@ import Switch from '@/components/ui/Switch';
 import Button from '@/components/ui/Button';
 import { getCurrencyConfig } from '@/lib/constants/location';
 import { formatCurrency } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 import type { TranslationKeys } from '@/lib/i18n';
 
@@ -239,7 +240,7 @@ export default function DeliverySettingsTab({
 
     setPreviewLoading(true);
     try {
-      const res = await fetch(`/api/public/merchants/${encodeURIComponent(formData.code)}/delivery/quote`, {
+      const res = await fetch(buildOrderApiUrl(`/api/public/merchants/${encodeURIComponent(formData.code)}/delivery/quote`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

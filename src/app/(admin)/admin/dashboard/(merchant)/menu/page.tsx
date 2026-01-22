@@ -697,7 +697,7 @@ function MerchantMenuPageContent() {
           <div className="mb-5" data-tutorial="menu-filters">
             <div className="flex flex-wrap items-center gap-3">
               {/* Search Bar - Takes remaining space */}
-              <div className="relative flex-1 min-w-[200px]" data-tutorial="menu-search">
+              <div className="relative min-w-50 flex-1" data-tutorial="menu-search">
                 <svg className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -750,7 +750,7 @@ function MerchantMenuPageContent() {
                 <button
                   type="button"
                   onClick={() => setIsStockDropdownOpen(!isStockDropdownOpen)}
-                  className="flex h-10 min-w-[140px] items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  className="flex h-10 min-w-35 items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-700 hover:bg-gray-50 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-500/10 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   <span>
                     {filterStock.length === 0
@@ -913,7 +913,7 @@ function MerchantMenuPageContent() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="max-w-[200px] space-y-1">
+                        <div className="max-w-50 space-y-1">
                           <div className="truncate">
                             <InlineEditField
                               value={item.name}
@@ -934,7 +934,7 @@ function MerchantMenuPageContent() {
                         </div>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="max-w-[150px]" title={getCategoryNames(item)}>
+                        <div className="max-w-37.5" title={getCategoryNames(item)}>
                           <span className="inline-flex truncate text-xs text-gray-700 dark:text-gray-300">
                             {getCategoryNames(item)}
                           </span>

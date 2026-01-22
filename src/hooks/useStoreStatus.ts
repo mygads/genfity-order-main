@@ -10,6 +10,7 @@
 'use client';
 
 import useSWR from 'swr';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { useMemo } from 'react';
 import {
   isStoreEffectivelyOpen,
@@ -145,7 +146,7 @@ export function useStoreStatus(
   const { refreshInterval = 30000, revalidateOnFocus = true } = options || {};
 
   const { data, error, isLoading, mutate } = useSWR<StoreStatusResponse>(
-    merchantCode ? `/api/public/merchants/${merchantCode}/status` : null,
+    merchantCode ? buildOrderApiUrl(`/api/public/merchants/${merchantCode}/status`) : null,
     fetcher,
     {
       refreshInterval, // Refresh every 30 seconds by default

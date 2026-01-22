@@ -28,6 +28,7 @@ import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
 
@@ -85,6 +86,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+    const [wsConnected, setWsConnected] = useState(false);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
   const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
@@ -108,7 +110,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       throw new Error('Authentication required');
     }
 
-    const res = await fetch(url, {
+    const res = await fetch(buildOrderApiUrl(url), {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -126,7 +128,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     '/api/merchant/orders/active',
     fetcher,
     {
-      refreshInterval: autoRefresh ? refreshInterval : 0,
+      refreshInterval: autoRefresh && !wsConnected ? refreshInterval : 0,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       dedupingInterval: 2000,
@@ -147,6 +149,41 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       },
     }
   );
+
+  useEffect(() => {
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          mutate();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [mutate]);
 
   // Extract orders from SWR data
   const orders: OrderListItem[] = data?.success ? data.data : [];
@@ -368,7 +405,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       // Update on server
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+        const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

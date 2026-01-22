@@ -25,6 +25,7 @@ import { customerHistoryUrl, customerMerchantHomeUrl } from '@/lib/utils/custome
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 
 // Order status types
 type OrderStatus = 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'READY' | 'COMPLETED' | 'CANCELLED';
@@ -219,6 +220,7 @@ export default function OrderTrackPage() {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showSplitBill, setShowSplitBill] = useState(false);
+    const [wsConnected, setWsConnected] = useState(false);
 
     const [waitEstimate, setWaitEstimate] = useState<{
         minMinutes: number;
@@ -249,7 +251,7 @@ export default function OrderTrackPage() {
 
         try {
             const response = await fetch(
-                `/api/public/orders/${orderNumber}/wait-time?token=${encodeURIComponent(token)}`
+                buildOrderApiUrl(`/api/public/orders/${orderNumber}/wait-time?token=${encodeURIComponent(token)}`)
             );
 
             if (!response.ok) {
@@ -271,7 +273,7 @@ export default function OrderTrackPage() {
 
         try {
             const query = `?token=${encodeURIComponent(token)}`;
-            const response = await fetch(`/api/public/orders/${orderNumber}${query}`);
+            const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}${query}`));
             const data = await response.json();
 
             if (!response.ok) {
@@ -368,7 +370,7 @@ export default function OrderTrackPage() {
 
             // Fetch group order details (if any)
             try {
-                const groupResponse = await fetch(`/api/public/orders/${orderNumber}/group-details?token=${encodeURIComponent(token)}`);
+                const groupResponse = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}/group-details?token=${encodeURIComponent(token)}`));
                 const groupData = await groupResponse.json();
                 if (groupResponse.ok && groupData.success) {
                     setGroupOrderData(groupData.data);
@@ -394,9 +396,32 @@ export default function OrderTrackPage() {
         fetchOrder();
     }, [fetchOrder]);
 
-    // Auto-refresh every 5 seconds (only if not completed/cancelled)
+    // WebSocket refresh (fallback to polling if WS is not available)
     useEffect(() => {
-        if (!order || order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+        const wsBase = getOrderWsBaseUrl();
+        if (!wsBase || !orderNumber || !token) {
+            setWsConnected(false);
+            return;
+        }
+
+        const wsUrl = `${wsBase}/ws/public/order?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(token)}`;
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => setWsConnected(true);
+        ws.onclose = () => setWsConnected(false);
+        ws.onerror = () => setWsConnected(false);
+        ws.onmessage = () => {
+            fetchOrder(true);
+        };
+
+        return () => {
+            ws.close();
+        };
+    }, [orderNumber, token, fetchOrder]);
+
+    // Auto-refresh every 5 seconds (only if not completed/cancelled, and WS not connected)
+    useEffect(() => {
+        if (wsConnected || !order || order.status === 'COMPLETED' || order.status === 'CANCELLED') {
             return;
         }
 
@@ -413,7 +438,7 @@ export default function OrderTrackPage() {
 
         const checkFeedback = async () => {
             try {
-                const response = await fetch(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`);
+                const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`));
                 const data = await response.json();
                 if (data.success) {
                     setHasFeedback(data.hasFeedback);
@@ -457,7 +482,7 @@ export default function OrderTrackPage() {
         foodRating?: number;
         comment?: string;
     }) => {
-        const response = await fetch(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`, {
+        const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}/feedback?token=${encodeURIComponent(token)}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(feedback),

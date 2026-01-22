@@ -5,12 +5,13 @@
 
 'use client';
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { FaClock, FaReceipt, FaExpand, FaCircle, FaSync } from 'react-icons/fa';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
+import { getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 import type {
   CustomerDisplayState,
   CustomerDisplayCartPayload,
@@ -38,6 +39,18 @@ interface CustomerDisplaySessionInfo {
   expiresAt: string;
 }
 
+function normalizeSessionInfo(raw: any): CustomerDisplaySessionInfo {
+  return {
+    sessionId: String(raw?.sessionId ?? ''),
+    userId: String(raw?.userId ?? ''),
+    staffName: raw?.staffName ?? null,
+    role: raw?.role ?? null,
+    deviceInfo: raw?.deviceInfo ?? null,
+    createdAt: String(raw?.createdAt ?? ''),
+    expiresAt: String(raw?.expiresAt ?? ''),
+  };
+}
+
 export default function CustomerDisplayPage() {
   const router = useRouter();
   const { t, locale } = useTranslation();
@@ -47,13 +60,13 @@ export default function CustomerDisplayPage() {
   const [availableSessions, setAvailableSessions] = useState<CustomerDisplaySessionInfo[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [isRefreshingSessions, setIsRefreshingSessions] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
   const [nowTick, setNowTick] = useState(Date.now());
   const [promoIndex, setPromoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [cachedPromoUrls, setCachedPromoUrls] = useState<string[]>([]);
   const [isPromoPreloading, setIsPromoPreloading] = useState(false);
-  const promoCacheRef = useRef<string[]>([]);
 
   const promoBanners = useMemo(() => merchant?.promoBannerUrls ?? [], [merchant?.promoBannerUrls]);
   const currency = merchant?.currency || 'AUD';
@@ -125,7 +138,8 @@ export default function CustomerDisplayPage() {
 
     const json = await response.json();
     if (json?.success && json?.data?.sessions) {
-      setAvailableSessions(json.data.sessions as CustomerDisplaySessionInfo[]);
+      const sessions = Array.isArray(json.data.sessions) ? json.data.sessions : [];
+      setAvailableSessions(sessions.map(normalizeSessionInfo));
     }
     setIsRefreshingSessions(false);
   }, [router]);
@@ -149,18 +163,56 @@ export default function CustomerDisplayPage() {
   }, [fetchMerchantProfile, fetchDisplayState, fetchSessionList]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      fetchDisplayState();
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [fetchDisplayState]);
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/customer-display?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'customer-display.refresh') {
+          fetchDisplayState();
+          fetchSessionList();
+        }
+      } catch {
+        fetchDisplayState();
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [fetchDisplayState, fetchSessionList]);
 
   useEffect(() => {
+    if (wsConnected) return;
+    const interval = window.setInterval(() => {
+      fetchDisplayState();
+    }, 2000);
+    return () => window.clearInterval(interval);
+  }, [fetchDisplayState, wsConnected]);
+
+  useEffect(() => {
+    if (wsConnected) return;
     const interval = window.setInterval(() => {
       fetchSessionList();
     }, 15000);
     return () => window.clearInterval(interval);
-  }, [fetchSessionList]);
+  }, [fetchSessionList, wsConnected]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -201,10 +253,6 @@ export default function CustomerDisplayPage() {
 
     const preload = async () => {
       if (promoBanners.length === 0) {
-        promoCacheRef.current.forEach((url) => {
-          if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-        });
-        promoCacheRef.current = [];
         setCachedPromoUrls((prev) => (prev.length ? [] : prev));
         setIsPromoPreloading((prev) => (prev ? false : prev));
         return;
@@ -212,32 +260,26 @@ export default function CustomerDisplayPage() {
 
       setIsPromoPreloading(true);
 
-      const results = await Promise.all(
-        promoBanners.map(async (url) => {
-          try {
-            const response = await fetch(url);
-            if (!response.ok) return url;
-            const blob = await response.blob();
-            return URL.createObjectURL(blob);
-          } catch {
-            return url;
-          }
-        })
-      );
-
-      if (cancelled) {
-        results.forEach((url) => {
-          if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-        });
-        return;
+      // Preload images without `fetch()` to avoid CORS issues on CDN.
+      // Using Image() respects browser image loading rules and still warms cache.
+      const urls = [...promoBanners];
+      if (typeof window !== 'undefined') {
+        await Promise.all(
+          urls.map(
+            (url) =>
+              new Promise<void>((resolve) => {
+                const img = new window.Image();
+                img.onload = () => resolve();
+                img.onerror = () => resolve();
+                img.src = url;
+              })
+          )
+        );
       }
 
-      promoCacheRef.current.forEach((url) => {
-        if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-      });
+      if (cancelled) return;
 
-      promoCacheRef.current = results;
-      setCachedPromoUrls(results);
+      setCachedPromoUrls(urls);
       setIsPromoPreloading(false);
     };
 
@@ -247,12 +289,6 @@ export default function CustomerDisplayPage() {
       cancelled = true;
     };
   }, [promoBanners]);
-
-  useEffect(() => () => {
-    promoCacheRef.current.forEach((url) => {
-      if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-    });
-  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -413,15 +449,16 @@ export default function CustomerDisplayPage() {
     : undefined;
 
   const formatSessionLabel = (session: CustomerDisplaySessionInfo) => {
-    const suffix = session.sessionId.slice(-4).toUpperCase();
+    const sessionIdStr = String(session.sessionId ?? '');
+    const suffix = sessionIdStr.slice(-4).toUpperCase();
     const timeLabel = new Date(session.createdAt).toLocaleTimeString(locale === 'id' ? 'id-ID' : 'en-AU', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone: timezone,
     });
     const name = session.staffName || session.userId;
-    const updatedAt = sessionMap[session.sessionId]?.updatedAt
-      ? new Date(sessionMap[session.sessionId]?.updatedAt as string).getTime()
+    const updatedAt = sessionMap[sessionIdStr]?.updatedAt
+      ? new Date(sessionMap[sessionIdStr]?.updatedAt as string).getTime()
       : null;
     const isInactive = !updatedAt || nowTick - updatedAt > sessionInactiveThresholdMs;
     const statusLabel = isInactive

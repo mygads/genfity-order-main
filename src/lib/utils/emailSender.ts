@@ -14,27 +14,7 @@
  * - Automatic retry on failure
  */
 
-import nodemailer from 'nodemailer';
-
-/**
- * Email configuration from environment variables
- */
-const emailConfig = {
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-};
-
-/**
- * Create transporter
- */
-const createTransporter = () => {
-  return nodemailer.createTransport(emailConfig);
-};
+import emailService from '@/lib/services/EmailService';
 
 /**
  * Send password reset email
@@ -52,8 +32,6 @@ export async function sendPasswordResetEmail({
   resetUrl: string;
   expiresAt: Date;
 }) {
-  const transporter = createTransporter();
-
   const expiresInMinutes = Math.floor((expiresAt.getTime() - Date.now()) / 1000 / 60);
 
   const htmlContent = `
@@ -154,18 +132,19 @@ If you didn't request a password reset, you can safely ignore this email. Your p
 © ${new Date().getFullYear()} GENFITY. All rights reserved.
   `;
 
-  const mailOptions = {
-    from: `"GENFITY" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to,
-    subject: 'Reset Your Password - GENFITY',
-    text: textContent,
-    html: htmlContent,
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset email sent:', info.messageId);
-    return info;
+    const ok = await emailService.sendEmail({
+      to,
+      subject: 'Reset Your Password - GENFITY',
+      html: htmlContent,
+    });
+
+    if (!ok) {
+      throw new Error('EmailService returned false');
+    }
+
+    console.log('Password reset email queued/sent');
+    return { ok: true, text: textContent };
   } catch (error) {
     console.error('Error sending password reset email:', error);
     throw new Error('Failed to send password reset email');
@@ -182,8 +161,6 @@ export async function sendWelcomeEmail({
   to: string;
   name: string;
 }) {
-  const transporter = createTransporter();
-
   const htmlContent = `
 <!DOCTYPE html>
 <html>
@@ -217,17 +194,19 @@ export async function sendWelcomeEmail({
 </html>
   `;
 
-  const mailOptions = {
-    from: `"GENFITY" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to,
-    subject: 'Welcome to GENFITY',
-    html: htmlContent,
-  };
-
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Welcome email sent:', info.messageId);
-    return info;
+    const ok = await emailService.sendEmail({
+      to,
+      subject: 'Welcome to GENFITY',
+      html: htmlContent,
+    });
+
+    if (!ok) {
+      throw new Error('EmailService returned false');
+    }
+
+    console.log('Welcome email queued/sent');
+    return { ok: true };
   } catch (error) {
     console.error('Error sending welcome email:', error);
     throw new Error('Failed to send welcome email');

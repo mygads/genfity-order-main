@@ -15,6 +15,7 @@ import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 
@@ -65,6 +66,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [previousOrderCount, setPreviousOrderCount] = useState(0);
+  const [wsConnected, setWsConnected] = useState(false);
   const previousDataRef = useRef<string>('');
   const { showError } = useToast();
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
@@ -78,7 +80,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
         return;
       }
 
-      const response = await fetch('/api/merchant/orders/active', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/active'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -120,11 +122,47 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
   useEffect(() => {
     fetchOrders();
 
-    if (autoRefresh) {
+    if (autoRefresh && !wsConnected) {
       const interval = setInterval(fetchOrders, refreshInterval);
       return () => clearInterval(interval);
     }
-  }, [autoRefresh, refreshInterval, fetchOrders]);
+  }, [autoRefresh, wsConnected, refreshInterval, fetchOrders]);
+
+  // WebSocket refresh (fallback to polling if WS is not available)
+  useEffect(() => {
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          fetchOrders();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [fetchOrders]);
 
   // Expose refresh function to parent
   useEffect(() => {
@@ -147,7 +185,7 @@ export const OrderTabListView: React.FC<OrderTabListViewProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) throw new Error('Authentication required');
 
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

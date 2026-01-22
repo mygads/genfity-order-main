@@ -24,6 +24,7 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz';
 
 const KITCHEN_STATUSES: OrderStatus[] = ['ACCEPTED', 'IN_PROGRESS'];
@@ -38,6 +39,7 @@ export default function KitchenDisplayPage() {
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
+  const [wsConnected, setWsConnected] = useState(false);
   const merchantCurrency = merchant?.currency || 'AUD';
 
   // Use ref to track previous order IDs without triggering re-renders
@@ -57,7 +59,7 @@ export default function KitchenDisplayPage() {
       }
 
       const statusFilter = KITCHEN_STATUSES.join(',');
-      const response = await fetch(`/api/merchant/orders?status=${statusFilter}&limit=50&includeItems=true`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders?status=${statusFilter}&limit=50&includeItems=true`), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
@@ -101,9 +103,46 @@ export default function KitchenDisplayPage() {
   // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
+    if (wsConnected) return;
     const interval = setInterval(fetchOrders, 5000);
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchOrders]);
+  }, [autoRefresh, wsConnected, fetchOrders]);
+
+  // WebSocket refresh (fallback to polling if WS is not available)
+  useEffect(() => {
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          fetchOrders();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [fetchOrders]);
 
   // Handle display mode changes
   useEffect(() => {
@@ -148,7 +187,7 @@ export default function KitchenDisplayPage() {
     e.stopPropagation(); // Prevent card click
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -170,7 +209,7 @@ export default function KitchenDisplayPage() {
     e.stopPropagation(); // Prevent card click
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

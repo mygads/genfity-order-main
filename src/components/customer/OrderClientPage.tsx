@@ -1415,7 +1415,7 @@ export default function OrderClientPage({
           setShowTableModal(true);
         }}
         merchantCode={merchantCode}
-        orderType={normalizedMode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY'}
+        orderType={normalizedMode === 'dinein' ? 'DINE_IN' : normalizedMode === 'delivery' ? 'DELIVERY' : 'TAKEAWAY'}
         tableNumber={tableNumber || undefined}
       />
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
@@ -175,7 +176,7 @@ export default function ViewOrderPage() {
   // Handle adding related menu item
   const _handleAddRelatedItem = async (menuId: string) => {
     try {
-      const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menuId}`);
+      const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/${menuId}`));
       const data = await response.json();
 
       if (data.success) {
@@ -247,7 +248,7 @@ export default function ViewOrderPage() {
 
       try {
         const response = await fetch(
-          `/api/public/merchants/${merchantCode}/recommendations?menuIds=${cartMenuIds}`
+          buildOrderApiUrl(`/api/public/merchants/${merchantCode}/recommendations?menuIds=${cartMenuIds}`)
         );
 
         if (response.ok) {
@@ -357,7 +358,7 @@ export default function ViewOrderPage() {
 
       // Fallback: Fetch from API if not in cache
       console.log('🔄 [VIEW ORDER] Cache miss, fetching from API:', item.menuId);
-      const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${item.menuId}`);
+      const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/${item.menuId}`));
       const data = await response.json();
       if (data.success) {
         setSelectedMenu(data.data);

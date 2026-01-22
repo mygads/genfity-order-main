@@ -5,6 +5,7 @@ import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { isFavorite, toggleFavorite } from '@/lib/utils/localStorage';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { FaHeart, FaRegHeart, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
 
@@ -249,7 +250,7 @@ export default function MenuDetailModal({
       console.log('🔄 [FETCH] Fetching addon data from API for menu:', menu.id);
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`);
+        const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/${menu.id}/addons`));
         const data = await response.json();
 
         if (data.success) {

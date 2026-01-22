@@ -17,6 +17,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { useCustomerData, type StockUpdate } from '@/context/CustomerDataContext';
 
 interface UseStockStreamOptions {
@@ -100,7 +101,7 @@ export function useStockStream({
     }
 
     console.log('📡 [SSE] Connecting to stock stream...');
-    const url = `/api/public/merchants/${merchantCode}/stock-stream`;
+    const url = buildOrderApiUrl(`/api/public/merchants/${merchantCode}/stock-stream`);
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 

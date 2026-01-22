@@ -134,16 +134,6 @@ async function handlePut(req: NextRequest, context: AuthContext) {
     if (body?.source === 'pos') {
       const sessionKey = context.sessionId ? context.sessionId.toString() : 'unknown';
       const existingSession = cleanedSessions?.[sessionKey] as Prisma.JsonObject | undefined;
-      const sessionLocked = Boolean(existingSession?.isLocked);
-
-      if (sessionLocked && body?.source === 'pos' && typeof body?.isLocked !== 'boolean') {
-        return NextResponse.json({
-          success: true,
-          data: serializeBigInt(existing),
-          message: 'Customer display locked',
-          statusCode: 200,
-        });
-      }
       let staffName: string | null = null;
 
       try {

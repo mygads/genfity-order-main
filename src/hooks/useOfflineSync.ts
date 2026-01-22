@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { normalizeTableNumber } from '@/lib/utils/posTableNumber';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 // ============================================
 // TYPES
@@ -596,7 +597,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
           }
         }
 
-        const response = await fetch('/api/merchant/orders/pos', {
+        const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

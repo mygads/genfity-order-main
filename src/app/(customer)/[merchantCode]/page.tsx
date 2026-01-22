@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import MerchantClientPage from '../../../components/customer/MerchantClientPage';
 
 // ISR: Revalidate every 1 hour (3600 seconds)
@@ -48,9 +49,7 @@ interface MerchantData {
  */
 async function getMerchant(merchantCode: string): Promise<MerchantData | null> {
   try {
-    // Use absolute URL for server-side fetch
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/public/merchants/${merchantCode}`, {
+    const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`), {
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
 

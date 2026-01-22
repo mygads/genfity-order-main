@@ -30,6 +30,7 @@ import {
   FaExclamationTriangle,
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
@@ -763,7 +764,7 @@ function POSPageContent() {
     const loadEditOrder = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch(`/api/merchant/orders/pos/${editOrderId}`, {
+        const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/pos/${editOrderId}`), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -1118,7 +1119,6 @@ function POSPageContent() {
     options?: { force?: boolean; isLocked?: boolean }
   ) => {
     if (!isLiveCartEnabled && !options?.force) return;
-    if (isDisplayLocked && !options?.force && typeof options?.isLocked !== 'boolean') return;
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -1175,14 +1175,13 @@ function POSPageContent() {
   useEffect(() => {
     if (!isLiveCartEnabled) return;
     if (!merchantSettings) return;
-    if (isDisplayLocked) return;
     if (cartItems.length === 0) return;
 
     const timer = window.setTimeout(() => {
       const cartPayload = buildCartDisplayPayload();
       if (!cartPayload) return;
       updateCustomerDisplayState('CART', { cart: cartPayload });
-    }, 250);
+    }, 80);
 
     return () => window.clearTimeout(timer);
   }, [cartItems, orderType, tableNumber, orderNotes, customerInfo, merchantSettings, isDisplayLocked, isLiveCartEnabled, buildCartDisplayPayload, updateCustomerDisplayState]);
@@ -1190,12 +1189,11 @@ function POSPageContent() {
   useEffect(() => {
     if (!isLiveCartEnabled) return;
     if (!merchantSettings) return;
-    if (isDisplayLocked) return;
     if (cartItems.length > 0) return;
 
     const timer = window.setTimeout(() => {
       updateCustomerDisplayState('IDLE', {});
-    }, 250);
+    }, 80);
 
     return () => window.clearTimeout(timer);
   }, [cartItems.length, isDisplayLocked, isLiveCartEnabled, merchantSettings, updateCustomerDisplayState]);
@@ -1279,7 +1277,7 @@ function POSPageContent() {
         }),
       };
 
-      const response = await fetch(`/api/merchant/orders/pos/${editOrderId}`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/pos/${editOrderId}`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1530,7 +1528,7 @@ function POSPageContent() {
         }),
       };
 
-      const response = await fetch('/api/merchant/orders/pos', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1840,7 +1838,7 @@ function POSPageContent() {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch('/api/merchant/orders/pos/payment', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos/payment'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1876,7 +1874,7 @@ function POSPageContent() {
         updateCustomerDisplayState('THANK_YOU', { thankYou: thankYouPayload });
 
         // Refresh POS history + active orders so payment status updates everywhere
-        mutate('/api/merchant/orders/pos/history?today=true');
+        mutate(buildOrderApiUrl('/api/merchant/orders/pos/history?today=true'));
         mutate('/api/merchant/orders/active');
 
         // Clear payment state

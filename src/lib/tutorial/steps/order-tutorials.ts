@@ -200,27 +200,9 @@ export const ordersQueueSteps: TutorialStep[] = [
   {
     id: 'queue-grid',
     title: 'Ready Orders Grid',
-    description: 'Each card shows: order number, customer name, order type (dine-in/takeaway), and time since ready. The newest order pulses green!',
+    description: 'Each card shows: order number, customer name, order type (dine-in/takeaway), and time since ready. This screen is designed for read-only display.',
     targetSelector: '[data-tutorial="queue-grid"], [data-tutorial="queue-empty-state"]',
     position: 'bottom',
-    spotlightPadding: 8,
-  },
-  {
-    id: 'queue-order-card',
-    title: 'Order Card',
-    description: 'Click the "Picked Up" button when a customer collects their order. This marks the order as COMPLETED.',
-    targetSelector: '[data-tutorial="queue-order-card"]',
-    position: 'right',
-    spotlightPadding: 8,
-    showPointer: true,
-    pointerDirection: 'left',
-  },
-  {
-    id: 'queue-pickup-button',
-    title: 'Picked Up Button',
-    description: 'Tap this when the order is collected.',
-    targetSelector: '[data-tutorial="queue-pickup-btn"], [data-tutorial="queue-order-card"]',
-    position: 'left',
     spotlightPadding: 8,
   },
   {

@@ -150,7 +150,22 @@ GENFITY adalah platform online ordering untuk restoran dengan fitur multi-mercha
    NEXT_PUBLIC_APP_URL="http://localhost:3000"
    NEXT_PUBLIC_CURRENCY="AUD"
    NEXT_PUBLIC_LANGUAGE="en"
+
+   # Go Order Services (optional)
+   # If left empty, Next.js will use its own /api routes.
+   NEXT_PUBLIC_ORDER_API_BASE_URL="http://localhost:8086"
+   NEXT_PUBLIC_ORDER_WS_URL="ws://localhost:8086"
+   SKIP_SMTP_VERIFY="false"
    ```
+
+### Go Order Services (Optional)
+
+This project can offload high-traffic order APIs + realtime updates to Go services in
+[services/genfity-order-services](services/genfity-order-services). If you enable them,
+set the `NEXT_PUBLIC_ORDER_API_BASE_URL` and `NEXT_PUBLIC_ORDER_WS_URL` variables so the
+Next.js app uses the Go API and WebSocket endpoints.
+
+The Go service reads its own `.env` file, so Next.js only needs the two `NEXT_PUBLIC_ORDER_*` values above.
 
 4. **Setup database**
    ```bash
@@ -277,6 +292,11 @@ genfity-online-ordering/
 
 The system includes automated cron jobs for maintenance and processing tasks. Configuration is managed via `cron-config.json` in the repository root.
 
+RabbitMQ queue processing (email + webpush jobs) runs as a long-running daemon worker on VPS (not cron).
+
+- Start it manually with `pnpm worker:rabbitmq` under systemd/pm2/supervisor.
+- In local/dev and standard VPS deployment, `pnpm dev` / `pnpm start` will auto-start the worker when `RABBITMQ_URL` is set.
+
 ### Available Cron Jobs
 
 | Job | Schedule | Description |
@@ -286,7 +306,6 @@ The system includes automated cron jobs for maintenance and processing tasks. Co
 | **Data Cleanup** | `0 2 * * *` | Clean expired sessions and old data at 2 AM |
 | **Subscription Cleanup** | `0 3 * * *` | Clean up expired subscription data at 3 AM |
 | **Push Subscription Cleanup** | `0 4 * * *` | Clean up expired push subscriptions at 4 AM |
-| **Notification Retry** | `*/15 * * * *` | Retry failed notifications every 15 minutes |
 
 ### Adding New Cron Jobs
 

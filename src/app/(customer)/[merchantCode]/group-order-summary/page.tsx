@@ -6,6 +6,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { customerTrackUrl } from '@/lib/utils/customerRoutes';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { FaCheckCircle, FaLightbulb, FaMoneyBillWave } from 'react-icons/fa';
 
 /**
@@ -48,7 +49,7 @@ export default function GroupOrderSummaryPage({
     useEffect(() => {
         // Fetch merchant currency
         if (merchantCode) {
-            fetch(`/api/public/merchants/${merchantCode}`)
+            fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`))
                 .then(res => res.json())
                 .then(data => {
                     if (data.success) {

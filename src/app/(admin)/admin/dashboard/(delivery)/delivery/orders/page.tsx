@@ -31,7 +31,7 @@ export default function DeliveryOrdersPage() {
     return statusFilter ? `${base}?status=${encodeURIComponent(statusFilter)}` : base;
   }, [statusFilter]);
 
-  const { data, isLoading, mutate } = useSWR(url);
+  const { data, isLoading, mutate } = useSWR(url, { refreshInterval: 15000 });
 
   const orders: DeliveryOrder[] = data?.success ? data.data : [];
 

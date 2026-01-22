@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { CustomerOrderSkeleton } from '@/components/common/SkeletonLoaders';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import OrderClientPage from '../../../../components/customer/OrderClientPage';
 
 // ISR: Revalidate every 60 seconds
@@ -84,17 +85,15 @@ interface InitialData {
  * Fetch initial data server-side for ISR
  */
 async function getInitialData(merchantCode: string): Promise<InitialData> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
   try {
     const [merchantRes, categoriesRes, menusRes] = await Promise.all([
-      fetch(`${baseUrl}/api/public/merchants/${merchantCode}`, {
+      fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`), {
         next: { revalidate: 60 },
       }),
-      fetch(`${baseUrl}/api/public/merchants/${merchantCode}/categories`, {
+      fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/categories`), {
         next: { revalidate: 60 },
       }),
-      fetch(`${baseUrl}/api/public/merchants/${merchantCode}/menus`, {
+      fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus`), {
         next: { revalidate: 60 },
       }),
     ]);
@@ -169,10 +168,8 @@ export default async function OrderPage({ params, searchParams }: OrderPageProps
  */
 export async function generateMetadata({ params }: OrderPageProps) {
   const { merchantCode } = await params;
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
   try {
-    const res = await fetch(`${baseUrl}/api/public/merchants/${merchantCode}`);
+    const res = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}`));
     const data = await res.json();
 
     if (data.success) {

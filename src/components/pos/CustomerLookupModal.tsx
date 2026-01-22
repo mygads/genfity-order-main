@@ -14,6 +14,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FaTimes, FaSearch, FaUser, FaPhone, FaEnvelope, FaClock, FaShoppingBag } from 'react-icons/fa';
 import { getAdminToken } from '@/lib/utils/adminAuth';
 import { formatCurrency } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 // Types
 interface CustomerInfo {
@@ -114,13 +115,13 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
     onSelect,
     currency = 'AUD',
 }) => {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
-    const [dbResults, setDbResults] = useState<DbCustomerResult[]>([]);
-    const [isDbSearching, setIsDbSearching] = useState(false);
-    const [dbError, setDbError] = useState<string | null>(null);
-    const [dbNextCursor, setDbNextCursor] = useState<string | null>(null);
-    const [dbHasMore, setDbHasMore] = useState(false);
+        const [searchQuery, setSearchQuery] = useState('');
+        const [recentCustomers, setRecentCustomers] = useState<RecentCustomer[]>([]);
+        const [dbResults, setDbResults] = useState<DbCustomerResult[]>([]);
+        const [dbError, setDbError] = useState<string | null>(null);
+        const [isDbSearching, setIsDbSearching] = useState(false);
+        const [dbNextCursor, setDbNextCursor] = useState<string | null>(null);
+        const [dbHasMore, setDbHasMore] = useState(false);
 
     // Load recent customers on open
     useEffect(() => {
@@ -170,7 +171,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
         try {
             const cursorQuery = params.cursor ? `&cursor=${encodeURIComponent(params.cursor)}` : '';
             const res = await fetch(
-                `/api/merchant/customers/search?q=${encodeURIComponent(params.query)}&take=20${cursorQuery}`,
+                buildOrderApiUrl(`/api/merchant/customers/search?q=${encodeURIComponent(params.query)}&take=20${cursorQuery}`),
                 {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -399,9 +400,9 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                         <button
                                             key={customer.id}
                                             onClick={() => handleSelectDb(customer)}
-                                            className="w-full flex items-start gap-3 p-3 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                                            className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 group"
                                         >
-                                            <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/30 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors group-hover:bg-brand-100 group-hover:text-brand-600 dark:bg-gray-800 dark:group-hover:bg-brand-900/30 dark:group-hover:text-brand-400">
                                                 <FaUser className="w-4 h-4" />
                                             </div>
 
@@ -416,7 +417,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                                             {customer.phone}
                                                         </span>
                                                     )}
-                                                    <span className="flex items-center gap-1 max-w-[150px] truncate">
+                                                    <span className="flex items-center gap-1 max-w-37.5 truncate">
                                                         <FaEnvelope className="w-3 h-3" />
                                                         {customer.email}
                                                     </span>
@@ -466,9 +467,9 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                         <button
                                             key={`${customer.phone || customer.email || index}`}
                                             onClick={() => handleSelect(customer)}
-                                            className="w-full flex items-start gap-3 p-3 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                                            className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 group"
                                         >
-                                            <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/30 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors group-hover:bg-brand-100 group-hover:text-brand-600 dark:bg-gray-800 dark:group-hover:bg-brand-900/30 dark:group-hover:text-brand-400">
                                                 <FaUser className="w-4 h-4" />
                                             </div>
 
@@ -484,7 +485,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                                         </span>
                                                     )}
                                                     {customer.email && (
-                                                        <span className="flex items-center gap-1 max-w-[150px] truncate">
+                                                        <span className="flex items-center gap-1 max-w-37.5 truncate">
                                                             <FaEnvelope className="w-3 h-3" />
                                                             {customer.email}
                                                         </span>
@@ -524,10 +525,10 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                 <button
                                     key={`${customer.phone || customer.email || index}`}
                                     onClick={() => handleSelect(customer)}
-                                    className="w-full flex items-start gap-3 p-3 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
+                                    className="flex w-full items-start gap-3 rounded-lg p-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 group"
                                 >
                                     {/* Avatar */}
-                                    <div className="w-10 h-10 shrink-0 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 group-hover:bg-brand-100 dark:group-hover:bg-brand-900/30 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-400 transition-colors group-hover:bg-brand-100 group-hover:text-brand-600 dark:bg-gray-800 dark:group-hover:bg-brand-900/30 dark:group-hover:text-brand-400">
                                         <FaUser className="w-4 h-4" />
                                     </div>
 
@@ -544,7 +545,7 @@ export const CustomerLookupModal: React.FC<CustomerLookupModalProps> = ({
                                                 </span>
                                             )}
                                             {customer.email && (
-                                                <span className="flex items-center gap-1 max-w-[150px] truncate">
+                                                <span className="flex items-center gap-1 max-w-37.5 truncate">
                                                     <FaEnvelope className="w-3 h-3" />
                                                     {customer.email}
                                                 </span>

@@ -12,7 +12,7 @@ interface CreateGroupModalProps {
     onSuccess: (sessionCode: string) => void;
     onNeedTableNumber?: () => void; // Callback when table number is required
     merchantCode: string;
-    orderType: 'DINE_IN' | 'TAKEAWAY';
+    orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
     tableNumber?: string;
 }
 
@@ -98,7 +98,9 @@ export default function CreateGroupModal({
     // Get mode display text
     const modeText = orderType === 'DINE_IN'
         ? (tableNumber ? `Table ${tableNumber}` : 'Dine In')
-        : 'Takeaway';
+        : orderType === 'DELIVERY'
+            ? 'Delivery'
+            : 'Takeaway';
 
     return (
         <>
@@ -108,7 +110,7 @@ export default function CreateGroupModal({
             />
 
             <div className={`fixed inset-x-0 bottom-0 z-1000 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
-                <div className="w-full max-w-[500px] bg-white rounded-t-2xl shadow-2xl">
+                <div className="w-full max-w-125 bg-white rounded-t-2xl shadow-2xl">
                     {/* Header with mode badge on right */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
                         <h2 className="text-lg font-semibold text-gray-900" style={{ margin: 0, lineHeight: 'normal' }}>

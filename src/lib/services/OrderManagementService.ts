@@ -31,11 +31,11 @@ import { validateStatusTransition } from '@/lib/utils/orderStatusRules';
 import emailService from '@/lib/services/EmailService';
 import balanceService from '@/lib/services/BalanceService';
 import subscriptionService from '@/lib/services/SubscriptionService';
-import subscriptionHistoryService from '@/lib/services/SubscriptionHistoryService';
 import CustomerPushService from '@/lib/services/CustomerPushService';
 import { shouldSendCustomerEmail } from '@/lib/utils/emailGuards';
-import { getCurrentTimeInTimezone } from '@/lib/utils/storeStatus';
 import userNotificationService from '@/lib/services/UserNotificationService';
+import { enqueueCompletedEmail } from '@/lib/queue/completedEmailQueue';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
 
 type TxClient = Prisma.TransactionClient;
 
@@ -107,44 +107,41 @@ export class OrderManagementService {
     const menuRequired = new Map<string, { id: bigint; name: string; qty: number; stockQty: number | null }>();
     const addonRequired = new Map<string, { id: bigint; name: string; qty: number; stockQty: number | null }>();
 
-    for (const item of orderForStock.orderItems) {
-      const menu = (item as any).menu as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
+    for (const item of orderForStock.orderItems as any[]) {
+      const itemQty = Number(item.quantity ?? 0);
+
+      const menu = item.menu as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
       if (menu?.trackStock && menu.stockQty !== null) {
         const key = String(menu.id);
         const existing = menuRequired.get(key);
-        const nextQty = (existing?.qty ?? 0) + item.quantity;
         menuRequired.set(key, {
           id: menu.id,
           name: menu.name,
-          qty: nextQty,
           stockQty: menu.stockQty,
+          qty: (existing?.qty ?? 0) + itemQty,
         });
       }
 
-      for (const addon of item.addons ?? []) {
-        const addonItem = (addon as any).addonItem as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
+      for (const addon of (item.addons ?? []) as any[]) {
+        const addonItem = addon.addonItem as { id: bigint; name: string; trackStock: boolean; stockQty: number | null } | null;
         if (addonItem?.trackStock && addonItem.stockQty !== null) {
+          const addonQty = Number(addon.quantity ?? 0);
           const key = String(addonItem.id);
           const existing = addonRequired.get(key);
-          const nextQty = (existing?.qty ?? 0) + addon.quantity;
           addonRequired.set(key, {
             id: addonItem.id,
             name: addonItem.name,
-            qty: nextQty,
             stockQty: addonItem.stockQty,
+            qty: (existing?.qty ?? 0) + addonQty,
           });
         }
       }
     }
 
     for (const required of menuRequired.values()) {
-      if (required.stockQty !== null && required.stockQty < required.qty) {
-        throw new Error(`Insufficient stock for ${required.name}`);
-      }
       const res = await tx.menu.updateMany({
         where: {
           id: required.id,
-          trackStock: true,
           stockQty: {
             gte: required.qty,
           },
@@ -171,13 +168,9 @@ export class OrderManagementService {
     }
 
     for (const required of addonRequired.values()) {
-      if (required.stockQty !== null && required.stockQty < required.qty) {
-        throw new Error(`Insufficient stock for ${required.name}`);
-      }
       const res = await tx.addonItem.updateMany({
         where: {
           id: required.id,
-          trackStock: true,
           stockQty: {
             gte: required.qty,
           },
@@ -602,77 +595,102 @@ export class OrderManagementService {
                   );
                 }
               } else {
-                const sent = await emailService.sendOrderCompleted({
-                  to: completedCustomerEmail,
-                  customerName: updated.customer?.name || 'Customer',
-                  orderNumber: updated.orderNumber,
-                  merchantName: updated.merchant?.name || 'Restaurant',
-                  merchantCode: updated.merchant?.code || '',
-                  merchantLogoUrl: (updated.merchant as any)?.logoUrl,
-                  merchantAddress: (updated.merchant as any)?.address,
-                  merchantPhone: (updated.merchant as any)?.phone,
-                  merchantEmail: (updated.merchant as any)?.email,
-                  receiptSettings: (updated.merchant as any)?.receiptSettings,
-                  merchantCountry: updated.merchant?.country,
-                  merchantTimezone: updated.merchant?.timezone,
-                  currency: updated.merchant?.currency,
-                  orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
-                  tableNumber: updated.tableNumber,
-                  customerPhone: updated.customer?.phone,
-                  customerEmail: updated.customer?.email,
-                  items:
-                    updated.orderItems?.map((item: any) => ({
-                      menuName: item.menuName,
-                      quantity: item.quantity,
-                      unitPrice: Number(item.menuPrice),
-                      subtotal: Number(item.subtotal),
-                      notes: item.notes,
-                      addons: (item.addons || []).map((addon: any) => ({
-                        addonName: addon.addonName,
-                        addonPrice: Number(addon.addonPrice),
-                        quantity: addon.quantity,
-                        subtotal: Number(addon.subtotal),
-                      })),
-                    })) || [],
-                  subtotal: Number((updated as any).subtotal),
-                  taxAmount: Number((updated as any).taxAmount || 0),
-                  serviceChargeAmount: Number((updated as any).serviceChargeAmount || 0),
-                  packagingFeeAmount: Number((updated as any).packagingFeeAmount || 0),
-                  discountAmount:
-                    typeof (updated as any).discountAmount !== 'undefined'
-                      ? Number((updated as any).discountAmount)
-                      : undefined,
-                  totalAmount: Number(updated.totalAmount),
-                  paymentMethod: updated.payment?.paymentMethod || null,
-                  completedAt: updated.completedAt || new Date(),
-                });
+                let queuedOk = false;
 
-                if (sent) {
-                  try {
-                    const charged = await balanceService.deductCompletedOrderEmailFee(
-                      order.merchantId,
-                      orderId,
-                      order.orderNumber,
-                      completedEmailFee,
-                      completedCustomerEmail
+                try {
+                  const queued = await enqueueCompletedEmail({
+                    orderId: orderId.toString(),
+                    merchantId: order.merchantId.toString(),
+                    customerEmail: completedCustomerEmail,
+                    orderNumber: order.orderNumber,
+                    completedEmailFee,
+                  });
+
+                  queuedOk = queued.ok;
+
+                  if (queuedOk) {
+                    console.log(
+                      `📨 [Order ${order.orderNumber}] Completed email queued for ${redactEmailForLogs(completedCustomerEmail)}`
                     );
-
-                    if (!charged.success) {
-                      console.error(
-                        `❌ [Order ${order.orderNumber}] Completed email sent but charge failed: insufficient balance during deduction`
-                      );
-                    }
-                  } catch (chargeError) {
-                    console.error(`[Order ${order.orderNumber}] Completed email charge failed:`, chargeError);
                   }
+                } catch (queueError) {
+                  console.error(`[Order ${order.orderNumber}] Failed to enqueue completed email:`, queueError);
+                }
 
-                  console.log(
-                    `✅ [Order ${order.orderNumber}] Completed email sent to ${redactEmailForLogs(completedCustomerEmail)}`
-                  );
-                } else {
-                  console.error(
-                    `❌ [Order ${order.orderNumber}] Completed email failed (EmailService returned false) for ${redactEmailForLogs(completedCustomerEmail)}`
-                  );
+                if (!queuedOk) {
+                  // Fallback: direct send (when RabbitMQ is disabled/unavailable)
+                  const sent = await emailService.sendOrderCompleted({
+                    to: completedCustomerEmail,
+                    customerName: updated.customer?.name || 'Customer',
+                    orderNumber: updated.orderNumber,
+                    merchantName: updated.merchant?.name || 'Restaurant',
+                    merchantCode: updated.merchant?.code || '',
+                    merchantLogoUrl: (updated.merchant as any)?.logoUrl,
+                    merchantAddress: (updated.merchant as any)?.address,
+                    merchantPhone: (updated.merchant as any)?.phone,
+                    merchantEmail: (updated.merchant as any)?.email,
+                    receiptSettings: (updated.merchant as any)?.receiptSettings,
+                    merchantCountry: updated.merchant?.country,
+                    merchantTimezone: updated.merchant?.timezone,
+                    currency: updated.merchant?.currency,
+                    orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY',
+                    tableNumber: updated.tableNumber,
+                    customerPhone: updated.customer?.phone,
+                    customerEmail: updated.customer?.email,
+                    items:
+                      updated.orderItems?.map((item: any) => ({
+                        menuName: item.menuName,
+                        quantity: item.quantity,
+                        unitPrice: Number(item.menuPrice),
+                        subtotal: Number(item.subtotal),
+                        notes: item.notes,
+                        addons: (item.addons || []).map((addon: any) => ({
+                          addonName: addon.addonName,
+                          addonPrice: Number(addon.addonPrice),
+                          quantity: addon.quantity,
+                          subtotal: Number(addon.subtotal),
+                        })),
+                      })) || [],
+                    subtotal: Number((updated as any).subtotal),
+                    taxAmount: Number((updated as any).taxAmount || 0),
+                    serviceChargeAmount: Number((updated as any).serviceChargeAmount || 0),
+                    packagingFeeAmount: Number((updated as any).packagingFeeAmount || 0),
+                    discountAmount:
+                      typeof (updated as any).discountAmount !== 'undefined'
+                        ? Number((updated as any).discountAmount)
+                        : undefined,
+                    totalAmount: Number(updated.totalAmount),
+                    paymentMethod: updated.payment?.paymentMethod || null,
+                    completedAt: updated.completedAt || new Date(),
+                  });
+
+                  if (sent) {
+                    try {
+                      const charged = await balanceService.deductCompletedOrderEmailFee(
+                        order.merchantId,
+                        orderId,
+                        order.orderNumber,
+                        completedEmailFee,
+                        completedCustomerEmail
+                      );
+
+                      if (!charged.success) {
+                        console.error(
+                          `❌ [Order ${order.orderNumber}] Completed email sent but charge failed: insufficient balance during deduction`
+                        );
+                      }
+                    } catch (chargeError) {
+                      console.error(`[Order ${order.orderNumber}] Completed email charge failed:`, chargeError);
+                    }
+
+                    console.log(
+                      `✅ [Order ${order.orderNumber}] Completed email sent to ${redactEmailForLogs(completedCustomerEmail)}`
+                    );
+                  } else {
+                    console.error(
+                      `❌ [Order ${order.orderNumber}] Completed email failed (EmailService returned false) for ${redactEmailForLogs(completedCustomerEmail)}`
+                    );
+                  }
                 }
               }
             }
@@ -695,15 +713,40 @@ export class OrderManagementService {
         });
 
         if (merchant) {
-          const sentCount = await CustomerPushService.notifyOrderStatusChange(
-            order.orderNumber,
-            data.status as 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
-            merchant.name,
-            merchant.code,
-            updated.customerId,
-            updated.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'
-          );
-          console.log(`📱 [Order ${order.orderNumber}] Push notifications sent: ${sentCount}`);
+          let queuedOk = false;
+
+          try {
+            const queued = await enqueueNotificationJob({
+              kind: 'push.customer_order_status',
+              payload: {
+                kind: 'push.customer_order_status',
+                orderNumber: order.orderNumber,
+                status: data.status as 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+                merchantName: merchant.name,
+                merchantCode: merchant.code,
+                customerId: updated.customerId ? updated.customerId.toString() : null,
+                orderType: updated.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY',
+              },
+            });
+
+            queuedOk = queued.ok;
+          } catch (queueErr) {
+            console.error(`[Order ${order.orderNumber}] Failed to enqueue push notification:`, queueErr);
+          }
+
+          if (queuedOk) {
+            console.log(`📱 [Order ${order.orderNumber}] Push notifications queued`);
+          } else {
+            const sentCount = await CustomerPushService.notifyOrderStatusChange(
+              order.orderNumber,
+              data.status as 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED',
+              merchant.name,
+              merchant.code,
+              updated.customerId,
+              updated.orderType as 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'
+            );
+            console.log(`📱 [Order ${order.orderNumber}] Push notifications sent: ${sentCount}`);
+          }
         }
       } catch (pushError) {
         console.error(`[Order ${order.orderNumber}] Failed to send push notification:`, pushError);

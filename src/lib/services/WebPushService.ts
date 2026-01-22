@@ -11,6 +11,8 @@
  */
 
 import webpush from 'web-push';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
+import { randomUUID } from 'crypto';
 
 const DEBUG_PUSH = process.env.DEBUG_PUSH === 'true';
 const pushLog = (...args: unknown[]) => {
@@ -118,6 +120,34 @@ class WebPushService {
         if (!this.isConfigured()) {
             console.warn('Web push is not configured. Set VAPID keys in environment.');
             return { success: false };
+        }
+
+        const canEnqueue = Boolean(process.env.RABBITMQ_URL) && process.env.RABBITMQ_WORKER !== '1';
+        if (canEnqueue) {
+            try {
+                const queued = await enqueueNotificationJob({
+                    kind: 'push.webpush_raw',
+                    payload: {
+                        kind: 'push.webpush_raw',
+                        idempotencyKey: randomUUID(),
+                        subscription: {
+                            endpoint: subscription.endpoint,
+                            keys: {
+                                p256dh: subscription.keys.p256dh,
+                                auth: subscription.keys.auth,
+                            },
+                        },
+                        payload,
+                    },
+                });
+
+                if (queued.ok) {
+                    return { success: true };
+                }
+            } catch (err) {
+                console.error('[WebPushService] failed to enqueue push job:', err);
+            }
+            // Fallback to direct sending below.
         }
 
         try {

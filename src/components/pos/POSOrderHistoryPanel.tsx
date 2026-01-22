@@ -9,10 +9,11 @@
  * - Unified receipt printing with customizable settings
  */
 
+
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import useSWR, { mutate } from 'swr';
+import React, { useEffect, useState, useCallback } from 'react';
+import useSWR from 'swr';
 import {
   FaTimes,
   FaHistory,
@@ -36,6 +37,7 @@ import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlCli
 import { useMerchant } from '@/context/MerchantContext';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 import { useToast } from '@/context/ToastContext';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 
 // ============================================
 // TYPES
@@ -119,6 +121,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
   const [showRefundModal, setShowRefundModal] = useState(false);
   const [refundingOrderId, setRefundingOrderId] = useState<string | null>(null);
   const [isRefunding, setIsRefunding] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
 
   // Fetch today's orders
   const fetcher = async (url: string) => {
@@ -141,11 +144,56 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     return data.data;
   };
 
-  const { data: orders, isLoading, error } = useSWR<Order[]>(
-    isOpen ? '/api/merchant/orders/pos/history?today=true' : null,
+  const historyUrl = isOpen
+    ? buildOrderApiUrl('/api/merchant/orders/pos/history?today=true')
+    : null;
+
+  const { data: orders, isLoading, error, mutate } = useSWR<Order[]>(
+    historyUrl,
     fetcher,
-    { revalidateOnFocus: true, refreshInterval: 30000 }
+    { revalidateOnFocus: true, refreshInterval: wsConnected ? 0 : 30000 }
   );
+
+  // WebSocket refresh (fallback to polling if WS is not available)
+  useEffect(() => {
+    if (!isOpen) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          mutate();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [isOpen, mutate]);
 
   // Format time
   const formatTime = (dateString: string) => {
@@ -216,7 +264,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     setIsRefunding(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchant/orders/pos/refund', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos/refund'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -241,7 +289,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
       }
 
       // Refresh orders list
-      mutate('/api/merchant/orders/pos/history?today=true');
+      await mutate();
       
       // Clear selection if it was the refunded order
       if (selectedOrder?.id === refundingOrderId) {
@@ -254,7 +302,7 @@ export const POSOrderHistoryPanel: React.FC<POSOrderHistoryPanelProps> = ({
     } finally {
       setIsRefunding(false);
     }
-  }, [refundingOrderId, selectedOrder, onRefundSuccess]);
+  }, [refundingOrderId, selectedOrder, onRefundSuccess, mutate]);
 
   const handlePrintReceipt = async (order: Order) => {
     const result = await openMerchantOrderReceiptHtmlAndPrint(order.id);

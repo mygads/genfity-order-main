@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface DeliveryFeePreviewProps {
   merchantCode: string;
@@ -58,7 +59,7 @@ export default function DeliveryFeePreview({
 
       try {
         const response = await fetch(
-          `/api/public/merchants/${merchantCode}/delivery/quote`,
+          buildOrderApiUrl(`/api/public/merchants/${merchantCode}/delivery/quote`),
           {
             method: 'POST',
             headers: {

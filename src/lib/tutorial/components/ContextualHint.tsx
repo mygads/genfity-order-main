@@ -812,15 +812,6 @@ export const CONTEXTUAL_HINTS = {
     showOnce: true,
     trigger: 'manual' as const,
   },
-  ordersQueuePickup: {
-    id: 'orders-queue-pickup',
-    title: 'Mark Picked Up',
-    message: 'Click "Picked Up" when customers collect their orders. This completes the order and removes it from display.',
-    position: 'bottom-right' as const,
-    type: 'tip' as const,
-    showOnce: true,
-    trigger: 'manual' as const,
-  },
 
   // Kitchen Display hints
   kitchenFirstVisit: {

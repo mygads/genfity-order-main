@@ -50,7 +50,9 @@ import {
 } from "react-icons/fa";
 import MerchantBanner from "../components/merchants/MerchantBanner";
 import { useSubscriptionStatus } from "../hooks/useSubscriptionStatus";
+import { useMerchantReservationCounts } from "../hooks/useMerchantReservationCounts";
 import { getAdminAuth, getUserMerchants, saveAdminAuth } from "../lib/utils/adminAuth";
+import { buildOrderApiUrl } from "../lib/utils/orderApiBase";
 
 type NavItem = {
   nameKey: TranslationKeys; // Translation key for name
@@ -546,47 +548,25 @@ const AppSidebar: React.FC = () => {
     return false;
   };
 
+  const reservationsCountEnabled = Boolean(
+    user && (user.role === 'MERCHANT_OWNER' || user.role === 'MERCHANT_STAFF') && hasMerchant !== false
+  );
+
+  const { data: reservationCounts } = useMerchantReservationCounts({
+    enabled: reservationsCountEnabled,
+    refreshInterval: 60_000,
+  });
+
   // Fetch active reservation count for conditional nav visibility.
   useEffect(() => {
-    if (!user || (user.role !== 'MERCHANT_OWNER' && user.role !== 'MERCHANT_STAFF')) {
-      setPendingReservationCount(null);
-      return;
-    }
-    if (hasMerchant === false) {
+    if (!reservationsCountEnabled) {
       setPendingReservationCount(null);
       return;
     }
 
-    let cancelled = false;
-    const fetchCount = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
-        const res = await fetch('/api/merchant/reservations/count', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          if (!cancelled) setPendingReservationCount(0);
-          return;
-        }
-
-        const json = await res.json();
-        const pending = typeof json?.data?.pending === 'number' ? json.data.pending : 0;
-        if (!cancelled) setPendingReservationCount(pending);
-      } catch {
-        if (!cancelled) setPendingReservationCount(0);
-      }
-    };
-
-    fetchCount();
-    const timer = window.setInterval(fetchCount, 30_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, [user, hasMerchant]);
+    if (!reservationCounts) return;
+    setPendingReservationCount(reservationCounts.pending);
+  }, [reservationsCountEnabled, reservationCounts]);
 
   // Scroll detection for indicator
   useEffect(() => {

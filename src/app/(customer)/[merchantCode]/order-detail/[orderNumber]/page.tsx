@@ -5,6 +5,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { useToast } from '@/context/ToastContext';
 import { Skeleton } from '@/components/common/SkeletonLoaders';
@@ -127,7 +128,7 @@ export default function OrderDetailPage() {
             }
 
             try {
-                const publicResponse = await fetch(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(token)}`);
+                const publicResponse = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}?token=${encodeURIComponent(token)}`));
                 if (publicResponse.ok) {
                     const publicData = await publicResponse.json();
                     if (publicData.success) {

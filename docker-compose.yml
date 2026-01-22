@@ -60,6 +60,7 @@ services:
       - R2_S3_ENDPOINT=${R2_S3_ENDPOINT}
       - R2_STORAGE_CLASS=${R2_STORAGE_CLASS}
       - CRON_SECRET=${CRON_SECRET}
+      - RABBITMQ_URL=${RABBITMQ_URL}
     depends_on:
       db:
         condition: service_healthy

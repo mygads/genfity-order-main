@@ -18,6 +18,7 @@ import { useMerchant } from '@/context/MerchantContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
 import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 // ===== TYPES =====
 
@@ -104,7 +105,7 @@ function OrderHistoryPageContent() {
       const endDate = dateRange.end.toISOString();
 
       const response = await fetch(
-        `/api/merchant/orders?startDate=${startDate}&endDate=${endDate}&limit=1000`,
+        buildOrderApiUrl(`/api/merchant/orders?startDate=${startDate}&endDate=${endDate}&limit=1000`),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -177,7 +178,7 @@ function OrderHistoryPageContent() {
       throw new Error(t('admin.history.error.notAuthenticated'));
     }
 
-    const response = await fetch(`/api/merchant/orders/${deleteOrderId}`, {
+    const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${deleteOrderId}`), {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,

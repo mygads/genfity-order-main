@@ -9,6 +9,7 @@ import React, {
     useRef,
 } from "react";
 import { useCart, CartItem as BaseCartItem } from "./CartContext";
+import { buildOrderApiUrl, getOrderWsBaseUrl } from "@/lib/utils/orderApiBase";
 
 /**
  * GENFITY - Group Order Context & Provider
@@ -45,7 +46,7 @@ export interface GroupOrderSession {
     id: string;
     sessionCode: string;
     merchantId: string;
-    orderType: "DINE_IN" | "TAKEAWAY";
+    orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY";
     tableNumber?: string;
     status: "OPEN" | "LOCKED" | "SUBMITTED" | "CANCELLED" | "EXPIRED";
     maxParticipants: number;
@@ -90,7 +91,7 @@ interface GroupOrderContextType {
     // Actions
     createSession: (
         merchantCode: string,
-        orderType: "DINE_IN" | "TAKEAWAY",
+        orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY",
         tableNumber: string | undefined,
         hostName: string,
         customerId?: string
@@ -214,8 +215,10 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [splitBill, setSplitBill] = useState<SplitBillItem[] | null>(null);
+    const [wsConnected, setWsConnected] = useState(false);
 
     const pollingRef = useRef<NodeJS.Timeout | null>(null);
+    const wsRef = useRef<WebSocket | null>(null);
     const { cart, clearCart } = useCart();
 
     // ============================================
@@ -266,7 +269,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
         // Poll every 5 seconds
         pollingRef.current = setInterval(async () => {
             try {
-                const response = await fetch(`/api/public/group-order/${code}`);
+                const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}`));
                 const data = await response.json();
 
                 if (data.success) {
@@ -304,7 +307,13 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
             clearInterval(pollingRef.current);
             pollingRef.current = null;
         }
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+        setWsConnected(false);
     }, []);
+
 
     // ============================================
     // ACTIONS
@@ -312,7 +321,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
     const refreshSessionFromCode = async (code: string, storedDeviceId?: string) => {
         try {
-            const response = await fetch(`/api/public/group-order/${code}`);
+            const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}`));
             const data = await response.json();
 
             if (data.success) {
@@ -326,7 +335,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
                 if (myParticipant) {
                     setMyParticipantId(myParticipant.id);
-                    startPolling(code);
+                    startRealtime(code);
                 } else {
                     // Not a participant anymore
                     clearStoredSession();
@@ -343,10 +352,48 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
         }
     };
 
+    const startRealtime = useCallback((code: string) => {
+        if (wsRef.current) {
+            wsRef.current.close();
+            wsRef.current = null;
+        }
+        setWsConnected(false);
+
+        const wsBase = getOrderWsBaseUrl();
+        if (!wsBase) {
+            setWsConnected(false);
+            startPolling(code);
+            return;
+        }
+
+        const wsUrl = `${wsBase}/ws/public/group-order?code=${encodeURIComponent(code)}`;
+        const ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => setWsConnected(true);
+        ws.onclose = () => setWsConnected(false);
+        ws.onerror = () => setWsConnected(false);
+        ws.onmessage = async () => {
+            await refreshSessionFromCode(code);
+        };
+    }, [refreshSessionFromCode, startPolling]);
+
+    useEffect(() => {
+        if (!session?.sessionCode) return;
+        if (wsConnected) {
+            if (pollingRef.current) {
+                clearInterval(pollingRef.current);
+                pollingRef.current = null;
+            }
+            return;
+        }
+        startPolling(session.sessionCode);
+    }, [session?.sessionCode, wsConnected, startPolling]);
+
     const createSession = useCallback(
         async (
             merchantCode: string,
-            orderType: "DINE_IN" | "TAKEAWAY",
+            orderType: "DINE_IN" | "TAKEAWAY" | "DELIVERY",
             tableNumber: string | undefined,
             hostName: string,
             customerId?: string
@@ -362,7 +409,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     backupCart(merchantCode, cart.mode, cart.items);
                 }
 
-                const response = await fetch("/api/public/group-order", {
+                const response = await fetch(buildOrderApiUrl("/api/public/group-order"), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -398,7 +445,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     clearCart();
 
                     // Start polling
-                    startPolling(data.data.sessionCode);
+                    startRealtime(data.data.sessionCode);
 
                     return { success: true, sessionCode: data.data.sessionCode };
                 } else {
@@ -429,7 +476,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     backupCart(cart.merchantCode, cart.mode, cart.items);
                 }
 
-                const response = await fetch(`/api/public/group-order/${code}/join`, {
+                const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}/join`), {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -457,7 +504,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     clearCart();
 
                     // Start polling
-                    startPolling(data.data.sessionCode);
+                    startRealtime(data.data.sessionCode);
 
                     return { success: true };
                 } else {
@@ -484,7 +531,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
         try {
             const response = await fetch(
-                `/api/public/group-order/${session.sessionCode}/leave`,
+                buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}/leave`),
                 {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },
@@ -527,7 +574,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
             if (!session || !deviceId) return;
 
             try {
-                await fetch(`/api/public/group-order/${session.sessionCode}/cart`, {
+                await fetch(buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}/cart`), {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -551,7 +598,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
             try {
                 const response = await fetch(
-                    `/api/public/group-order/${session.sessionCode}/kick`,
+                    buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}/kick`),
                     {
                         method: "DELETE",
                         headers: { "Content-Type": "application/json" },
@@ -593,7 +640,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
             try {
                 const response = await fetch(
-                    `/api/public/group-order/${session.sessionCode}/transfer-host`,
+                    buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}/transfer-host`),
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -634,7 +681,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
             try {
                 const response = await fetch(
-                    `/api/public/group-order/${session.sessionCode}/submit`,
+                    buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}/submit`),
                     {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -690,7 +737,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
         try {
             const response = await fetch(
-                `/api/public/group-order/${session.sessionCode}`,
+                buildOrderApiUrl(`/api/public/group-order/${session.sessionCode}`),
                 {
                     method: "DELETE",
                     headers: { "Content-Type": "application/json" },

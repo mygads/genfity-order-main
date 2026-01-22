@@ -14,6 +14,7 @@ import { KitchenOrderCard } from './KitchenOrderCard';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { OrderStatus } from '@prisma/client';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 
 interface KitchenBoardProps {
   merchantId: bigint;
@@ -34,6 +35,7 @@ export const KitchenBoard: React.FC<KitchenBoardProps> = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set());
   const [autoRefresh, setAutoRefresh] = useState(initialAutoRefresh);
+  const [wsConnected, setWsConnected] = useState(false);
   const previousDataRef = useRef<string>('');
 
   // Fetch kitchen orders with smart comparison
@@ -49,7 +51,7 @@ export const KitchenBoard: React.FC<KitchenBoardProps> = ({
       // Instead of 2 parallel calls, join statuses with comma
       const statusFilter = KITCHEN_STATUSES.join(',');
       
-      const response = await fetch(`/api/merchant/orders?status=${statusFilter}&limit=50`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders?status=${statusFilter}&limit=50`), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -102,10 +104,47 @@ export const KitchenBoard: React.FC<KitchenBoardProps> = ({
   // Auto-refresh
   useEffect(() => {
     if (!autoRefresh) return;
+    if (wsConnected) return;
 
     const interval = setInterval(fetchOrders, refreshInterval);
     return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval, fetchOrders]);
+  }, [autoRefresh, wsConnected, refreshInterval, fetchOrders]);
+
+  // WebSocket refresh (fallback to polling if WS is not available)
+  useEffect(() => {
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          fetchOrders();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [fetchOrders]);
 
   // Fullscreen handling
   const toggleFullscreen = useCallback(() => {
@@ -148,7 +187,7 @@ export const KitchenBoard: React.FC<KitchenBoardProps> = ({
   const handleMarkInProgress = async (orderId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -169,7 +208,7 @@ export const KitchenBoard: React.FC<KitchenBoardProps> = ({
   const handleMarkReady = async (orderId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

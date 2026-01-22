@@ -42,6 +42,8 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import MerchantReservationsPanel from '@/components/reservations/MerchantReservationsPanel';
 import AdminPillTabs, { type AdminPillTabItem } from '@/components/common/AdminPillTabs';
 import QRCodeScanModal from '@/components/common/QRCodeScanModal';
+import { useMerchantReservationCounts } from '@/hooks/useMerchantReservationCounts';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 type ViewMode = 'kanban-card' | 'kanban-list' | 'tab-list';
 
@@ -170,43 +172,16 @@ function MerchantOrdersPageContent() {
   }, [fetchMerchantId]);
 
   // Show Reservations tab only when there are active reservations (pending+accepted).
+  const { data: reservationCounts } = useMerchantReservationCounts({
+    enabled: true,
+    refreshInterval: 60_000,
+  });
+
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-    if (!token) {
-      setPendingReservationCount(0);
-      setActiveReservationCount(0);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchReservationCount = async () => {
-      try {
-        const res = await fetch('/api/merchant/reservations/count', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const json = await res.json();
-        const pending = Number(json?.data?.pending ?? 0);
-        const active = Number(json?.data?.active ?? 0);
-        if (!cancelled) {
-          setPendingReservationCount(Number.isFinite(pending) ? pending : 0);
-          setActiveReservationCount(Number.isFinite(active) ? active : 0);
-        }
-      } catch {
-        if (!cancelled) {
-          setPendingReservationCount(0);
-          setActiveReservationCount(0);
-        }
-      }
-    };
-
-    fetchReservationCount();
-    const timer = window.setInterval(fetchReservationCount, 15_000);
-    return () => {
-      cancelled = true;
-      window.clearInterval(timer);
-    };
-  }, []);
+    if (!reservationCounts) return;
+    setPendingReservationCount(reservationCounts.pending);
+    setActiveReservationCount(reservationCounts.active);
+  }, [reservationCounts]);
 
   // If active reservations are gone, ensure we don't stay on the reservations tab.
   useEffect(() => {
@@ -321,7 +296,7 @@ function MerchantOrdersPageContent() {
       throw new Error('Authentication required');
     }
 
-    const res = await fetch(`/api/merchant/orders/resolve?orderNumber=${encodeURIComponent(orderNumber)}`,
+    const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/resolve?orderNumber=${encodeURIComponent(orderNumber)}`),
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -402,7 +377,7 @@ function MerchantOrdersPageContent() {
       // Update each order
       await Promise.all(
         orderIds.map(orderId =>
-          fetch(`/api/merchant/orders/${orderId}/status`, {
+          fetch(buildOrderApiUrl(`/api/merchant/orders/${orderId}/status`), {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',

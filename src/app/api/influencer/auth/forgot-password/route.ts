@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import influencerAuthService from '@/lib/services/InfluencerAuthService';
 import { sendPasswordResetEmail } from '@/lib/utils/emailSender';
 import { handleError } from '@/lib/middleware/errorHandler';
+import { enqueueNotificationJob } from '@/lib/queue/notificationJobsQueue';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,12 +42,30 @@ export async function POST(request: NextRequest) {
       // Generate reset URL
       const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/influencer/reset-password?token=${resetToken}`;
 
-      // Send email with reset link
-      await sendPasswordResetEmail({
-        to: email,
-        resetUrl,
-        expiresAt,
-      });
+      let queuedOk = false;
+      try {
+        const queued = await enqueueNotificationJob({
+          kind: 'email.password_reset_link',
+          payload: {
+            kind: 'email.password_reset_link',
+            to: email,
+            resetUrl,
+            expiresAt: expiresAt.toISOString(),
+          },
+        });
+        queuedOk = queued.ok;
+      } catch (err) {
+        console.error('[influencer-forgot-password] failed to enqueue reset email:', err);
+      }
+
+      if (!queuedOk) {
+        // Fallback: direct send
+        await sendPasswordResetEmail({
+          to: email,
+          resetUrl,
+          expiresAt,
+        });
+      }
     }
 
     // Always return success to prevent email enumeration

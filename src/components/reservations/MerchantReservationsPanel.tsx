@@ -24,6 +24,8 @@ import {
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useMerchant } from '@/context/MerchantContext';
 import { TableActionButton } from '@/components/common/TableActionButton';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+import { useMerchantReservationCounts } from '@/hooks/useMerchantReservationCounts';
 
 type ReservationStatus = 'PENDING' | 'ACCEPTED' | 'CANCELLED';
 type ReservationDisplayStatus = ReservationStatus | 'IN_PROGRESS' | 'COMPLETED';
@@ -251,26 +253,21 @@ export default function MerchantReservationsPanel(props: {
     return localStorage.getItem('accessToken');
   }, []);
 
-  const fetchPendingCount = useCallback(async () => {
-    if (!token) return;
+  const { data: reservationCounts } = useMerchantReservationCounts({
+    enabled: Boolean(token),
+    refreshInterval: 60_000,
+  });
 
-    try {
-      const res = await fetch('/api/merchant/reservations/count', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = (await res.json()) as ApiResponse<{ pending: number }>;
-      const pending = Number(json.data?.pending ?? 0);
-      onPendingCountChange?.(Number.isFinite(pending) ? pending : 0);
-    } catch {
-      // Don't surface count errors as UI errors; the list fetch covers that.
-    }
-  }, [token, onPendingCountChange]);
+  useEffect(() => {
+    if (!reservationCounts) return;
+    onPendingCountChange?.(reservationCounts.pending);
+  }, [reservationCounts, onPendingCountChange]);
 
   const fetchActive = useCallback(async () => {
     if (!token) return;
 
     try {
-      const res = await fetch(`/api/merchant/reservations?limit=${encodeURIComponent(String(limit))}`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/reservations?limit=${encodeURIComponent(String(limit))}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -281,8 +278,6 @@ export default function MerchantReservationsPanel(props: {
 
       const data = Array.isArray(json.data) ? json.data : [];
       setReservations(data);
-      // Prefer server-backed count for accuracy (list may be limited/filtered).
-      fetchPendingCount();
       setError('');
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('admin.reservations.errorLoad');
@@ -290,14 +285,13 @@ export default function MerchantReservationsPanel(props: {
     } finally {
       setLoading(false);
     }
-  }, [token, limit, fetchPendingCount, t]);
+  }, [token, limit, t]);
 
   useEffect(() => {
     fetchActive();
-    fetchPendingCount();
     const timer = window.setInterval(fetchActive, pollMs);
     return () => window.clearInterval(timer);
-  }, [fetchActive, fetchPendingCount, pollMs]);
+  }, [fetchActive, pollMs]);
 
   const todayYmd = useMemo(() => {
     const now = new Date();
@@ -354,7 +348,7 @@ export default function MerchantReservationsPanel(props: {
     setPreorderDetails(null);
 
     try {
-      const res = await fetch(`/api/merchant/reservations/${encodeURIComponent(reservationId)}/preorder`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/reservations/${encodeURIComponent(reservationId)}/preorder`), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -384,7 +378,7 @@ export default function MerchantReservationsPanel(props: {
     setAcceptingId(activeReservationId);
 
     try {
-      const res = await fetch(`/api/merchant/reservations/${encodeURIComponent(activeReservationId)}/accept`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/reservations/${encodeURIComponent(activeReservationId)}/accept`), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -402,7 +396,6 @@ export default function MerchantReservationsPanel(props: {
       }
 
       await fetchActive();
-      await fetchPendingCount();
       closeModals();
 
       const createdOrderId = json.data?.order?.id;
@@ -426,7 +419,7 @@ export default function MerchantReservationsPanel(props: {
     setCancellingId(activeReservationId);
 
     try {
-      const res = await fetch(`/api/merchant/reservations/${encodeURIComponent(activeReservationId)}/cancel`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/reservations/${encodeURIComponent(activeReservationId)}/cancel`), {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -437,7 +430,6 @@ export default function MerchantReservationsPanel(props: {
       }
 
       await fetchActive();
-      await fetchPendingCount();
       closeModals();
     } catch (e) {
       const msg = e instanceof Error ? e.message : t('admin.reservations.errorCancel');

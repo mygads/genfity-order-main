@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { FaSync, FaExpand, FaCompress, FaEye, FaBell, FaCheck } from 'react-icons/fa';
+import { FaExpand, FaCompress, FaEye, FaBell, FaWifi, FaClock } from 'react-icons/fa';
 import type { OrderWithDetails } from '@/lib/types/order';
 import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -18,6 +18,7 @@ import { useContextualHint, CONTEXTUAL_HINTS } from '@/lib/tutorial/components/C
 import { KitchenDisplaySkeleton } from '@/components/common/SkeletonLoaders';
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber } from '@/lib/utils/format';
+import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 
 export default function QueueDisplayPage() {
   const router = useRouter();
@@ -28,9 +29,10 @@ export default function QueueDisplayPage() {
   const [orders, setOrders] = useState<OrderWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [wsConnected, setWsConnected] = useState(false);
   const [displayMode, setDisplayMode] = useState<'normal' | 'clean' | 'fullscreen'>('normal');
   const [previousOrderIds, setPreviousOrderIds] = useState<Set<string>>(new Set());
+  const [now, setNow] = useState(() => new Date());
 
   // Show contextual hints on first visit
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function QueueDisplayPage() {
         return;
       }
 
-      const response = await fetch('/api/merchant/orders?status=READY&limit=50', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/orders?status=READY&limit=50'), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -101,10 +103,52 @@ export default function QueueDisplayPage() {
 
   // Auto-refresh
   useEffect(() => {
-    if (!autoRefresh) return;
+    if (wsConnected) return;
     const interval = setInterval(fetchOrders, 3000); // 3 seconds for quick updates
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchOrders]);
+  }, [wsConnected, fetchOrders]);
+
+  // Clock (useful for TV/monitor display)
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  // WebSocket refresh (fallback to polling if WS is not available)
+  useEffect(() => {
+    const wsBase = getOrderWsBaseUrl();
+    if (!wsBase) {
+      setWsConnected(false);
+      return;
+    }
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+      setWsConnected(false);
+      return;
+    }
+
+    const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => setWsConnected(true);
+    ws.onclose = () => setWsConnected(false);
+    ws.onerror = () => setWsConnected(false);
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data as string);
+        if (payload?.type === 'orders.refresh') {
+          fetchOrders();
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [fetchOrders]);
 
   // Handle display mode changes
   useEffect(() => {
@@ -144,29 +188,6 @@ export default function QueueDisplayPage() {
     return () => document.removeEventListener('fullscreenchange', handleFullScreenChange);
   }, [displayMode]);
 
-  // Handle order completion
-  const handleMarkCompleted = async (orderId: string) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${orderId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status: 'COMPLETED' }),
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        playNotificationSound('payment');
-        await fetchOrders();
-      }
-    } catch (error) {
-      console.error('Error updating order status:', error);
-    }
-  };
-
   // Calculate time since order was ready
   const getTimeSinceReady = (readyAt: string | Date | null) => {
     if (!readyAt) return '';
@@ -190,8 +211,8 @@ export default function QueueDisplayPage() {
 
   return (
     <div data-tutorial="queue-page" className={`${displayMode !== 'normal' ? 'fixed inset-0 z-40 overflow-hidden bg-gray-50 dark:bg-gray-950 flex flex-col' : 'flex flex-col h-[calc(100vh-100px)]'}`}>
-      {/* Header - Clean Minimal Design matching Kitchen Display */}
-      <div className={`sticky top-0 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
+      {/* Header - Display-only */}
+      <div className={`sticky top-0 z-30 bg-white/95 backdrop-blur dark:bg-gray-950/85 border-b border-gray-200 dark:border-gray-800 ${displayMode !== 'normal' ? 'px-6 py-4' : 'pb-4 -mx-6 px-6 pt-0'}`}>
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -206,14 +227,19 @@ export default function QueueDisplayPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Manual Refresh */}
-            <button
-              onClick={fetchOrders}
-              className="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-              title={t("admin.queue.refresh")}
-            >
-              <FaSync className="h-3.5 w-3.5" />
-            </button>
+            {/* Connection status */}
+            <div className={`flex h-9 w-9 items-center justify-center rounded-lg border ${wsConnected
+              ? 'border-success-200 bg-success-50 text-success-700 dark:border-success-900/40 dark:bg-success-900/15 dark:text-success-300'
+              : 'border-gray-200 bg-white text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300'
+              }`}>
+              <FaWifi className="h-3.5 w-3.5" />
+            </div>
+
+            {/* Clock */}
+            <div className="flex h-9 items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 text-gray-700 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300">
+              <FaClock className="h-3.5 w-3.5 text-gray-400" />
+              <span className="tabular-nums">{now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
 
             {/* Display Mode Toggle */}
             <button
@@ -266,9 +292,9 @@ export default function QueueDisplayPage() {
           </div>
         )}
 
-        {/* Queue Grid - Large order number cards */}
+        {/* Queue Grid - Display-only cards */}
         {orders.length > 0 ? (
-          <div data-tutorial="queue-grid" className={`grid gap-6 ${displayMode !== 'normal'
+          <div data-tutorial="queue-grid" className={`grid gap-4 ${displayMode !== 'normal'
             ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
             : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
             }`}>
@@ -276,63 +302,48 @@ export default function QueueDisplayPage() {
               <div
                 key={String(order.id)}
                 data-tutorial={index === 0 ? "queue-order-card" : undefined}
-                className={`group relative overflow-hidden rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl ${index === 0
-                  ? 'border-success-400 bg-linear-to-br from-success-500 to-success-600 text-white shadow-lg shadow-success-500/30 animate-pulse'
-                  : 'border-gray-200 bg-white hover:border-success-300 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-success-600'
+                className={`group relative overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-gray-900 ${index === 0
+                  ? 'border-success-300 ring-1 ring-success-200 dark:border-success-700/60 dark:ring-success-900/40'
+                  : 'border-gray-200 dark:border-gray-800'
                   }`}
               >
                 {/* New badge for most recent */}
                 {index === 0 && (
                   <div className="absolute top-3 left-3">
-                    <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-bold uppercase tracking-wide">
+                    <span className="rounded-full border border-success-200 bg-success-50 px-3 py-1 text-xs font-semibold text-success-800 dark:border-success-900/40 dark:bg-success-900/15 dark:text-success-300">
                       {t("admin.queue.latest")}
                     </span>
                   </div>
                 )}
 
-                <div className={`p-6 text-center ${displayMode !== 'normal' ? 'py-10' : ''}`}>
-                  {/* Order Number - Prominently displayed */}
-                  <div className={`font-black ${displayMode !== 'normal'
-                    ? 'text-7xl'
-                    : 'text-5xl'
-                    } ${index === 0 ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                <div className={`p-6 ${displayMode !== 'normal' ? 'py-10' : ''}`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      {t("admin.queue.ready")}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+                      {getTimeSinceReady(order.actualReadyAt)}
+                    </div>
+                  </div>
+
+                  <div className={`mt-3 text-center font-black tracking-tight ${displayMode !== 'normal' ? 'text-7xl' : 'text-5xl'} text-gray-900 dark:text-white`}>
                     {formatFullOrderNumber(order.orderNumber, merchant?.code)}
                   </div>
 
-                  {/* Customer Name */}
-                  <div className={`mt-3 font-semibold ${displayMode !== 'normal' ? 'text-2xl' : 'text-lg'
-                    } ${index === 0 ? 'text-white/90' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {order.customer?.name || (order as unknown as { customerName?: string }).customerName || 'Guest'}
+                  <div className={`mt-4 text-center font-semibold ${displayMode !== 'normal' ? 'text-2xl' : 'text-lg'} text-gray-800 dark:text-gray-200`}>
+                    {order.customer?.name || (order as unknown as { customerName?: string }).customerName || t('admin.history.customer.guest')}
                   </div>
 
-                  {/* Order Type Badge */}
-                  <div className={`mt-2 inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${index === 0
-                    ? 'bg-white/20 text-white'
-                    : order.orderType === 'DINE_IN'
-                      ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
-                      : 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400'
-                    }`}>
-                    {order.orderType === 'DINE_IN' ? `🍽️ ${t("admin.queue.dineIn")}` : `🥡 ${t("admin.queue.takeaway")}`}
-                    {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && ` - ${t("admin.queue.table")} ${(order as unknown as { tableNumber?: string }).tableNumber}`}
+                  <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                      {order.orderType === 'DINE_IN' ? t("admin.queue.dineIn") : t("admin.queue.takeaway")}
+                    </span>
+                    {order.orderType === 'DINE_IN' && (order as unknown as { tableNumber?: string }).tableNumber && (
+                      <span className="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                        {t("admin.queue.table")} {(order as unknown as { tableNumber?: string }).tableNumber}
+                      </span>
+                    )}
                   </div>
-
-                  {/* Time since ready */}
-                  <div className={`mt-3 text-sm ${index === 0 ? 'text-white/70' : 'text-gray-500 dark:text-gray-400'}`}>
-                    {t("admin.queue.ready")} {getTimeSinceReady(order.actualReadyAt)}
-                  </div>
-
-                  {/* Mark as Completed button (for staff) */}
-                  <button
-                    data-tutorial={index === 0 ? "queue-pickup-btn" : undefined}
-                    onClick={() => handleMarkCompleted(String(order.id))}
-                    className={`mt-4 flex w-full items-center justify-center gap-2 rounded-lg py-3 text-sm font-semibold transition-all ${index === 0
-                      ? 'bg-white/20 text-white hover:bg-white/30'
-                      : 'bg-success-50 text-success-700 hover:bg-success-100 dark:bg-success-900/20 dark:text-success-400 dark:hover:bg-success-900/30'
-                      }`}
-                  >
-                    <FaCheck />
-                    {t("admin.queue.pickedUp")}
-                  </button>
                 </div>
               </div>
             ))}

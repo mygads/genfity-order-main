@@ -96,7 +96,7 @@ function _saveCacheToStorage(cache: Cache<unknown>): void {
  * 
  * Features:
  * - Global fetcher with auth support
- * - 5-second revalidation for real-time feel
+ * - No global polling (polling must be opt-in per hook)
  * - Revalidate on focus for fresh data
  * - Error retry with exponential backoff
  * - Optimistic UI support
@@ -140,7 +140,7 @@ export default function SWRProvider({ children }: { children: ReactNode }) {
     provider: cacheProvider,
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
-    refreshInterval: isOnline ? 5000 : 0, // Stop polling when offline
+    refreshInterval: 0, // No global polling; set per-hook where needed
     dedupingInterval: 2000,
     errorRetryCount: isOnline ? 3 : 0, // Don't retry when offline
     errorRetryInterval: 5000,
