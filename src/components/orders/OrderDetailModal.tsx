@@ -44,7 +44,6 @@ import { OrderStatus, PaymentMethod } from '@prisma/client';
 import { openMerchantOrderReceiptHtmlAndPrint } from '@/lib/utils/receiptHtmlClient';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
-import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
@@ -163,7 +162,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingTableNumber(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}`), {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -219,7 +218,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setAssigningDriver(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}/delivery/assign`), {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}/delivery/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -250,7 +249,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     try {
       const token = localStorage.getItem('accessToken');
       const [orderResponse, merchantResponse] = await Promise.all([
-        fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}`), {
+        fetch(`/api/merchant/orders/${apiOrderId}`, {
           headers: { 'Authorization': `Bearer ${token}` },
         }),
         fetch('/api/merchant/profile', {
@@ -348,7 +347,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingAdminNote(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}/admin-note`), {
+      const res = await fetch(`/api/merchant/orders/${apiOrderId}/admin-note`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -398,7 +397,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setUpdating(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}/status`), {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -451,7 +450,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         requestBody,
       });
 
-      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}/payment`), {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -507,7 +506,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/${apiOrderId}/cod/confirm`), {
+      const response = await fetch(`/api/merchant/orders/${apiOrderId}/cod/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

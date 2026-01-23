@@ -19,10 +19,7 @@ import HorizontalMenuSection from '@/components/customer/HorizontalMenuSection';
 import ViewModeToggle, { type ViewMode } from '@/components/customer/ViewModeToggle';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import {
-  buildMenuThumbMeta,
-  createMenuImageBlobs,
-  requestPresignedUpload,
-  uploadBlobWithProgress,
+  uploadMenuImageViaApi,
 } from '@/lib/utils/menuImage';
 
 /**
@@ -486,84 +483,22 @@ export default function MenuBuilderTabs({
         return;
       }
 
-      const tempMenuId = menuId
-        ? String(menuId)
-        : `temp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const allowTemp = !menuId;
+      const uploadResult = await uploadMenuImageViaApi(
+        { token, file, menuId: menuId ? String(menuId) : undefined },
+        (percent) => setUploadProgress(percent),
+        menuImageMessages
+      );
 
-      const { fullBlob, thumbBlob, thumb2xBlob, sourceWidth, sourceHeight, sourceFormat } =
-        await createMenuImageBlobs(file, menuImageMessages);
-
-      if (sourceWidth < 800) {
-        showWarning(
-          t('admin.menuUpload.warning.smallImageMessage', { width: sourceWidth }),
-          t('admin.menuUpload.warning.smallImageTitle')
-        );
+      if (uploadResult.warnings.length > 0) {
+        showWarning(uploadResult.warnings.join(' '), t('common.warning') || 'Warning');
       }
 
-      const [mainPresign, thumbPresign, thumb2xPresign] = await Promise.all([
-        requestPresignedUpload(token, {
-          type: 'menu',
-          contentType: 'image/jpeg',
-          fileSize: fullBlob.size,
-          menuId: tempMenuId,
-          allowTemp,
-        }, menuImageMessages),
-        requestPresignedUpload(token, {
-          type: 'menu-thumb',
-          contentType: 'image/jpeg',
-          fileSize: thumbBlob.size,
-          menuId: tempMenuId,
-          allowTemp,
-        }, menuImageMessages),
-        requestPresignedUpload(token, {
-          type: 'menu-thumb-2x',
-          contentType: 'image/jpeg',
-          fileSize: thumb2xBlob.size,
-          menuId: tempMenuId,
-          allowTemp,
-        }, menuImageMessages),
-      ]);
-
-      await uploadBlobWithProgress(mainPresign.uploadUrl, fullBlob, 'image/jpeg', setUploadProgress, menuImageMessages);
-      await uploadBlobWithProgress(thumbPresign.uploadUrl, thumbBlob, 'image/jpeg', undefined, menuImageMessages);
-      await uploadBlobWithProgress(thumb2xPresign.uploadUrl, thumb2xBlob, 'image/jpeg', undefined, menuImageMessages);
-      setUploadProgress(100);
-
-      const imageThumbMeta = buildMenuThumbMeta({
-        sourceWidth,
-        sourceHeight,
-        sourceFormat,
-        thumbUrl: thumbPresign.publicUrl,
-        thumb2xUrl: thumb2xPresign.publicUrl,
-      });
-
-      const confirmResponse = await fetch('/api/merchant/upload/menu-image/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          imageUrl: mainPresign.publicUrl,
-          imageThumbUrl: thumbPresign.publicUrl,
-          imageThumb2xUrl: thumb2xPresign.publicUrl,
-          imageThumbMeta,
-          menuId: menuId ? String(menuId) : undefined,
-        }),
-      });
-
-      const confirmData = await confirmResponse.json();
-      if (!confirmResponse.ok || !confirmData?.success) {
-        throw new Error(confirmData?.message || t('admin.menuUpload.error.confirmFailed'));
-      }
-
-      setValue('imageUrl', mainPresign.publicUrl, { shouldValidate: true, shouldDirty: true });
-      setValue('imageThumbUrl', thumbPresign.publicUrl, { shouldValidate: true, shouldDirty: true });
-      setValue('imageThumbMeta', imageThumbMeta, { shouldValidate: true, shouldDirty: true });
-      setUploadedImageUrl(mainPresign.publicUrl);
-      setUploadedImageThumbUrl(thumbPresign.publicUrl);
-      setUploadedImageThumb2xUrl(thumb2xPresign.publicUrl);
+      setValue('imageUrl', uploadResult.imageUrl, { shouldValidate: true, shouldDirty: true });
+      setValue('imageThumbUrl', uploadResult.imageThumbUrl, { shouldValidate: true, shouldDirty: true });
+      setValue('imageThumbMeta', uploadResult.imageThumbMeta, { shouldValidate: true, shouldDirty: true });
+      setUploadedImageUrl(uploadResult.imageUrl);
+      setUploadedImageThumbUrl(uploadResult.imageThumbUrl);
+      setUploadedImageThumb2xUrl(uploadResult.imageThumb2xUrl);
       setImageSource('upload');
     } catch (error) {
       showError(error instanceof Error ? error.message : t('admin.menuUpload.error.uploadFailed'));
@@ -809,9 +744,6 @@ export default function MenuBuilderTabs({
                       <button
                         type="button"
                         onClick={() => {
-                          const currentImageUrl = watchImageUrl;
-                          const currentThumbUrl = watchImageThumbUrl;
-
                           // If there is a temp upload tracked, delete it immediately
                           if (uploadedImageUrl) {
                             deleteUploadedImage(uploadedImageUrl, uploadedImageThumbUrl, uploadedImageThumb2xUrl);
@@ -826,9 +758,6 @@ export default function MenuBuilderTabs({
                           setValue('imageThumbUrl', '', { shouldValidate: true, shouldDirty: true });
                           setValue('imageThumbMeta', null, { shouldValidate: true, shouldDirty: true });
                           setValue('stockPhotoId', null, { shouldValidate: true, shouldDirty: true });
-
-                          // Keep these reads to avoid unused vars in some TS configurations
-                          void currentThumbUrl;
                         }}
                         className="absolute right-2 top-2 rounded-full bg-white/90 p-2 text-gray-600 shadow-lg transition-all hover:bg-error-100 hover:text-error-600 dark:bg-gray-800/90 dark:text-gray-300"
                       >

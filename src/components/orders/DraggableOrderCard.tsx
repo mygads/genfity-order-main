@@ -18,7 +18,7 @@ type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
 interface DraggableOrderCardProps {
   order: OrderListItem;
   onClick?: () => void;
-  onStatusChange?: (newStatus: string) => void;
+  onStatusChange?: (newStatus: string, options?: { forceComplete?: boolean; forceMarkPaid?: boolean }) => void;
   orderNumberDisplayMode?: OrderNumberDisplayMode;
   isFirst?: boolean;
   isLast?: boolean;

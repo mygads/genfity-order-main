@@ -6,10 +6,10 @@
 import menuRepository from '@/lib/repositories/MenuRepository';
 import merchantRepository from '@/lib/repositories/MerchantRepository';
 import prisma from '@/lib/db/client';
+import { BlobService } from '@/lib/services/BlobService';
 import {
   ValidationError,
   NotFoundError,
-  ConflictError,
   ERROR_CODES,
 } from '@/lib/constants/errors';
 import { Prisma } from '@prisma/client';
@@ -420,6 +420,47 @@ class MenuService {
     }
 
     await menuRepository.deleteMenu(menuId, userId);
+
+    // Best-effort delete uploaded menu images (do NOT delete stock photos)
+    if (!existing.stockPhotoId) {
+      const urlsToDelete: string[] = [];
+      if (existing.imageUrl) urlsToDelete.push(String(existing.imageUrl));
+      if (existing.imageThumbUrl) urlsToDelete.push(String(existing.imageThumbUrl));
+
+      const imageThumbMeta = (existing as { imageThumbMeta?: unknown }).imageThumbMeta;
+      const variants =
+        typeof imageThumbMeta === 'object' && imageThumbMeta && 'variants' in imageThumbMeta
+          ? (imageThumbMeta as { variants?: unknown }).variants
+          : undefined;
+
+      if (Array.isArray(variants)) {
+        for (const variant of variants as Array<{ url?: unknown }>) {
+          if (typeof variant?.url === 'string') urlsToDelete.push(variant.url);
+        }
+      }
+
+      if (urlsToDelete.length > 0) {
+        await Promise.all(
+          urlsToDelete.map(async (url) => {
+            try {
+              // Safety: skip deletion if another menu still references this URL
+              const inUse = await prisma.menu.count({
+                where: {
+                  deletedAt: null,
+                  NOT: { id: menuId },
+                  OR: [{ imageUrl: url }, { imageThumbUrl: url }],
+                },
+              });
+
+              if (inUse > 0) return;
+              await BlobService.deleteFile(url);
+            } catch {
+              // ignore storage cleanup errors
+            }
+          })
+        );
+      }
+    }
 
     if (existing.stockPhotoId) {
       await this.syncStockPhotoUsage(BigInt(existing.stockPhotoId));

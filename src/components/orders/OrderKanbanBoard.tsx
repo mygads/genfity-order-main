@@ -31,8 +31,14 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
+import { shouldConfirmUndeliveredBeforeComplete } from '@/lib/utils/orderDeliveryRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
+type StatusUpdateOptions = {
+  forceComplete?: boolean;
+  forceMarkPaid?: boolean;
+};
 
 interface OrderKanbanBoardProps {
   merchantId: bigint;
@@ -89,10 +95,12 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     const [wsConnected, setWsConnected] = useState(false);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const [showUndeliveredCompleteConfirm, setShowUndeliveredCompleteConfirm] = useState(false);
   const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
-  const [pendingCompleteStatusChange, setPendingCompleteStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
+  const [pendingCompleteStatusChange, setPendingCompleteStatusChange] = useState<{ orderId: string; newStatus: OrderStatus; options?: StatusUpdateOptions } | null>(null);
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set()); // Track orders being updated
   const previousOrderCountRef = useRef(0);
+  const chainingCompleteConfirmRef = useRef(false);
   const { showError, showSuccess } = useToast();
 
   const sensors = useSensors(
@@ -329,6 +337,17 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     if (
       order.status === 'READY' &&
       newStatus === 'COMPLETED' &&
+      shouldConfirmUndeliveredBeforeComplete(order)
+    ) {
+      setPendingCompleteStatusChange({ orderId, newStatus, options: { forceComplete: true } });
+      setShowUndeliveredCompleteConfirm(true);
+      return;
+    }
+
+    // Check if dragging from READY to COMPLETED with unpaid order
+    if (
+      order.status === 'READY' &&
+      newStatus === 'COMPLETED' &&
       shouldConfirmUnpaidBeforeComplete(order)
     ) {
       setPendingCompleteStatusChange({ orderId, newStatus });
@@ -340,21 +359,34 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   };
 
   // Handle status change from button click
-  const handleStatusChange = async (orderId: string, newStatus: string) => {
+  const handleStatusChange = async (orderId: string, newStatus: string, options?: StatusUpdateOptions) => {
     const targetStatus = newStatus as OrderStatus;
 
-    const order = orders.find(o => String(o.id) === orderId);
-    if (order && order.status === 'READY' && targetStatus === 'COMPLETED' && shouldConfirmUnpaidBeforeComplete(order)) {
-      setPendingCompleteStatusChange({ orderId, newStatus: targetStatus });
-      setShowUnpaidCompleteConfirm(true);
+    // If the UI already confirmed an override (e.g. from OrderCard), do not re-prompt.
+    if (options?.forceComplete || options?.forceMarkPaid) {
+      await updateOrderStatus(orderId, targetStatus, options);
       return;
+    }
+
+    const order = orders.find(o => String(o.id) === orderId);
+    if (order && order.status === 'READY' && targetStatus === 'COMPLETED') {
+      if (shouldConfirmUndeliveredBeforeComplete(order)) {
+        setPendingCompleteStatusChange({ orderId, newStatus: targetStatus, options: { forceComplete: true } });
+        setShowUndeliveredCompleteConfirm(true);
+        return;
+      }
+      if (shouldConfirmUnpaidBeforeComplete(order)) {
+        setPendingCompleteStatusChange({ orderId, newStatus: targetStatus });
+        setShowUnpaidCompleteConfirm(true);
+        return;
+      }
     }
 
     await updateOrderStatus(orderId, targetStatus);
   };
 
   // Common function to update order status
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, options?: StatusUpdateOptions) => {
     // ✅ Prevent double-click / fast-click race conditions
     if (updatingOrders.has(orderId)) {
       console.log(`[OrderKanbanBoard] Order ${orderId} is already being updated, skipping...`);
@@ -411,7 +443,11 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            ...(options?.forceComplete ? { forceComplete: true } : {}),
+            ...(options?.forceMarkPaid ? { forceMarkPaid: true } : {}),
+          }),
         });
 
         const responseData = await response.json();
@@ -575,6 +611,43 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         </DragOverlay>
       </DndContext>
 
+      {/* Undelivered Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUndeliveredCompleteConfirm}
+        onClose={() => {
+          setShowUndeliveredCompleteConfirm(false);
+          if (!chainingCompleteConfirmRef.current) {
+            setPendingCompleteStatusChange(null);
+          }
+        }}
+        onConfirm={() => {
+          const change = pendingCompleteStatusChange;
+          setShowUndeliveredCompleteConfirm(false);
+
+          if (!change) {
+            chainingCompleteConfirmRef.current = false;
+            setPendingCompleteStatusChange(null);
+            return;
+          }
+
+          const order = orders.find(o => String(o.id) === change.orderId);
+          if (order && shouldConfirmUnpaidBeforeComplete(order)) {
+            chainingCompleteConfirmRef.current = true;
+            setShowUnpaidCompleteConfirm(true);
+            return;
+          }
+
+          chainingCompleteConfirmRef.current = false;
+          setPendingCompleteStatusChange(null);
+          updateOrderStatus(change.orderId, change.newStatus, change.options);
+        }}
+        title="Delivery Not Completed"
+        message="This order is a delivery and is not marked as delivered yet. Completing it will also mark the delivery as delivered. Continue?"
+        confirmText="Complete & Mark Delivered"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
       {/* Unpaid Order Confirmation Modal for Drag & Drop */}
       <ConfirmationModal
         isOpen={showUnpaidConfirm}
@@ -602,14 +675,17 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         isOpen={showUnpaidCompleteConfirm}
         onClose={() => {
           setShowUnpaidCompleteConfirm(false);
+          chainingCompleteConfirmRef.current = false;
           setPendingCompleteStatusChange(null);
         }}
         onConfirm={() => {
           const change = pendingCompleteStatusChange;
           setShowUnpaidCompleteConfirm(false);
+          chainingCompleteConfirmRef.current = false;
           setPendingCompleteStatusChange(null);
           if (change) {
-            updateOrderStatus(change.orderId, change.newStatus);
+            const opts = change.options ?? {};
+            updateOrderStatus(change.orderId, change.newStatus, { ...opts, forceMarkPaid: true });
           }
         }}
         title="Unpaid Order"

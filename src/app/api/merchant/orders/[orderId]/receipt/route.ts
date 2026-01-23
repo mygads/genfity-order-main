@@ -112,6 +112,12 @@ export const GET = withMerchant(async (req: NextRequest, auth: AuthContext, rout
         .join(' + ') || undefined
     : undefined;
 
+  const paymentMetadata = (order.payment?.metadata || {}) as any;
+  const amountPaidRaw = paymentMetadata?.paidAmount;
+  const changeAmountRaw = paymentMetadata?.changeAmount;
+  const amountPaid = typeof amountPaidRaw === 'number' && Number.isFinite(amountPaidRaw) ? amountPaidRaw : undefined;
+  const changeAmount = typeof changeAmountRaw === 'number' && Number.isFinite(changeAmountRaw) ? changeAmountRaw : undefined;
+
   const requestOrigin = req.nextUrl.origin;
   const resolvedLogoUrl = resolveAssetUrl(order.merchant.logoUrl, { requestOrigin });
 
@@ -166,6 +172,10 @@ export const GET = withMerchant(async (req: NextRequest, auth: AuthContext, rout
       : 0,
     totalAmount: Number(order.totalAmount) || 0,
     paymentMethod: order.payment?.paymentMethod ? String(order.payment.paymentMethod) : null,
+    paymentStatus: order.payment?.status ? String(order.payment.status) : null,
+    amountPaid,
+    changeAmount,
+    cashierName: order.payment?.paidBy?.name || null,
     currency,
     completedAt: (order as any).completedAt ? new Date((order as any).completedAt) : new Date(order.placedAt),
     locale,

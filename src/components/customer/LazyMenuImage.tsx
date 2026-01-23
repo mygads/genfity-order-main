@@ -82,10 +82,16 @@ export default function LazyMenuImage({
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [blurDataUrl, setBlurDataUrl] = useState<string | null>(null);
+  const [activeSrc, setActiveSrc] = useState<string>(src || '/images/default-menu.png');
   const containerRef = useRef<HTMLDivElement>(null);
   const observerSupported = typeof IntersectionObserver !== 'undefined';
 
-  const imageSrc = src || '/images/default-menu.png';
+  useEffect(() => {
+    setActiveSrc(src || '/images/default-menu.png');
+    setIsLoaded(false);
+    setHasError(false);
+    setRetryCount(0);
+  }, [src]);
 
   // Generate blur placeholder for blur-up effect
   useEffect(() => {
@@ -173,8 +179,19 @@ export default function LazyMenuImage({
 
   // Handle image load error
   const handleError = useCallback(() => {
+    // If the CDN image fails (often 404), immediately fall back to default.
+    // We can't reliably detect 404 vs other failures from onError, so treat
+    // any failure of a remote src as a signal to show a safe local placeholder.
+    if (src && activeSrc !== '/images/default-menu.png') {
+      setActiveSrc('/images/default-menu.png');
+      setIsLoaded(false);
+      setHasError(false);
+      setRetryCount(0);
+      return;
+    }
+
+    // If even the default image fails, then use the existing retry+error UI.
     if (retryCount < maxRetries) {
-      // Auto-retry with exponential backoff
       const timeout = Math.pow(2, retryCount) * 500;
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
@@ -183,7 +200,7 @@ export default function LazyMenuImage({
     } else {
       setHasError(true);
     }
-  }, [retryCount, maxRetries]);
+  }, [retryCount, maxRetries, src, activeSrc]);
 
   // Manual retry handler
   const handleRetry = useCallback(() => {
@@ -199,7 +216,7 @@ export default function LazyMenuImage({
       style={{ width: '100%', height: '100%' }}
     >
       {/* Shimmer effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
+      <div className="absolute inset-0 bg-linear-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
       <svg 
         className="w-8 h-8 text-gray-300" 
         fill="currentColor" 
@@ -288,7 +305,7 @@ export default function LazyMenuImage({
           {/* Actual image with blur-up transition */}
           {fill ? (
             <Image
-              src={`${imageSrc}${retryCount > 0 ? `?retry=${retryCount}` : ''}`}
+              src={`${activeSrc}${retryCount > 0 ? `?retry=${retryCount}` : ''}`}
               alt={alt}
               fill
               className={`${className} transition-all duration-500 ease-out ${isLoaded ? 'opacity-100 blur-0 scale-100' : 'opacity-0 blur-sm scale-105'}`}
@@ -301,7 +318,7 @@ export default function LazyMenuImage({
             />
           ) : (
             <Image
-              src={`${imageSrc}${retryCount > 0 ? `?retry=${retryCount}` : ''}`}
+              src={`${activeSrc}${retryCount > 0 ? `?retry=${retryCount}` : ''}`}
               alt={alt}
               width={width || 70}
               height={height || 70}

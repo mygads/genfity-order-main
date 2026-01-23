@@ -25,6 +25,14 @@ export type MenuThumbMeta = {
   variants: Array<{ dpr: number; width: number; height: number; url: string }>;
 };
 
+export type MenuImageUploadApiResult = {
+  imageUrl: string;
+  imageThumbUrl: string;
+  imageThumb2xUrl: string | null;
+  imageThumbMeta: MenuThumbMeta;
+  warnings: string[];
+};
+
 export type MenuImageMessages = {
   prepareFailed: string;
   invalidResponse: string;
@@ -76,6 +84,68 @@ export const requestPresignedUpload = async (
   }
 
   return { uploadUrl, publicUrl } as PresignResponse;
+};
+
+export const uploadMenuImageViaApi = (
+  params: {
+    token: string;
+    file: File;
+    menuId?: string;
+  },
+  onProgress?: (percent: number) => void,
+  messages: MenuImageMessages = DEFAULT_MENU_IMAGE_MESSAGES
+): Promise<MenuImageUploadApiResult> => {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+
+    if (onProgress) {
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          onProgress(percentComplete);
+        }
+      });
+    }
+
+    xhr.addEventListener('load', () => {
+      try {
+        const raw = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+        if (!raw || !raw.success) {
+          reject(new Error(raw?.message || messages.uploadFailed));
+          return;
+        }
+
+        const data = raw.data || {};
+        const imageUrl = data.url as string | undefined;
+        const imageThumbUrl = data.thumbUrl as string | undefined;
+        const imageThumb2xUrl = (data.thumb2xUrl as string | undefined) ?? null;
+        const imageThumbMeta = data.thumbMeta as MenuThumbMeta | undefined;
+        const warnings = Array.isArray(data.warnings) ? (data.warnings as string[]) : [];
+
+        if (!imageUrl || !imageThumbUrl || !imageThumbMeta) {
+          reject(new Error(messages.invalidResponse));
+          return;
+        }
+
+        onProgress?.(100);
+
+        resolve({ imageUrl, imageThumbUrl, imageThumb2xUrl, imageThumbMeta, warnings });
+      } catch {
+        reject(new Error(messages.invalidResponse));
+      }
+    });
+
+    xhr.addEventListener('error', () => reject(new Error(messages.networkError)));
+    xhr.addEventListener('abort', () => reject(new Error(messages.uploadCancelled)));
+
+    const body = new FormData();
+    body.append('file', params.file);
+    if (params.menuId) body.append('menuId', params.menuId);
+
+    xhr.open('POST', '/api/merchant/upload/menu-image');
+    xhr.setRequestHeader('Authorization', `Bearer ${params.token}`);
+    xhr.send(body);
+  });
 };
 
 export const uploadBlobWithProgress = (

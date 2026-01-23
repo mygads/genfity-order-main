@@ -79,6 +79,9 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const merchantCode = merchant.code;
 
     let menuIdValue: bigint | null = null;
+    let previousImageUrl: string | null = null;
+    let previousThumbUrl: string | null = null;
+    let previousThumbMeta: any = null;
     if (menuId) {
       try {
         menuIdValue = BigInt(menuId);
@@ -96,7 +99,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
       const menu = await prisma.menu.findFirst({
         where: { id: menuIdValue, merchantId: merchant.id },
-        select: { id: true },
+        select: {
+          id: true,
+          imageUrl: true,
+          imageThumbUrl: true,
+          imageThumbMeta: true,
+        },
       });
 
       if (!menu) {
@@ -110,11 +118,10 @@ async function handlePost(req: NextRequest, context: AuthContext) {
           { status: 404 }
         );
       }
-    }
 
-    // Delete old image if exists and menuId provided
-    if (menuId) {
-      await BlobService.deleteOldMenuImage(merchantCode, menuId);
+      previousImageUrl = menu.imageUrl;
+      previousThumbUrl = menu.imageThumbUrl;
+      previousThumbMeta = menu.imageThumbMeta;
     }
 
     // Convert File to Buffer
@@ -184,8 +191,38 @@ async function handlePost(req: NextRequest, context: AuthContext) {
           imageUrl: result.url,
           imageThumbUrl: thumbResult.url,
           imageThumbMeta: imageThumbMeta as unknown as object,
+          updatedByUserId: context.userId,
         },
       });
+
+      // Best-effort cleanup previous assets AFTER successful DB update
+      const urlsToDelete: string[] = [];
+      if (previousImageUrl && previousImageUrl !== result.url) {
+        urlsToDelete.push(previousImageUrl);
+      }
+      if (previousThumbUrl && previousThumbUrl !== thumbResult.url) {
+        urlsToDelete.push(previousThumbUrl);
+      }
+
+      const oldVariants = previousThumbMeta?.variants;
+      if (Array.isArray(oldVariants)) {
+        for (const variant of oldVariants) {
+          const url = variant?.url;
+          if (typeof url === 'string') urlsToDelete.push(url);
+        }
+      }
+
+      if (urlsToDelete.length > 0) {
+        await Promise.all(
+          urlsToDelete.map(async (url) => {
+            try {
+              await BlobService.deleteFile(url);
+            } catch {
+              warnings.push('Failed to delete a previous image from storage.');
+            }
+          })
+        );
+      }
     }
 
     return NextResponse.json({

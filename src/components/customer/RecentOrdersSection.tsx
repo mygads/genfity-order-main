@@ -93,7 +93,22 @@ export default function RecentOrdersSection({
                 const data = await response.json();
 
                 if (data.success && data.data?.items) {
-                    setItems(data.data.items);
+                    // Normalize IDs to string to avoid strict equality mismatches (string vs number)
+                    setItems(
+                        (Array.isArray(data.data.items) ? data.data.items : []).map((raw: any) => ({
+                            menuId: String(raw.menuId),
+                            menuName: String(raw.menuName ?? ''),
+                            menuPrice: typeof raw.menuPrice === 'string' ? parseFloat(raw.menuPrice) : Number(raw.menuPrice ?? 0),
+                            menuImageUrl: raw.menuImageUrl ?? null,
+                            orderCount: Number(raw.orderCount ?? 0),
+                            isAvailable: Boolean(raw.isAvailable),
+                            isPromo: Boolean(raw.isPromo),
+                            promoPrice:
+                                raw.promoPrice === null || raw.promoPrice === undefined
+                                    ? null
+                                    : (typeof raw.promoPrice === 'string' ? parseFloat(raw.promoPrice) : Number(raw.promoPrice)),
+                        }))
+                    );
                 }
             } catch (error) {
                 console.error('Failed to fetch recent orders:', error);
@@ -143,7 +158,8 @@ export default function RecentOrdersSection({
                         return (
                             <div
                                 key={item.menuId}
-                                className={`shrink-0 bg-white px-3 pt-3 pb-2 ${item.isAvailable ? '' : 'opacity-60'}`}
+                                onClick={() => item.isAvailable && onMenuClick?.(item.menuId)}
+                                className={`shrink-0 bg-white px-3 pt-3 pb-2 ${item.isAvailable ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed'}`}
                                 style={{
                                     width: '150px', // Compact width
                                     borderRadius: '10px',
@@ -153,7 +169,11 @@ export default function RecentOrdersSection({
                             >
                                 {/* Image Container - 100px height for compact look */}
                                 <div
-                                    onClick={() => item.isAvailable && onMenuClick?.(item.menuId)}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (!item.isAvailable) return;
+                                        onMenuClick?.(item.menuId);
+                                    }}
                                     className={item.isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}
                                     style={{
                                         position: 'relative',
@@ -236,6 +256,7 @@ export default function RecentOrdersSection({
                                                     }}
                                                 >
                                                     <button
+                                                        type="button"
                                                         onClick={(e) => { e.stopPropagation(); onDecreaseQty?.(item.menuId); }}
                                                         className="flex items-center justify-center hover:bg-orange-50 transition-colors"
                                                         style={{ width: '32px', height: '100%', color: 'rgb(240, 90, 40)' }}
@@ -248,6 +269,7 @@ export default function RecentOrdersSection({
                                                         {quantityInCart}
                                                     </span>
                                                     <button
+                                                        type="button"
                                                         onClick={(e) => { e.stopPropagation(); onIncreaseQty?.(item.menuId); }}
                                                         className="flex items-center justify-center hover:bg-orange-50 transition-colors"
                                                         style={{ width: '32px', height: '100%', color: 'rgb(240, 90, 40)' }}
@@ -259,6 +281,7 @@ export default function RecentOrdersSection({
                                                 </div>
                                             ) : (
                                                 <button
+                                                    type="button"
                                                     onClick={(e) => { e.stopPropagation(); onMenuClick?.(item.menuId); }}
                                                     className="w-full flex items-center justify-center hover:bg-orange-50 transition-colors"
                                                     style={{

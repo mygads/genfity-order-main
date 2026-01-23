@@ -40,6 +40,8 @@ import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import { useStockStream } from '@/hooks/useStockStream';
 import type { OrderMode } from '@/lib/types/customer';
+import { normalizeOrderMode } from '@/lib/utils/orderMode';
+import { useToast } from '@/context/ToastContext';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -160,6 +162,7 @@ export default function OrderClientPage({
 }: OrderClientPageProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  const { showWarning } = useToast();
   const urlSearchParams = useSearchParams();
 
   const isReservationFlow = flow === 'reservation';
@@ -186,9 +189,23 @@ export default function OrderClientPage({
 
   const isCustomerStoreClosed = !customerOrderingAllowed;
 
-  const normalizedMode: OrderMode = (mode === 'dinein' || mode === 'takeaway' || mode === 'delivery')
-    ? (mode as OrderMode)
-    : 'takeaway';
+  const normalizedModeResult = useMemo(() => normalizeOrderMode(mode), [mode]);
+  const normalizedMode: OrderMode = normalizedModeResult.mode;
+
+  const unknownModeWarnedTokensRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!normalizedModeResult.didFallback) return;
+
+    const key = normalizedModeResult.raw || normalizedModeResult.token || 'unknown';
+    if (unknownModeWarnedTokensRef.current.has(key)) return;
+    unknownModeWarnedTokensRef.current.add(key);
+
+    const label = normalizedModeResult.raw || normalizedModeResult.token || 'unknown';
+    showWarning(
+      tOr(t, 'customer.toast.unknownModeMessage', `Unknown mode "${label}". Defaulting to Takeaway.`).replace('{mode}', label),
+      tOr(t, 'customer.toast.unknownModeTitle', 'Unknown order mode')
+    );
+  }, [normalizedModeResult.didFallback, normalizedModeResult.raw, normalizedModeResult.token, showWarning, t]);
 
   // Initialize state from server-provided props (instant render, no loading)
 
@@ -270,8 +287,8 @@ export default function OrderClientPage({
     if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) return;
     if (!Array.isArray(allMenuItems) || allMenuItems.length === 0) return;
 
-    const availableMenuIds = new Set(allMenuItems.map((m) => m.id));
-    const invalidCartItems = cart.items.filter((item) => !availableMenuIds.has(item.menuId));
+    const availableMenuIds = new Set(allMenuItems.map((m) => String(m.id)));
+    const invalidCartItems = cart.items.filter((item) => !availableMenuIds.has(String(item.menuId)));
 
     if (invalidCartItems.length === 0) return;
     invalidCartItems.forEach((item) => removeItem(item.cartItemId));
@@ -303,7 +320,7 @@ export default function OrderClientPage({
 
   const getMenuCartItems = (menuId: string): CartItem[] => {
     if (!cart || !Array.isArray(cart.items)) return [];
-    return cart.items.filter((item) => item.menuId === menuId);
+    return cart.items.filter((item) => String(item.menuId) === String(menuId));
   };
 
   const handleOpenMenu = (item: MenuItem) => {
@@ -328,7 +345,7 @@ export default function OrderClientPage({
    */
   const handleIncreaseQtyFromCard = (menuId: string) => {
     if (!Array.isArray(allMenuItems)) return;
-    const menuItem = allMenuItems.find(m => m.id === menuId);
+    const menuItem = allMenuItems.find((m) => String(m.id) === String(menuId));
     if (menuItem) {
       setCartOptionsMenu(menuItem);
     }
@@ -340,7 +357,7 @@ export default function OrderClientPage({
    */
   const handleDecreaseQtyFromCard = (menuId: string) => {
     if (!Array.isArray(allMenuItems)) return;
-    const menuItem = allMenuItems.find(m => m.id === menuId);
+    const menuItem = allMenuItems.find((m) => String(m.id) === String(menuId));
     if (menuItem) {
       setCartOptionsMenu(menuItem);
     }
@@ -352,7 +369,7 @@ export default function OrderClientPage({
   const getMenuQuantityInCart = (menuId: string): number => {
     if (!cart || !Array.isArray(cart.items)) return 0;
     return cart.items
-      .filter(item => item.menuId === menuId)
+      .filter((item) => String(item.menuId) === String(menuId))
       .reduce((sum, item) => sum + item.quantity, 0);
   };
 
@@ -502,10 +519,10 @@ export default function OrderClientPage({
       const params = new URLSearchParams(window.location.search);
       params.delete('group');
       const newSearch = params.toString();
-      const newUrl = `/${merchantCode}/order${newSearch ? `?${newSearch}` : `?mode=${mode}`}`;
+      const newUrl = `/${merchantCode}/order${newSearch ? `?${newSearch}` : `?mode=${normalizedMode}`}`;
       window.history.replaceState({}, '', newUrl);
     }
-  }, [groupCodeFromUrl, merchantCode, mode, isInGroupOrder]);
+  }, [groupCodeFromUrl, merchantCode, normalizedMode, isInGroupOrder]);
 
   // ========================================
   // Initialize CustomerData Context with ISR Data
@@ -747,6 +764,12 @@ export default function OrderClientPage({
     return allMenuItems.filter(item => item.isRecommended);
   }, [allMenuItems]);
 
+  // ✅ MEMOIZED: Items with no assigned category (uncategorized)
+  const uncategorizedItems = useMemo(() => {
+    if (!Array.isArray(allMenuItems)) return [];
+    return allMenuItems.filter((item) => !Array.isArray(item.categories) || item.categories.length === 0);
+  }, [allMenuItems]);
+
   // ✅ MEMOIZED: Build special categories for CategoryTabs
   const specialCategories = useMemo(() => {
     const result: { id: string; name: string }[] = [];
@@ -761,6 +784,22 @@ export default function OrderClientPage({
     }
     return result;
   }, [promoItems, bestSellerItems, recommendationItems]);
+
+  // ✅ MEMOIZED: Category tabs list (append "All Menu" for uncategorized items at the bottom)
+  const categoryTabsList = useMemo(() => {
+    const base = Array.isArray(categories)
+      ? categories.map((c) => ({ id: c.id, name: c.name }))
+      : [];
+
+    if (uncategorizedItems.length > 0) {
+      base.push({
+        id: 'all-menu',
+        name: tOr(t, 'customer.menu.allMenu', 'All Menu'),
+      });
+    }
+
+    return base;
+  }, [categories, uncategorizedItems.length, t]);
 
   // ========================================
   // RENDER - NEW LAYOUT
@@ -785,7 +824,7 @@ export default function OrderClientPage({
       )}
 
       {/* Store Closing Soon Warning Banner */}
-      {storeOpen && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
+      {storeOpen && merchantInfo?.isOpen !== true && minutesUntilClose !== null && minutesUntilClose <= 30 && minutesUntilClose > 0 && (
         <div className={`bg-amber-500 text-white px-4 py-2 text-center text-sm font-medium sticky ${todaySpecialHour ? '' : 'top-0'} z-50`}>
           Store closes in {minutesUntilClose} minute{minutesUntilClose !== 1 ? 's' : ''}
         </div>
@@ -924,7 +963,7 @@ export default function OrderClientPage({
             ) : null}
 
             {/* Dine-in Info Card (Table Number OR Reservation Summary) */}
-            {mode === 'dinein' && hasTopInfoCard && (
+            {normalizedMode === 'dinein' && hasTopInfoCard && (
               <div className={`px-4 my-2 relative z-10 ${isCustomerStoreClosed ? 'opacity-50' : ''}`} data-table-number-card>
                 {isReservationFlow && reservationDetails ? (
                   <div
@@ -996,7 +1035,7 @@ export default function OrderClientPage({
               <div className="flex items-center justify-between px-4 py-2">
                 <div className="flex-1 overflow-x-auto">
                   <CategoryTabs
-                    categories={categories}
+                    categories={categoryTabsList}
                     specialCategories={specialCategories}
                     activeTab={selectedCategory === 'all' ? activeScrollTab : selectedCategory}
                     onTabClick={(categoryId: string) => {
@@ -1037,7 +1076,7 @@ export default function OrderClientPage({
                     currency={merchantInfo?.currency || 'AUD'}
                     onMenuClick={(menuId) => {
                       if (!Array.isArray(allMenuItems)) return;
-                      const menuItem = allMenuItems.find(m => m.id === menuId);
+                      const menuItem = allMenuItems.find((m) => String(m.id) === String(menuId));
                       if (menuItem) {
                         handleOpenMenu(menuItem);
                       }
@@ -1182,6 +1221,31 @@ export default function OrderClientPage({
                     </div>
                   );
                 })}
+
+                {/* All Menu (Uncategorized) - shows menus not assigned to any category */}
+                {uncategorizedItems.length > 0 && (
+                  <div
+                    ref={(el) => {
+                      sectionRefs.current['all-menu'] = el;
+                    }}
+                    data-category-section="all-menu"
+                  >
+                    <div className="mt-4">
+                      <DetailedMenuSection
+                        title={tOr(t, 'customer.menu.allMenu', 'All Menu').toUpperCase()}
+                        items={uncategorizedItems}
+                        currency={merchantInfo?.currency || 'AUD'}
+                        merchantCode={merchantCode}
+                        onAddItem={(item) => handleOpenMenu(item as MenuItem)}
+                        getItemQuantityInCart={getMenuQuantityInCart}
+                        onIncreaseQty={handleIncreaseQtyFromCard}
+                        onDecreaseQty={handleDecreaseQtyFromCard}
+                        storeOpen={customerOrderingAllowed}
+                        viewMode={viewMode}
+                      />
+                    </div>
+                  </div>
+                )}
               </>
             ) : (
               /* Show single category when specific category selected */
@@ -1241,7 +1305,7 @@ export default function OrderClientPage({
         <MenuDetailModal
           menu={selectedMenu}
           merchantCode={merchantCode}
-          mode={mode}
+          mode={normalizedMode}
           currency={merchantInfo?.currency || 'AUD'}
           editMode={Boolean(editingCartItem)}
           existingCartItem={editingCartItem}

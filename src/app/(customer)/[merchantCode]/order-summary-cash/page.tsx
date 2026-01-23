@@ -198,6 +198,12 @@ export default function OrderSummaryCashPage() {
           return;
         }
 
+        if (!data?.success || !data?.data) {
+          setError(data?.message || t('customer.errors.orderLoadFailed'));
+          setIsLoading(false);
+          return;
+        }
+
         /**
          * ✅ Convert Decimal.js serialized object to number
          */
@@ -218,22 +224,24 @@ export default function OrderSummaryCashPage() {
           return 0;
         };
 
-        // ✅ FIX: Convert Decimal di order items
-        const convertedOrderItems = data.data.orderItems.map((item: {
+        const safeArray = <T,>(value: unknown): T[] => (Array.isArray(value) ? (value as T[]) : []);
+
+        // ✅ FIX: Convert Decimal di order items (guard against null arrays)
+        const convertedOrderItems = safeArray<{
           menuName: string;
           quantity: number;
           menuPrice: unknown;
           subtotal: unknown;
-          notes?: string;
-          addons: Array<{ addonName?: string; addonItemName?: string; quantity: number; addonPrice?: unknown; price?: unknown }>;
-        }) => ({
+          notes?: string | null;
+          addons?: Array<{ addonName?: string; addonItemName?: string; quantity: number; addonPrice?: unknown; price?: unknown }> | null;
+        }>(data.data.orderItems).map((item) => ({
           menuName: item.menuName,
           quantity: item.quantity,
           price: convertDecimal(item.menuPrice),      // ✅ Convert menuPrice
           subtotal: convertDecimal(item.subtotal),    // ✅ Convert subtotal
-          notes: item.notes,
-          addons: item.addons.map((addon) => ({
-            addonItemName: addon.addonName || addon.addonItemName, // ✅ Support both field names
+          notes: item.notes ?? null,
+          addons: safeArray<{ addonName?: string; addonItemName?: string; quantity: number; addonPrice?: unknown; price?: unknown }>(item.addons).map((addon) => ({
+            addonItemName: addon.addonName ?? addon.addonItemName ?? '', // ✅ Support both field names
             quantity: addon.quantity,
             price: convertDecimal(addon.addonPrice || addon.price), // ✅ Support both field names
           })),

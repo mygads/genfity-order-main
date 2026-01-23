@@ -34,6 +34,8 @@ interface UseStockStreamOptions {
 interface UseStockStreamReturn {
   /** Whether connected to SSE stream */
   isConnected: boolean;
+  /** Connection status for UX (idle/connecting/reconnecting/etc) */
+  status: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error';
   /** Connection error if any */
   error: string | null;
   /** Number of reconnect attempts */
@@ -64,8 +66,12 @@ export function useStockStream({
   const { updateStockFromSSE } = useCustomerData();
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isManualCloseRef = useRef(false);
+  const isMountedRef = useRef(false);
+  const hasEverConnectedRef = useRef(false);
   
   const [isConnected, setIsConnected] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
 
@@ -97,25 +103,57 @@ export function useStockStream({
 
     // Clean up existing connection
     if (eventSourceRef.current) {
+      isManualCloseRef.current = true;
       eventSourceRef.current.close();
     }
 
     console.log('📡 [SSE] Connecting to stock stream...');
+    setStatus('connecting');
+    setError(null);
     const url = buildOrderApiUrl(`/api/public/merchants/${merchantCode}/stock-stream`);
+    isManualCloseRef.current = false;
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
+      if (!isMountedRef.current || eventSourceRef.current !== eventSource) {
+        return;
+      }
       console.log('📡 [SSE] Connected');
+      hasEverConnectedRef.current = true;
       setIsConnected(true);
+      setStatus('connected');
       setError(null);
       setReconnectAttempts(0);
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
 
     eventSource.onerror = () => {
-      console.error('📡 [SSE] Connection error');
+      if (isManualCloseRef.current) {
+        return;
+      }
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      // Ignore errors from stale EventSource instances after a reconnect.
+      if (eventSourceRef.current !== eventSource) {
+        return;
+      }
+
+      // Avoid spamming multiple reconnect timers if onerror fires repeatedly.
+      if (reconnectTimeoutRef.current) {
+        return;
+      }
+
       setIsConnected(false);
-      setError('Connection lost');
+      setStatus('reconnecting');
+      setError(null);
       
       // Auto-reconnect with exponential backoff
       if (reconnectAttempts < maxReconnectAttempts) {
@@ -127,6 +165,7 @@ export function useStockStream({
           connect();
         }, delay);
       } else {
+        setStatus('error');
         setError('Max reconnect attempts reached');
       }
     };
@@ -145,12 +184,15 @@ export function useStockStream({
     }
     
     if (eventSourceRef.current) {
+      isManualCloseRef.current = true;
       eventSourceRef.current.close();
       eventSourceRef.current = null;
       console.log('📡 [SSE] Disconnected');
     }
     
     setIsConnected(false);
+    setStatus('idle');
+    setError(null);
   }, []);
 
   // Reconnect manually
@@ -162,17 +204,20 @@ export function useStockStream({
 
   // Effect to manage connection lifecycle
   useEffect(() => {
+    isMountedRef.current = true;
     if (enabled && merchantCode) {
       connect();
     }
 
     return () => {
+      isMountedRef.current = false;
       disconnect();
     };
   }, [merchantCode, enabled]); // Only reconnect when these change
 
   return {
     isConnected,
+    status,
     error,
     reconnectAttempts,
     disconnect,

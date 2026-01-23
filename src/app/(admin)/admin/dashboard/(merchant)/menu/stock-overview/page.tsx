@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import StockStatusCard, { StockStatusCardSkeleton } from '@/components/menu/StockStatusCard';
 import BulkStockActions from '@/components/menu/BulkStockActions';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import AlertDialog from '@/components/modals/AlertDialog';
 
@@ -473,22 +473,22 @@ export default function StockOverviewPage() {
     <div data-tutorial="stock-overview-page">
       <AlertDialog
         isOpen={noTemplateAlertOpen}
-        title={t('common.error') || 'Error'}
-        message={t('admin.stock.noTemplateSet') || 'No items have a daily stock template set'}
+        title={tOr(t, 'common.error', 'Error')}
+        message={tOr(t, 'admin.stock.noTemplateSet', 'No items have a daily stock template set')}
         variant="warning"
         onClose={() => setNoTemplateAlertOpen(false)}
       />
 
       <ConfirmDialog
         isOpen={bulkAddConfirmOpen}
-        title={t('admin.stock.bulkAddTitle') || 'Add stock to all'}
+        title={tOr(t, 'admin.stock.bulkAddTitle', 'Add stock to all')}
         message={
           pendingBulkAddAmount !== null
-            ? (t('admin.stock.bulkAddConfirmMessage', { amount: pendingBulkAddAmount }) || `Add ${pendingBulkAddAmount} units to ALL items?`)
-            : (t('admin.stock.bulkAddConfirmFallback') || 'Add stock to ALL items?')
+            ? tOr(t, 'admin.stock.bulkAddConfirmMessage', `Add ${pendingBulkAddAmount} units to ALL items?`, { amount: pendingBulkAddAmount })
+            : tOr(t, 'admin.stock.bulkAddConfirmFallback', 'Add stock to ALL items?')
         }
-        confirmText={t('common.confirm') || 'Confirm'}
-        cancelText={t('common.cancel') || 'Cancel'}
+        confirmText={tOr(t, 'common.confirm', 'Confirm')}
+        cancelText={tOr(t, 'common.cancel', 'Cancel')}
         variant="warning"
         onConfirm={() => {
           if (pendingBulkAddAmount === null) return;
@@ -505,14 +505,18 @@ export default function StockOverviewPage() {
 
       <ConfirmDialog
         isOpen={resetConfirmOpen}
-        title={t('admin.stock.resetAllTitle') || 'Reset all to template'}
+        title={tOr(t, 'admin.stock.resetAllTitle', 'Reset all to template')}
         message={
-          t('admin.stock.resetAllConfirmMessage', { count: pendingResetCount })
-            || `Reset ${pendingResetCount} items to their template values?`
+          tOr(
+            t,
+            'admin.stock.resetAllConfirmMessage',
+            `Reset ${pendingResetCount} items to their template values?`,
+            { count: pendingResetCount }
+          )
         }
-        confirmText={t('common.confirm') || 'Confirm'}
-        cancelText={t('common.cancel') || 'Cancel'}
-        variant="warning"
+        confirmText={tOr(t, 'common.confirm', 'Confirm')}
+        cancelText={tOr(t, 'common.cancel', 'Cancel')}
+        variant="info"
         onConfirm={() => {
           setResetConfirmOpen(false);
           setPendingResetCount(0);
@@ -574,7 +578,7 @@ export default function StockOverviewPage() {
                       <svg className="h-4 w-4 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
-                      Reset all to template
+                      {t('admin.stock.resetAllTemplate')}
                     </button>
                   </div>
                 )}

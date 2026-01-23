@@ -21,7 +21,7 @@ interface OrderColumnProps {
   status: string;
   orders: OrderListItem[];
   onOrderClick: (order: OrderListItem) => void;
-  onStatusChange?: (orderId: string, newStatus: string) => void;
+  onStatusChange?: (orderId: string, newStatus: string, options?: { forceComplete?: boolean; forceMarkPaid?: boolean }) => void;
   orderNumberDisplayMode?: OrderNumberDisplayMode;
   isInvalidDropZone?: boolean;
   isOver?: boolean;
@@ -164,7 +164,7 @@ export const OrderColumn: React.FC<OrderColumnProps> = ({
               <DraggableOrderCard 
                 order={order}
                 onClick={() => onOrderClick(order)}
-                onStatusChange={(newStatus: string) => onStatusChange?.(String(order.id), newStatus)}
+                onStatusChange={(newStatus: string, options) => onStatusChange?.(String(order.id), newStatus, options)}
                 orderNumberDisplayMode={orderNumberDisplayMode}
                 currency={currency}
               />

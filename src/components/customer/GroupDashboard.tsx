@@ -147,12 +147,12 @@ export default function GroupDashboard({
         <>
             {/* Overlay */}
             <div
-                className={`fixed inset-0 bg-black/50 z-100 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
+                className={`fixed inset-0 bg-black/50 z-700 transition-opacity duration-250 ${isClosing ? 'animate-fadeOut' : 'animate-fadeIn'}`}
                 onClick={handleClose}
             />
 
             {/* Bottom Sheet */}
-            <div className={`fixed inset-x-0 bottom-0 z-100 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
+            <div className={`fixed inset-x-0 bottom-0 z-700 flex justify-center ${isClosing ? 'animate-slideDown' : 'animate-slideUp'}`}>
                 <div className="w-full max-w-125 bg-white rounded-t-2xl shadow-2xl max-h-[85vh] flex flex-col">
                     {/* Header - White style matching Table Number modal */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">

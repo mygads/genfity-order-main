@@ -99,7 +99,15 @@ async function loadImageAsDataUrl(url: string): Promise<{ dataUrl: string; forma
 
     const res = await fetch(url, {
       // Prevent long hangs when logo host is slow/unreachable.
-      signal: typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? (AbortSignal as any).timeout(4000) : undefined,
+      // Some CDN/WAF setups can be slower; give a bit more time.
+      signal: typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? (AbortSignal as any).timeout(8000) : undefined,
+      redirect: 'follow',
+      cache: 'no-store',
+      headers: {
+        Accept: 'image/*,*/*;q=0.8',
+        // Some hosts block requests without a UA.
+        'User-Agent': 'genfity-receipt/1.0',
+      },
     });
     if (!res.ok) return null;
     const contentType = (res.headers.get('content-type') || '').toLowerCase();

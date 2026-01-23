@@ -630,31 +630,11 @@ export default function EditMerchantPage() {
         return;
       }
 
-      const presignResponse = await fetch('/api/merchant/upload/presign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'logo',
-          contentType: file.type,
-          fileSize: file.size,
-        }),
-      });
-
-      const presignData = await presignResponse.json();
-      if (!presignResponse.ok || !presignData?.success) {
-        throw new Error(presignData?.message || 'Failed to prepare upload');
-      }
-
-      const { uploadUrl, publicUrl } = presignData.data || {};
-      if (!uploadUrl || !publicUrl) {
-        throw new Error('Invalid upload response');
-      }
-
-      await new Promise<void>((resolve, reject) => {
+      const uploadedUrl = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        const body = new FormData();
+        body.append('file', file);
+        body.append('type', 'logo');
 
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
@@ -667,9 +647,14 @@ export default function EditMerchantPage() {
         });
 
         xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && json?.success && json?.data?.url) {
+              resolve(String(json.data.url));
+              return;
+            }
+            reject(new Error(json?.message || 'Failed to upload logo'));
+          } catch {
             reject(new Error('Failed to upload logo'));
           }
         });
@@ -677,29 +662,12 @@ export default function EditMerchantPage() {
         xhr.addEventListener('error', () => reject(new Error('Network error')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type);
-        xhr.send(file);
+        xhr.open('POST', '/api/merchant/upload/merchant-image');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(body);
       });
 
-      const confirmResponse = await fetch('/api/merchant/upload/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'logo',
-          publicUrl,
-        }),
-      });
-
-      const confirmData = await confirmResponse.json();
-      if (!confirmResponse.ok || !confirmData?.success) {
-        throw new Error(confirmData?.message || 'Failed to confirm upload');
-      }
-
-      setFormData(prev => ({ ...prev, logoUrl: publicUrl }));
+      setFormData(prev => ({ ...prev, logoUrl: uploadedUrl }));
       setLogoUploadStatus('completed');
       showSuccess('Success', 'Logo uploaded successfully');
       await refreshMerchantImages();
@@ -747,31 +715,11 @@ export default function EditMerchantPage() {
         return;
       }
 
-      const presignResponse = await fetch('/api/merchant/upload/presign', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'banner',
-          contentType: file.type,
-          fileSize: file.size,
-        }),
-      });
-
-      const presignData = await presignResponse.json();
-      if (!presignResponse.ok || !presignData?.success) {
-        throw new Error(presignData?.message || 'Failed to prepare upload');
-      }
-
-      const { uploadUrl, publicUrl } = presignData.data || {};
-      if (!uploadUrl || !publicUrl) {
-        throw new Error('Invalid upload response');
-      }
-
-      await new Promise<void>((resolve, reject) => {
+      const uploadedUrl = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
+        const body = new FormData();
+        body.append('file', file);
+        body.append('type', 'banner');
 
         xhr.upload.addEventListener('progress', (event) => {
           if (event.lengthComputable) {
@@ -784,9 +732,14 @@ export default function EditMerchantPage() {
         });
 
         xhr.addEventListener('load', () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            resolve();
-          } else {
+          try {
+            const json = JSON.parse(xhr.responseText);
+            if (xhr.status >= 200 && xhr.status < 300 && json?.success && json?.data?.url) {
+              resolve(String(json.data.url));
+              return;
+            }
+            reject(new Error(json?.message || 'Failed to upload banner'));
+          } catch {
             reject(new Error('Failed to upload banner'));
           }
         });
@@ -794,29 +747,12 @@ export default function EditMerchantPage() {
         xhr.addEventListener('error', () => reject(new Error('Network error')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Content-Type', file.type);
-        xhr.send(file);
+        xhr.open('POST', '/api/merchant/upload/merchant-image');
+        xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+        xhr.send(body);
       });
 
-      const confirmResponse = await fetch('/api/merchant/upload/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'banner',
-          publicUrl,
-        }),
-      });
-
-      const confirmData = await confirmResponse.json();
-      if (!confirmResponse.ok || !confirmData?.success) {
-        throw new Error(confirmData?.message || 'Failed to confirm upload');
-      }
-
-      setFormData(prev => ({ ...prev, bannerUrl: publicUrl }));
+      setFormData(prev => ({ ...prev, bannerUrl: uploadedUrl }));
       setBannerUploadStatus('completed');
       showSuccess('Success', 'Banner uploaded successfully');
       await refreshMerchantImages();
@@ -887,31 +823,10 @@ export default function EditMerchantPage() {
         setPromoUploadStatus('uploading');
 
         try {
-          const presignResponse = await fetch('/api/merchant/upload/presign', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              type: 'promo',
-              contentType: file.type,
-              fileSize: file.size,
-            }),
-          });
-
-          const presignData = await presignResponse.json();
-          if (!presignResponse.ok || !presignData?.success) {
-            throw new Error(presignData?.message || 'Failed to prepare upload');
-          }
-
-          const { uploadUrl, publicUrl } = presignData.data || {};
-          if (!uploadUrl || !publicUrl) {
-            throw new Error('Invalid upload response');
-          }
-
-          await new Promise<void>((resolve, reject) => {
+          const uploadedUrl = await new Promise<string>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
+            const body = new FormData();
+            body.append('file', file);
 
             xhr.upload.addEventListener('progress', (event) => {
               if (event.lengthComputable) {
@@ -924,9 +839,14 @@ export default function EditMerchantPage() {
             });
 
             xhr.addEventListener('load', () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                resolve();
-              } else {
+              try {
+                const json = JSON.parse(xhr.responseText);
+                if (xhr.status >= 200 && xhr.status < 300 && json?.success && json?.data?.url) {
+                  resolve(String(json.data.url));
+                  return;
+                }
+                reject(new Error(json?.message || 'Failed to upload banner'));
+              } catch {
                 reject(new Error('Failed to upload banner'));
               }
             });
@@ -934,19 +854,13 @@ export default function EditMerchantPage() {
             xhr.addEventListener('error', () => reject(new Error('Network error')));
             xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-            xhr.open('PUT', uploadUrl);
-            xhr.setRequestHeader('Content-Type', file.type);
-            xhr.send(file);
+            xhr.open('POST', '/api/merchant/upload/promo-banner');
+            xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.send(body);
           });
 
-          if (publicUrl) {
-            nextUrls.push(String(publicUrl));
-            setPromoUploadStatus('completed');
-          } else {
-            setPromoUploadStatus('error');
-            setPromoUploadError('Failed to upload banner');
-            showError('Upload Failed', 'Failed to upload banner');
-          }
+          nextUrls.push(uploadedUrl);
+          setPromoUploadStatus('completed');
         } catch (err) {
           setPromoUploadStatus('error');
           setPromoUploadError(err instanceof Error ? err.message : 'Failed to upload banner');

@@ -109,6 +109,7 @@ export default function UpsellCard({
 
                 {/* Add Button */}
                 <button
+                    type="button"
                     onClick={() => onAdd(id)}
                     className="w-full flex items-center justify-center hover:bg-orange-50 transition-colors"
                     style={{

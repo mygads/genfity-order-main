@@ -280,7 +280,7 @@ export default function StockPhotoPicker({
               </h3>
               <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
                 <Image
-                  src={selectedPhoto.imageUrl}
+                  src={selectedPhoto.thumbnailUrl ?? selectedPhoto.imageUrl}
                   alt={selectedPhoto.name}
                   fill
                   className="object-cover"

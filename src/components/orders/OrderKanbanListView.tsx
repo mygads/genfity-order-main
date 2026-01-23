@@ -24,6 +24,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { FaBan } from 'react-icons/fa';
 import { DraggableOrderTabListCard } from './DraggableOrderTabListCard';
 import { OrderTabListCard } from './OrderTabListCard';
+import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { useToast } from '@/context/ToastContext';
 import type { OrderListItem } from '@/lib/types/order';
 import { OrderStatus, OrderType, PaymentStatus } from '@prisma/client';
@@ -31,8 +32,15 @@ import { playNotificationSound } from '@/lib/utils/soundNotification';
 import { ORDER_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { canTransitionStatus } from '@/lib/utils/orderStatusRules';
 import { buildOrderApiUrl, getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
+import { shouldConfirmUnpaidBeforeComplete } from '@/lib/utils/orderPaymentRules';
+import { shouldConfirmUndeliveredBeforeComplete } from '@/lib/utils/orderDeliveryRules';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
+type StatusUpdateOptions = {
+  forceComplete?: boolean;
+  forceMarkPaid?: boolean;
+};
 
 interface OrderKanbanListViewProps {
   merchantId: bigint;
@@ -87,6 +95,15 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   const previousDataRef = useRef<string>('');
   const { showError } = useToast();
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set());
+
+  const [showUndeliveredCompleteConfirm, setShowUndeliveredCompleteConfirm] = useState(false);
+  const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
+  const [pendingCompleteChange, setPendingCompleteChange] = useState<{
+    orderId: string;
+    newStatus: OrderStatus;
+    options?: StatusUpdateOptions;
+  } | null>(null);
+  const chainingCompleteConfirmRef = useRef(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -196,7 +213,7 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
     }
   }, [onRefreshReady, fetchOrders]);
 
-  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus) => {
+  const updateOrderStatus = async (orderId: string, newStatus: OrderStatus, options?: StatusUpdateOptions) => {
     if (updatingOrders.has(orderId)) return;
 
     const previousOrders = orders;
@@ -215,7 +232,11 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({
+          status: newStatus,
+          ...(options?.forceComplete ? { forceComplete: true } : {}),
+          ...(options?.forceMarkPaid ? { forceMarkPaid: true } : {}),
+        }),
       });
 
       if (!response.ok) {
@@ -268,6 +289,22 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
   };
 
   const handleStatusChange = async (orderId: string, newStatus: OrderStatus) => {
+    if (newStatus === 'COMPLETED') {
+      const order = orders.find(o => String(o.id) === orderId);
+
+      if (order && shouldConfirmUndeliveredBeforeComplete(order)) {
+        setPendingCompleteChange({ orderId, newStatus, options: { forceComplete: true } });
+        setShowUndeliveredCompleteConfirm(true);
+        return;
+      }
+
+      if (order && shouldConfirmUnpaidBeforeComplete(order)) {
+        setPendingCompleteChange({ orderId, newStatus });
+        setShowUnpaidCompleteConfirm(true);
+        return;
+      }
+    }
+
     await updateOrderStatus(orderId, newStatus);
   };
 
@@ -426,6 +463,68 @@ export const OrderKanbanListView: React.FC<OrderKanbanListViewProps> = ({
           />
         ) : null}
       </DragOverlay>
+
+      {/* Undelivered Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUndeliveredCompleteConfirm}
+        onClose={() => {
+          setShowUndeliveredCompleteConfirm(false);
+          if (!chainingCompleteConfirmRef.current) {
+            setPendingCompleteChange(null);
+          }
+        }}
+        onConfirm={() => {
+          const change = pendingCompleteChange;
+          setShowUndeliveredCompleteConfirm(false);
+
+          if (!change) {
+            chainingCompleteConfirmRef.current = false;
+            setPendingCompleteChange(null);
+            return;
+          }
+
+          const order = orders.find(o => String(o.id) === change.orderId);
+          if (order && shouldConfirmUnpaidBeforeComplete(order)) {
+            chainingCompleteConfirmRef.current = true;
+            setShowUnpaidCompleteConfirm(true);
+            return;
+          }
+
+          chainingCompleteConfirmRef.current = false;
+          setPendingCompleteChange(null);
+          updateOrderStatus(change.orderId, change.newStatus, change.options);
+        }}
+        title="Delivery Not Completed"
+        message="This order is a delivery and is not marked as delivered yet. Completing it will also mark the delivery as delivered. Continue?"
+        confirmText="Complete & Mark Delivered"
+        cancelText="Cancel"
+        variant="warning"
+      />
+
+      {/* Unpaid Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUnpaidCompleteConfirm}
+        onClose={() => {
+          setShowUnpaidCompleteConfirm(false);
+          chainingCompleteConfirmRef.current = false;
+          setPendingCompleteChange(null);
+        }}
+        onConfirm={() => {
+          const change = pendingCompleteChange;
+          setShowUnpaidCompleteConfirm(false);
+          chainingCompleteConfirmRef.current = false;
+          setPendingCompleteChange(null);
+
+          if (!change) return;
+          const opts = change.options ?? {};
+          updateOrderStatus(change.orderId, change.newStatus, { ...opts, forceMarkPaid: true });
+        }}
+        title="Unpaid Order"
+        message="This order is not marked as paid yet. Completing it will mark the payment as paid. Continue?"
+        confirmText="Complete & Mark Paid"
+        cancelText="Cancel"
+        variant="warning"
+      />
     </DndContext>
   );
 };

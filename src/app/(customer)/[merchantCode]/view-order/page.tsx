@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import MenuDetailModal from '@/components/menu/MenuDetailModal';
@@ -12,13 +13,15 @@ import { formatCurrency } from '@/lib/utils/format';
 import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import LoadingState, { LOADING_MESSAGES } from '@/components/common/LoadingState';
 import OtherNotesModal from '@/components/modals/OtherNotesModal';
-import { useTranslation } from '@/lib/i18n/useTranslation';
+import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { useModeAvailability } from '@/hooks/useModeAvailability';
 import UpsellSection from '@/components/customer/UpsellSection';
 import { customerOrderUrl } from '@/lib/utils/customerRoutes';
 import AlertDialog from '@/components/modals/AlertDialog';
 import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaEdit, FaExclamationTriangle, FaMinusCircle, FaPlusCircle, FaStickyNote, FaTrash } from 'react-icons/fa';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import { normalizeOrderMode } from '@/lib/utils/orderMode';
+import { useToast } from '@/context/ToastContext';
 
 interface MenuItem {
   id: string;
@@ -54,9 +57,29 @@ export default function ViewOrderPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { t } = useTranslation();
+  const { showWarning } = useToast();
 
   const merchantCode = params.merchantCode as string;
-  const mode = (searchParams.get('mode') || 'takeaway') as 'dinein' | 'takeaway' | 'delivery';
+
+  const rawMode = searchParams.get('mode');
+  const modeResult = useMemo(() => normalizeOrderMode(rawMode), [rawMode]);
+  const mode = modeResult.mode;
+
+  const unknownModeWarnedTokensRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!modeResult.didFallback) return;
+
+    const key = modeResult.raw || modeResult.token || 'unknown';
+    if (unknownModeWarnedTokensRef.current.has(key)) return;
+    unknownModeWarnedTokensRef.current.add(key);
+
+    const label = modeResult.raw || modeResult.token || 'unknown';
+    showWarning(
+      tOr(t, 'customer.toast.unknownModeMessage', `Unknown mode "${label}". Defaulting to Takeaway.`).replace('{mode}', label),
+      tOr(t, 'customer.toast.unknownModeTitle', 'Unknown order mode')
+    );
+  }, [modeResult.didFallback, modeResult.raw, modeResult.token, showWarning, t]);
+
   const flow = searchParams.get('flow') || '';
   const isReservationFlow = flow === 'reservation';
   const scheduled = searchParams.get('scheduled') || '';
@@ -244,7 +267,7 @@ export default function ViewOrderPage() {
         return;
       }
 
-      const cartMenuIds = cart.items.map(item => item.menuId).join(',');
+      const cartMenuIds = cart.items.map(item => item.menuId?.toString?.() ?? String(item.menuId)).join(',');
 
       try {
         const response = await fetch(
@@ -255,7 +278,14 @@ export default function ViewOrderPage() {
           const data = await response.json();
           if (data.success && data.data.length >= 3) {
             // Use API-based co-purchase recommendations
-            setUpsellSuggestions(data.data);
+            setUpsellSuggestions(
+              (Array.isArray(data.data) ? data.data : []).map((raw: any) => ({
+                id: String(raw.id),
+                name: String(raw.name ?? ''),
+                price: typeof raw.price === 'string' ? parseFloat(raw.price) : Number(raw.price ?? 0),
+                imageUrl: raw.imageUrl ?? null,
+              }))
+            );
             return;
           }
         }
@@ -283,7 +313,7 @@ export default function ViewOrderPage() {
           })
           .slice(0, 5)
           .map((menu) => ({
-            id: menu.id,
+            id: String(menu.id),
             name: menu.name,
             price: typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price,
             imageUrl: menu.imageUrl,
@@ -339,14 +369,27 @@ export default function ViewOrderPage() {
   };
 
   const handleEditItem = async (item: CartItem) => {
-    try {
-      // ✅ OPTIMIZATION: Check sessionStorage cache first
-      const menusCacheKey = `menus_${merchantCode}`;
-      const cachedMenus = sessionStorage.getItem(menusCacheKey);
+    // Prefer in-memory context menus (works even when sessionStorage cache is missing)
+    const contextMenu = (Array.isArray(contextMenus) ? contextMenus : []).find(
+      (m: { id: string | number }) => String(m?.id) === String(item.menuId)
+    );
 
-      if (cachedMenus) {
+    if (contextMenu) {
+      setSelectedMenu(contextMenu as unknown as MenuItem);
+      setEditingCartItem(item);
+      return;
+    }
+
+    // ✅ OPTIMIZATION: Check sessionStorage cache first (do not fail edit if cache is corrupted)
+    const menusCacheKey = `menus_${merchantCode}`;
+    const cachedMenus = sessionStorage.getItem(menusCacheKey);
+
+    if (cachedMenus) {
+      try {
         const menus = JSON.parse(cachedMenus);
-        const cachedMenu = menus.find((m: { id: string | number }) => m.id.toString() === item.menuId.toString());
+        const cachedMenu = (Array.isArray(menus) ? menus : []).find(
+          (m: { id: string | number }) => String(m?.id) === String(item.menuId)
+        );
 
         if (cachedMenu) {
           console.log('✅ [VIEW ORDER] Using cached menu + addons for edit:', item.menuId);
@@ -354,19 +397,35 @@ export default function ViewOrderPage() {
           setEditingCartItem(item);
           return; // No API call needed!
         }
+      } catch (error) {
+        console.warn('⚠️ [VIEW ORDER] Failed to parse cached menus, falling back to API:', error);
       }
+    }
 
-      // Fallback: Fetch from API if not in cache
+    // Fallback: Fetch from API if not in cache
+    try {
       console.log('🔄 [VIEW ORDER] Cache miss, fetching from API:', item.menuId);
-      const response = await fetch(buildOrderApiUrl(`/api/public/merchants/${merchantCode}/menus/${item.menuId}`));
-      const data = await response.json();
-      if (data.success) {
+      const response = await fetch(
+        buildOrderApiUrl(
+          `/api/public/merchants/${encodeURIComponent(merchantCode)}/menus/${encodeURIComponent(String(item.menuId))}`
+        )
+      );
+      const data = await response.json().catch(() => null);
+      if (response.ok && data?.success) {
         setSelectedMenu(data.data);
         setEditingCartItem(item);
+        return;
       }
+      console.error('Failed to fetch menu detail:', data);
     } catch (error) {
       console.error('Failed to fetch menu detail:', error);
     }
+
+    setAlertState({
+      isOpen: true,
+      title: tOr(t, 'common.error', 'Error'),
+      message: tOr(t, 'customer.cart.editItemFailed', 'Unable to open this item for editing. Please try again from the menu page.'),
+    });
   };
 
   const handleCloseModal = () => {
@@ -597,6 +656,7 @@ export default function ViewOrderPage() {
                         {item.menuName}
                       </h3>
                       <button
+                        type="button"
                         onClick={() => handleEditItem(item)}
                         className="flex items-center px-2.5 py-1 rounded transition-colors flex-shrink-0"
                         style={{
@@ -769,10 +829,11 @@ export default function ViewOrderPage() {
               onAddItem={async (menuId) => {
                 // Add item directly to cart
                 try {
-                  const menu = contextMenus.find((m: { id: string }) => m.id === menuId);
+                  const menuIdStr = String(menuId);
+                  const menu = contextMenus.find((m: { id: string | number }) => String(m.id) === menuIdStr);
                   if (menu) {
                     addItem({
-                      menuId: menu.id,
+                      menuId: String(menu.id),
                       menuName: menu.name,
                       price: typeof menu.price === 'string' ? parseFloat(menu.price) : menu.price,
                       quantity: 1,

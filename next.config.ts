@@ -30,11 +30,16 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.genfity.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'dev-cdn.genfity.com',
+        pathname: '/**',
+      },
     ],
     // Increase timeout for slow connections
     minimumCacheTTL: 60,
     // Disable image optimization in development if having issues
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: true,
   },
   webpack(config) {
     config.module.rules.push({

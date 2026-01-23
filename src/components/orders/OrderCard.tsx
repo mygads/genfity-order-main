@@ -8,7 +8,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { FaUser, FaUtensils, FaShoppingBag, FaTruck, FaClock, FaRegClock, FaCheck, FaStickyNote, FaCalendarCheck, FaUsers } from 'react-icons/fa';
 import { ORDER_STATUS_COLORS, PAYMENT_STATUS_COLORS } from '@/lib/constants/orderConstants';
 import { formatDistanceToNow } from 'date-fns';
@@ -18,10 +18,16 @@ import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber, formatOrderNumberSuffix } from '@/lib/utils/format';
 import DriverQuickAssign from '@/components/orders/DriverQuickAssign';
 import { shouldConfirmUnpaidBeforeComplete, shouldConfirmUnpaidBeforeInProgress } from '@/lib/utils/orderPaymentRules';
+import { shouldConfirmUndeliveredBeforeComplete } from '@/lib/utils/orderDeliveryRules';
 import { formatPaymentMethodLabel } from '@/lib/utils/paymentDisplay';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 
 type OrderNumberDisplayMode = 'full' | 'suffix' | 'raw';
+
+type StatusUpdateOptions = {
+  forceComplete?: boolean;
+  forceMarkPaid?: boolean;
+};
 
 interface OrderCardProps {
   order: OrderListItem | OrderWithDetails;
@@ -29,7 +35,7 @@ interface OrderCardProps {
   showQuickActions?: boolean;
   orderNumberDisplayMode?: OrderNumberDisplayMode;
   onClick?: () => void;
-  onStatusChange?: (newStatus: string) => void;
+  onStatusChange?: (newStatus: string, options?: StatusUpdateOptions) => void;
   onViewDetails?: () => void;
   className?: string;
   currency?: string;
@@ -48,7 +54,10 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   currency: _currency = 'AUD',
 }) => {
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
+  const [showUndeliveredCompleteConfirm, setShowUndeliveredCompleteConfirm] = useState(false);
   const [showUnpaidCompleteConfirm, setShowUnpaidCompleteConfirm] = useState(false);
+  const [pendingCompleteOptions, setPendingCompleteOptions] = useState<StatusUpdateOptions | null>(null);
+  const chainingCompleteConfirmRef = useRef(false);
   const { merchant } = useMerchant();
   const { t } = useTranslation();
 
@@ -127,7 +136,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
     <div
       onClick={(e) => {
         // Don't open detail modal if confirmation modal is open
-        if (showUnpaidConfirm || showUnpaidCompleteConfirm) {
+        if (showUnpaidConfirm || showUndeliveredCompleteConfirm || showUnpaidCompleteConfirm) {
           e.stopPropagation();
           return;
         }
@@ -377,11 +386,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (shouldConfirmUnpaidBeforeComplete(order)) {
-                  setShowUnpaidCompleteConfirm(true);
-                } else {
-                  onStatusChange('COMPLETED');
+                if (shouldConfirmUndeliveredBeforeComplete(order)) {
+                  setPendingCompleteOptions({ forceComplete: true });
+                  setShowUndeliveredCompleteConfirm(true);
+                  return;
                 }
+
+                if (shouldConfirmUnpaidBeforeComplete(order)) {
+                  setPendingCompleteOptions({});
+                  setShowUnpaidCompleteConfirm(true);
+                  return;
+                }
+
+                onStatusChange('COMPLETED');
               }}
               className="w-full h-9 px-4 rounded-lg bg-success-500 text-white font-semibold text-sm hover:bg-success-600 transition-colors duration-150 flex items-center justify-center gap-2"
             >
@@ -391,6 +408,35 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
         </div>
       )}
+
+      {/* Undelivered Complete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showUndeliveredCompleteConfirm}
+        onClose={() => {
+          setShowUndeliveredCompleteConfirm(false);
+          if (!chainingCompleteConfirmRef.current) {
+            setPendingCompleteOptions(null);
+          }
+        }}
+        onConfirm={() => {
+          setShowUndeliveredCompleteConfirm(false);
+
+          if (shouldConfirmUnpaidBeforeComplete(order)) {
+            chainingCompleteConfirmRef.current = true;
+            setShowUnpaidCompleteConfirm(true);
+            return;
+          }
+
+          chainingCompleteConfirmRef.current = false;
+          onStatusChange?.('COMPLETED', pendingCompleteOptions ?? { forceComplete: true });
+          setPendingCompleteOptions(null);
+        }}
+        title="Delivery Not Completed"
+        message="This order is a delivery and is not marked as delivered yet. Completing it will also mark the delivery as delivered. Continue?"
+        confirmText="Complete & Mark Delivered"
+        cancelText="Cancel"
+        variant="warning"
+      />
 
       {/* Unpaid Order Confirmation Modal */}
       <ConfirmationModal
@@ -411,11 +457,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
       {/* Unpaid Complete Confirmation Modal */}
       <ConfirmationModal
         isOpen={showUnpaidCompleteConfirm}
-        onClose={() => setShowUnpaidCompleteConfirm(false)}
+        onClose={() => {
+          setShowUnpaidCompleteConfirm(false);
+          chainingCompleteConfirmRef.current = false;
+          setPendingCompleteOptions(null);
+        }}
         onConfirm={() => {
-          if (onStatusChange) {
-            onStatusChange('COMPLETED');
-          }
+          chainingCompleteConfirmRef.current = false;
+          onStatusChange?.('COMPLETED', { ...(pendingCompleteOptions ?? {}), forceMarkPaid: true });
+          setPendingCompleteOptions(null);
         }}
         title="Unpaid Order"
         message="This order is not marked as paid yet. Completing it will mark the payment as paid. Continue?"

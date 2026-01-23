@@ -16,10 +16,7 @@ import { getCurrencyConfig } from "@/lib/constants/location";
 import StockPhotoPicker from "@/components/menu/StockPhotoPicker";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
-  buildMenuThumbMeta,
-  createMenuImageBlobs,
-  requestPresignedUpload,
-  uploadBlobWithProgress,
+  uploadMenuImageViaApi,
 } from "@/lib/utils/menuImage";
 
 interface MenuAddonCategory {
@@ -319,72 +316,25 @@ export default function EditMenuPage() {
         return;
       }
 
-      const { fullBlob, thumbBlob, thumb2xBlob, sourceWidth, sourceHeight, sourceFormat } =
-        await createMenuImageBlobs(file, menuImageMessages);
-
-      const [mainPresign, thumbPresign, thumb2xPresign] = await Promise.all([
-        requestPresignedUpload(token, {
-          type: 'menu',
-          contentType: 'image/jpeg',
-          fileSize: fullBlob.size,
-          menuId,
-        }, menuImageMessages),
-        requestPresignedUpload(token, {
-          type: 'menu-thumb',
-          contentType: 'image/jpeg',
-          fileSize: thumbBlob.size,
-          menuId,
-        }, menuImageMessages),
-        requestPresignedUpload(token, {
-          type: 'menu-thumb-2x',
-          contentType: 'image/jpeg',
-          fileSize: thumb2xBlob.size,
-          menuId,
-        }, menuImageMessages),
-      ]);
-
-      await uploadBlobWithProgress(mainPresign.uploadUrl, fullBlob, 'image/jpeg', setUploadProgress, menuImageMessages);
-      await uploadBlobWithProgress(thumbPresign.uploadUrl, thumbBlob, 'image/jpeg', undefined, menuImageMessages);
-      await uploadBlobWithProgress(thumb2xPresign.uploadUrl, thumb2xBlob, 'image/jpeg', undefined, menuImageMessages);
-      setUploadProgress(100);
-
-      const imageThumbMeta = buildMenuThumbMeta({
-        sourceWidth,
-        sourceHeight,
-        sourceFormat,
-        thumbUrl: thumbPresign.publicUrl,
-        thumb2xUrl: thumb2xPresign.publicUrl,
-      });
-
-      const confirmResponse = await fetch('/api/merchant/upload/menu-image/confirm', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          imageUrl: mainPresign.publicUrl,
-          imageThumbUrl: thumbPresign.publicUrl,
-          imageThumb2xUrl: thumb2xPresign.publicUrl,
-          imageThumbMeta,
-          menuId,
-        }),
-      });
-
-      const confirmData = await confirmResponse.json();
-      if (!confirmResponse.ok || !confirmData?.success) {
-        throw new Error(confirmData?.message || t('admin.menuUpload.error.confirmFailed'));
-      }
+      const uploadResult = await uploadMenuImageViaApi(
+        { token, file, menuId },
+        (percent) => setUploadProgress(percent),
+        menuImageMessages
+      );
 
       setFormData(prev => ({
         ...prev,
-        imageUrl: mainPresign.publicUrl,
-        imageThumbUrl: thumbPresign.publicUrl,
-        imageThumbMeta,
+        imageUrl: uploadResult.imageUrl,
+        imageThumbUrl: uploadResult.imageThumbUrl,
+        imageThumbMeta: uploadResult.imageThumbMeta,
         stockPhotoId: null,
       }));
       setImageSource('upload');
-      setSuccess('Image uploaded successfully!');
+      setSuccess(
+        uploadResult.warnings.length > 0
+          ? uploadResult.warnings.join(' ')
+          : 'Image uploaded successfully!'
+      );
       setTimeout(() => setSuccess(null), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('admin.menuUpload.error.uploadFailed'));

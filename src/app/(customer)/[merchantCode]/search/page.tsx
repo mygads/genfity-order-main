@@ -10,6 +10,7 @@ import MenuInCartModal from '@/components/menu/MenuInCartModal';
 import LazyMenuImage from '@/components/customer/LazyMenuImage';
 import { useCart } from '@/context/CartContext';
 import type { CartItem } from '@/context/CartContext';
+import { useToast } from '@/context/ToastContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { useCustomerData } from '@/context/CustomerDataContext';
 import type { CachedAddonCategory } from '@/lib/utils/addonExtractor';
@@ -17,6 +18,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { TranslationKeys } from '@/lib/i18n';
 import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { customerOrderUrl } from '@/lib/utils/customerRoutes';
+import { normalizeOrderMode } from '@/lib/utils/orderMode';
 
 interface MenuItem {
   id: string;
@@ -71,9 +73,11 @@ export default function SearchPage() {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const { t } = useTranslation();
+  const { showWarning } = useToast();
 
   const merchantCode = params.merchantCode as string;
-  const mode = searchParams.get('mode') || 'takeaway';
+  const rawMode = searchParams.get('mode');
+  const { mode } = normalizeOrderMode(rawMode);
   const refUrl = searchParams.get('ref') || customerOrderUrl(merchantCode, { mode });
 
   // ✅ Check store status (open/closed)
@@ -106,13 +110,28 @@ export default function SearchPage() {
   const [maxPrice, setMaxPrice] = useState(1000);
 
   const { initializeCart, cart, updateItem, removeItem } = useCart();
+  const warnedModeRef = useRef<string | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
+  // Warn once per unique invalid mode value.
   useEffect(() => {
-    initializeCart(merchantCode, mode as 'dinein' | 'takeaway' | 'delivery');
+    const res = normalizeOrderMode(rawMode);
+    if (!res.didFallback) return;
+    if (!rawMode || rawMode.trim().length === 0) return;
+    if (warnedModeRef.current === rawMode) return;
+
+    warnedModeRef.current = rawMode;
+    showWarning(
+      (t('customer.toast.unknownModeMessage') || 'Unknown order mode "{mode}". Defaulting to Takeaway.').replace('{mode}', rawMode),
+      t('customer.toast.unknownModeTitle') || 'Mode adjusted'
+    );
+  }, [rawMode, showWarning, t]);
+
+  useEffect(() => {
+    initializeCart(merchantCode, mode);
   }, [merchantCode, mode, initializeCart]);
 
   // ✅ Initialize data from Context (instant if available from Order page)
@@ -496,7 +515,7 @@ export default function SearchPage() {
         )}
       </div>
 
-      <FloatingCartButton merchantCode={merchantCode} mode={mode as 'dinein' | 'takeaway' | 'delivery'} storeOpen={storeOpen} />
+      <FloatingCartButton merchantCode={merchantCode} mode={mode} storeOpen={storeOpen} />
 
       {selectedMenu && (
         <MenuDetailModal menu={selectedMenu} merchantCode={merchantCode} mode={mode} currency={merchantInfo?.currency || 'AUD'} editMode={Boolean(editingCartItem)} existingCartItem={editingCartItem} onClose={handleCloseMenuDetail} prefetchedAddons={menuAddonsCache[selectedMenu.id]} storeOpen={storeOpen} />
