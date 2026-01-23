@@ -92,7 +92,6 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
-    const [wsConnected, setWsConnected] = useState(false);
   const [showUnpaidConfirm, setShowUnpaidConfirm] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<{ orderId: string; newStatus: OrderStatus } | null>(null);
   const [showUndeliveredCompleteConfirm, setShowUndeliveredCompleteConfirm] = useState(false);
@@ -110,6 +109,33 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
       },
     })
   );
+
+  // Helper to normalize order data from WebSocket payloads
+  const applyOrdersPayload = useCallback((raw: unknown): OrderListItem[] => {
+    if (!Array.isArray(raw)) return [];
+    
+    return raw.map((item: unknown) => {
+      const data = item as Record<string, unknown>;
+      
+      // Convert numeric string fields to actual numbers
+      const order: OrderListItem = {
+        ...data,
+        id: typeof data.id === 'string' ? parseInt(data.id) : data.id,
+        merchantId: typeof data.merchantId === 'string' ? parseInt(data.merchantId) : data.merchantId,
+        customerId: data.customerId ? (typeof data.customerId === 'string' ? parseInt(data.customerId as string) : data.customerId) : null,
+        subtotal: typeof data.subtotal === 'string' ? parseFloat(data.subtotal) : data.subtotal,
+        taxAmount: typeof data.taxAmount === 'string' ? parseFloat(data.taxAmount) : data.taxAmount,
+        serviceChargeAmount: typeof data.serviceChargeAmount === 'string' ? parseFloat(data.serviceChargeAmount) : data.serviceChargeAmount,
+        packagingFeeAmount: typeof data.packagingFeeAmount === 'string' ? parseFloat(data.packagingFeeAmount) : data.packagingFeeAmount,
+        discountAmount: typeof data.discountAmount === 'string' ? parseFloat(data.discountAmount) : data.discountAmount,
+        totalAmount: typeof data.totalAmount === 'string' ? parseFloat(data.totalAmount) : data.totalAmount,
+        deliveryFeeAmount: data.deliveryFeeAmount ? (typeof data.deliveryFeeAmount === 'string' ? parseFloat(data.deliveryFeeAmount) : data.deliveryFeeAmount) : undefined,
+        deliveryDistanceKm: data.deliveryDistanceKm ? (typeof data.deliveryDistanceKm === 'string' ? parseFloat(data.deliveryDistanceKm as string) : data.deliveryDistanceKm) : undefined,
+      } as OrderListItem;
+      
+      return order;
+    });
+  }, []);
 
   // SWR fetcher with auth
   const fetcher = async (url: string) => {
@@ -136,7 +162,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     '/api/merchant/orders/active',
     fetcher,
     {
-      refreshInterval: autoRefresh && !wsConnected ? refreshInterval : 0,
+      refreshInterval: autoRefresh ? refreshInterval : 0,
       revalidateOnFocus: true,
       revalidateOnReconnect: true,
       dedupingInterval: 2000,
@@ -161,37 +187,67 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   useEffect(() => {
     const wsBase = getOrderWsBaseUrl();
     if (!wsBase) {
-      setWsConnected(false);
       return;
     }
 
     const token = localStorage.getItem('accessToken');
     if (!token) {
-      setWsConnected(false);
       return;
     }
 
     const wsUrl = `${wsBase}/ws/merchant/orders?token=${encodeURIComponent(`Bearer ${token}`)}`;
     const ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => setWsConnected(true);
-    ws.onclose = () => setWsConnected(false);
-    ws.onerror = () => setWsConnected(false);
+    let isOpen = false;
+
+    ws.onopen = () => {
+      isOpen = true;
+      console.log('[OrderKanbanBoard] WebSocket connected');
+    };
+    
+    ws.onclose = () => {
+      isOpen = false;
+      console.log('[OrderKanbanBoard] WebSocket disconnected');
+    };
+    
+    ws.onerror = () => {
+      isOpen = false;
+    };
+    
     ws.onmessage = (event) => {
       try {
-        const payload = JSON.parse(event.data as string);
-        if (payload?.type === 'orders.refresh') {
+        const msg = JSON.parse(event.data as string);
+        
+        // Primary: payload push (P1 optimization)
+        if (msg?.type === 'orders.state' && msg.data) {
+          const orders = applyOrdersPayload(msg.data);
+          
+          // Update SWR cache with payload directly (no HTTP refetch)
+          mutate({ success: true, data: orders }, false);
+          
+          // Detect new orders and play sound
+          if (previousOrderCountRef.current > 0 && orders.length > previousOrderCountRef.current) {
+            const newOrdersCount = orders.length - previousOrderCountRef.current;
+            console.log(`[OrderKanbanBoard] Detected ${newOrdersCount} new order(s) via WS`);
+            playNotificationSound('newOrder');
+          }
+          previousOrderCountRef.current = orders.length;
+        }
+        // Fallback: refresh trigger (backward compatibility)
+        else if (msg?.type === 'orders.refresh') {
           mutate();
         }
-      } catch {
-        // ignore parse errors
+      } catch (err) {
+        console.error('[OrderKanbanBoard] WS message error:', err);
       }
     };
 
     return () => {
-      ws.close();
+      if (isOpen) {
+        ws.close();
+      }
     };
-  }, [mutate]);
+  }, [mutate, applyOrdersPayload]);
 
   // Extract orders from SWR data
   const orders: OrderListItem[] = data?.success ? data.data : [];

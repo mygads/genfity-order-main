@@ -71,7 +71,7 @@ export default function CustomerDisplayPage() {
   const promoBanners = useMemo(() => merchant?.promoBannerUrls ?? [], [merchant?.promoBannerUrls]);
   const currency = merchant?.currency || 'AUD';
   const timezone = merchant?.timezone || 'Asia/Jakarta';
-    const sessionInactiveThresholdMs = 5 * 60 * 1000;
+  const sessionInactiveThresholdMs = 5 * 60 * 1000;
 
   const fetchMerchantProfile = useCallback(async () => {
     const token = localStorage.getItem('accessToken');
@@ -183,10 +183,20 @@ export default function CustomerDisplayPage() {
     ws.onerror = () => setWsConnected(false);
     ws.onmessage = (event) => {
       try {
-        const payload = JSON.parse(event.data as string);
-        if (payload?.type === 'customer-display.refresh') {
-          fetchDisplayState();
-          fetchSessionList();
+        const payload: unknown = JSON.parse(event.data as string);
+        if (payload && typeof payload === 'object') {
+          const record = payload as Record<string, unknown>;
+          const typeValue = record.type;
+
+          if (typeValue === 'customer-display.state' && record.data) {
+            setDisplayState(record.data as CustomerDisplayState);
+            return;
+          }
+
+          if (typeValue === 'customer-display.refresh') {
+            fetchDisplayState();
+            fetchSessionList();
+          }
         }
       } catch {
         fetchDisplayState();
@@ -197,6 +207,14 @@ export default function CustomerDisplayPage() {
       ws.close();
     };
   }, [fetchDisplayState, fetchSessionList]);
+
+  useEffect(() => {
+    // Keep the cashier/session selector fresh even if the display state does not change.
+    const interval = window.setInterval(() => {
+      fetchSessionList();
+    }, 60_000);
+    return () => window.clearInterval(interval);
+  }, [fetchSessionList]);
 
   useEffect(() => {
     if (wsConnected) return;

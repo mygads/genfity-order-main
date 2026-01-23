@@ -17,7 +17,7 @@ import { buildOrderApiUrl, getOrderWsBaseUrl } from "@/lib/utils/orderApiBase";
  * Manages group order (split bill) state with:
  * - Session creation and joining
  * - Participant management
- * - Cart synchronization via polling (every 5 seconds)
+ * - Real-time updates via WebSocket (no client polling)
  * - localStorage backup/restore
  *
  * @specification implementation_plan.md - Group Order Feature
@@ -142,6 +142,9 @@ const STORAGE_KEYS = {
     CART_BACKUP_PREFIX: "genfity_cart_backup_",
 };
 
+const GROUP_ORDER_IDLE_DISCONNECT_MS = 3 * 60 * 1000;
+const GROUP_ORDER_ACTIVITY_THROTTLE_MS = 1000;
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
@@ -215,21 +218,37 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [splitBill, setSplitBill] = useState<SplitBillItem[] | null>(null);
-    const [wsConnected, setWsConnected] = useState(false);
 
-    const pollingRef = useRef<NodeJS.Timeout | null>(null);
     const wsRef = useRef<WebSocket | null>(null);
+    const wsCodeRef = useRef<string | null>(null);
+    const wsReconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const wsReconnectAttemptsRef = useRef<number>(0);
+    const sessionRef = useRef<GroupOrderSession | null>(null);
+    const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const lastActivityAtRef = useRef<number>(0);
+    const refreshSessionFromCodeRef = useRef<
+        (
+            code: string,
+            storedDeviceId?: string,
+            options?: { ensureRealtime?: boolean }
+        ) => Promise<void>
+    >(async () => {});
     const { cart, clearCart } = useCart();
 
     // ============================================
     // COMPUTED VALUES
     // ============================================
 
-    const isInGroupOrder = session !== null && session.status === "OPEN";
+    const isInGroupOrder =
+        session !== null && (session.status === "OPEN" || session.status === "LOCKED");
 
     const isHost = session?.participants.some(
         (p) => p.id === myParticipantId && p.isHost
     ) ?? false;
+
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
 
     // ============================================
     // INITIALIZATION
@@ -244,151 +263,324 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
         const stored = getStoredSession();
         if (stored) {
             // Try to reconnect
-            refreshSessionFromCode(stored.code, stored.deviceId);
+            refreshSessionFromCode(stored.code, stored.deviceId, { ensureRealtime: true });
         }
 
         return () => {
-            // Cleanup polling on unmount
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-            }
+            disconnectRealtime();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // ============================================
-    // POLLING
+    // REALTIME (WEBSOCKET ONLY)
     // ============================================
 
-    const startPolling = useCallback((code: string) => {
-        // Clear existing polling
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
+    const disconnectRealtime = useCallback(() => {
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current);
+            idleTimerRef.current = null;
         }
-
-        // Poll every 5 seconds
-        pollingRef.current = setInterval(async () => {
-            try {
-                const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}`));
-                const data = await response.json();
-
-                if (data.success) {
-                    setSession(data.data);
-
-                    // Check if session was submitted
-                    if (data.data.status === "SUBMITTED" && data.data.order) {
-                        stopPolling();
-                        // Clear local cart for all participants when order is submitted
-                        clearCart();
-                    }
-
-                    // Check if session expired or cancelled
-                    if (["EXPIRED", "CANCELLED"].includes(data.data.status)) {
-                        stopPolling();
-                        clearStoredSession();
-                    }
-                } else {
-                    // Session not found
-                    if (data.error === "SESSION_NOT_FOUND" || data.error === "SESSION_EXPIRED") {
-                        stopPolling();
-                        clearStoredSession();
-                        setSession(null);
-                    }
-                }
-            } catch (_err) {
-                console.error("[GROUP ORDER] Polling error:", _err);
-            }
-        }, 5000);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clearCart]);
-
-    const stopPolling = useCallback(() => {
-        if (pollingRef.current) {
-            clearInterval(pollingRef.current);
-            pollingRef.current = null;
+        if (wsReconnectTimerRef.current) {
+            clearTimeout(wsReconnectTimerRef.current);
+            wsReconnectTimerRef.current = null;
         }
+        wsReconnectAttemptsRef.current = 0;
+        wsCodeRef.current = null;
+
         if (wsRef.current) {
-            wsRef.current.close();
+            try {
+                wsRef.current.onopen = null;
+                wsRef.current.onclose = null;
+                wsRef.current.onerror = null;
+                wsRef.current.onmessage = null;
+                wsRef.current.close();
+            } catch {
+                // ignore
+            }
             wsRef.current = null;
         }
-        setWsConnected(false);
     }, []);
 
+    const resetIdleTimer = useCallback(() => {
+        if (idleTimerRef.current) {
+            clearTimeout(idleTimerRef.current);
+        }
+
+        idleTimerRef.current = setTimeout(() => {
+            disconnectRealtime();
+        }, GROUP_ORDER_IDLE_DISCONNECT_MS);
+    }, [disconnectRealtime]);
 
     // ============================================
     // ACTIONS
     // ============================================
 
-    const refreshSessionFromCode = async (code: string, storedDeviceId?: string) => {
-        try {
-            const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}`));
-            const data = await response.json();
-
-            if (data.success) {
-                setSession(data.data);
-
-                // Find my participant
-                const myDevice = storedDeviceId || deviceId;
-                const myParticipant = data.data.participants.find(
-                    (p: GroupOrderParticipant) => p.deviceId === myDevice
-                );
-
-                if (myParticipant) {
-                    setMyParticipantId(myParticipant.id);
-                    startRealtime(code);
-                } else {
-                    // Not a participant anymore
-                    clearStoredSession();
-                    setSession(null);
-                }
-            } else {
-                clearStoredSession();
-                setSession(null);
-            }
-        } catch (err) {
-            console.error("[GROUP ORDER] Refresh error:", err);
-            clearStoredSession();
-            setSession(null);
-        }
-    };
-
-    const startRealtime = useCallback((code: string) => {
-        if (wsRef.current) {
-            wsRef.current.close();
-            wsRef.current = null;
-        }
-        setWsConnected(false);
-
+    const ensureRealtimeConnected = useCallback((code: string) => {
         const wsBase = getOrderWsBaseUrl();
         if (!wsBase) {
-            setWsConnected(false);
-            startPolling(code);
+            console.warn("[GROUP ORDER] NEXT_PUBLIC_ORDER_WS_URL is not set; realtime disabled.");
             return;
         }
 
-        const wsUrl = `${wsBase}/ws/public/group-order?code=${encodeURIComponent(code)}`;
+        const normalizedCode = code.trim().toUpperCase();
+        const existing = wsRef.current;
+        if (
+            existing &&
+            wsCodeRef.current === normalizedCode &&
+            (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)
+        ) {
+            return;
+        }
+
+        disconnectRealtime();
+        wsCodeRef.current = normalizedCode;
+
+        const wsUrl = `${wsBase}/ws/public/group-order?code=${encodeURIComponent(normalizedCode)}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 
-        ws.onopen = () => setWsConnected(true);
-        ws.onclose = () => setWsConnected(false);
-        ws.onerror = () => setWsConnected(false);
-        ws.onmessage = async () => {
-            await refreshSessionFromCode(code);
+        ws.onopen = () => {
+            wsReconnectAttemptsRef.current = 0;
+            resetIdleTimer();
         };
-    }, [refreshSessionFromCode, startPolling]);
+
+        ws.onmessage = async (event) => {
+            resetIdleTimer();
+
+            const isRecord = (value: unknown): value is Record<string, unknown> =>
+                typeof value === "object" && value !== null;
+
+            let parsed: unknown;
+            let messageType: string | undefined;
+            let messageData: unknown;
+            try {
+                parsed = JSON.parse(event.data as string);
+                if (isRecord(parsed)) {
+                    const t = parsed.type;
+                    if (typeof t === "string") {
+                        messageType = t;
+                    }
+                    messageData = parsed.data;
+                }
+            } catch {
+                // ignore (some servers may send non-JSON)
+            }
+
+            if (messageType === "group-order.session" && messageData) {
+                const nextSession = messageData as GroupOrderSession;
+                setSession(nextSession);
+
+                if (["EXPIRED", "CANCELLED"].includes(nextSession.status)) {
+                    clearStoredSession();
+                    setMyParticipantId(null);
+                    disconnectRealtime();
+                    return;
+                }
+
+                if (nextSession.status === "SUBMITTED") {
+                    clearStoredSession();
+                    disconnectRealtime();
+                    return;
+                }
+
+                const myDevice = deviceId || getOrCreateDeviceId();
+                const myParticipant = nextSession.participants.find(
+                    (p: GroupOrderParticipant) => p.deviceId === myDevice
+                );
+                if (!myParticipant) {
+                    clearStoredSession();
+                    setSession(null);
+                    setMyParticipantId(null);
+                    disconnectRealtime();
+                    return;
+                }
+
+                setMyParticipantId(myParticipant.id);
+                return;
+            }
+
+            if (messageType === "group-order.closed") {
+                if (messageData) {
+                    const nextSession = messageData as GroupOrderSession;
+                    setSession(nextSession);
+                }
+                clearStoredSession();
+                disconnectRealtime();
+                return;
+            }
+
+            if (messageType === "error") {
+                clearStoredSession();
+                disconnectRealtime();
+                return;
+            }
+
+            // Backward-compatible: older servers may send refresh signals.
+            if (messageType === "group-order.refresh") {
+                await refreshSessionFromCodeRef.current(normalizedCode, undefined, { ensureRealtime: false });
+            }
+
+        };
+
+        ws.onclose = () => {
+            wsRef.current = null;
+
+            // If we intentionally disconnected or switched sessions, don't reconnect.
+            if (wsCodeRef.current !== normalizedCode) return;
+
+            const currentSession = sessionRef.current;
+            const stillRelevant =
+                currentSession?.sessionCode?.toUpperCase() === normalizedCode &&
+                (currentSession.status === "OPEN" || currentSession.status === "LOCKED");
+
+            if (!stillRelevant) return;
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+
+            const attempt = wsReconnectAttemptsRef.current + 1;
+            wsReconnectAttemptsRef.current = attempt;
+            if (attempt > 5) return;
+
+            const delayMs = Math.min(15000, 1000 * Math.pow(2, attempt - 1));
+            wsReconnectTimerRef.current = setTimeout(() => {
+                ensureRealtimeConnected(normalizedCode);
+            }, delayMs);
+        };
+
+        ws.onerror = () => {
+            // Let onclose handle reconnection/cleanup
+        };
+    }, [deviceId, disconnectRealtime, resetIdleTimer]);
+
+    const handleUserActivity = useCallback(() => {
+        const now = Date.now();
+        if (now - lastActivityAtRef.current < GROUP_ORDER_ACTIVITY_THROTTLE_MS) return;
+        lastActivityAtRef.current = now;
+
+        resetIdleTimer();
+
+        const currentSession = sessionRef.current;
+        if (
+            currentSession &&
+            (currentSession.status === "OPEN" || currentSession.status === "LOCKED")
+        ) {
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+                return;
+            }
+            ensureRealtimeConnected(currentSession.sessionCode);
+        }
+    }, [ensureRealtimeConnected, resetIdleTimer]);
 
     useEffect(() => {
-        if (!session?.sessionCode) return;
-        if (wsConnected) {
-            if (pollingRef.current) {
-                clearInterval(pollingRef.current);
-                pollingRef.current = null;
-            }
-            return;
+        if (!session || (session.status !== "OPEN" && session.status !== "LOCKED")) return;
+        if (typeof window === "undefined") return;
+
+        resetIdleTimer();
+
+        const events: Array<keyof WindowEventMap> = [
+            "mousemove",
+            "keydown",
+            "click",
+            "touchstart",
+            "scroll",
+        ];
+
+        for (const ev of events) {
+            window.addEventListener(ev, handleUserActivity, { passive: true });
         }
-        startPolling(session.sessionCode);
-    }, [session?.sessionCode, wsConnected, startPolling]);
+
+        const onVisibility = () => {
+            if (document.visibilityState === "hidden") {
+                disconnectRealtime();
+            } else {
+                handleUserActivity();
+            }
+        };
+
+        document.addEventListener("visibilitychange", onVisibility);
+
+        return () => {
+            for (const ev of events) {
+                window.removeEventListener(ev, handleUserActivity);
+            }
+            document.removeEventListener("visibilitychange", onVisibility);
+            if (idleTimerRef.current) {
+                clearTimeout(idleTimerRef.current);
+                idleTimerRef.current = null;
+            }
+        };
+    }, [disconnectRealtime, handleUserActivity, resetIdleTimer, session]);
+
+    const refreshSessionFromCode = useCallback(
+        async (
+            code: string,
+            storedDeviceId?: string,
+            options?: { ensureRealtime?: boolean }
+        ) => {
+            try {
+                const response = await fetch(buildOrderApiUrl(`/api/public/group-order/${code}`));
+                const data = await response.json();
+
+                if (!data.success) {
+                    clearStoredSession();
+                    setSession(null);
+                    setMyParticipantId(null);
+                    disconnectRealtime();
+                    return;
+                }
+
+                const nextSession: GroupOrderSession = data.data;
+                setSession(nextSession);
+
+                // Hard stop conditions (auto-disconnect + cleanup)
+                if (["EXPIRED", "CANCELLED"].includes(nextSession.status)) {
+                    clearStoredSession();
+                    setMyParticipantId(null);
+                    disconnectRealtime();
+                    return;
+                }
+
+                // If already submitted, we don't need realtime anymore
+                if (nextSession.status === "SUBMITTED") {
+                    clearStoredSession();
+                    disconnectRealtime();
+                    return;
+                }
+
+                // Find my participant
+                const myDevice = storedDeviceId || deviceId;
+                const myParticipant = nextSession.participants.find(
+                    (p: GroupOrderParticipant) => p.deviceId === myDevice
+                );
+
+                if (!myParticipant) {
+                    // Not a participant anymore
+                    clearStoredSession();
+                    setSession(null);
+                    setMyParticipantId(null);
+                    disconnectRealtime();
+                    return;
+                }
+
+                setMyParticipantId(myParticipant.id);
+
+                if (options?.ensureRealtime) {
+                    ensureRealtimeConnected(code);
+                }
+            } catch (err) {
+                console.error("[GROUP ORDER] Refresh error:", err);
+                clearStoredSession();
+                setSession(null);
+                setMyParticipantId(null);
+                disconnectRealtime();
+            }
+        },
+        [deviceId, disconnectRealtime, ensureRealtimeConnected]
+    );
+
+    useEffect(() => {
+        refreshSessionFromCodeRef.current = refreshSessionFromCode;
+    }, [refreshSessionFromCode]);
 
     const createSession = useCallback(
         async (
@@ -444,8 +636,8 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     // Clear local cart (using group cart now)
                     clearCart();
 
-                    // Start polling
-                    startRealtime(data.data.sessionCode);
+                    // Start realtime connection
+                    ensureRealtimeConnected(data.data.sessionCode);
 
                     return { success: true, sessionCode: data.data.sessionCode };
                 } else {
@@ -460,7 +652,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                 setIsLoading(false);
             }
         },
-        [cart, clearCart, startPolling]
+        [cart, clearCart, ensureRealtimeConnected]
     );
 
     const joinSession = useCallback(
@@ -503,8 +695,8 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                     // Clear local cart
                     clearCart();
 
-                    // Start polling
-                    startRealtime(data.data.sessionCode);
+                    // Start realtime connection
+                    ensureRealtimeConnected(data.data.sessionCode);
 
                     return { success: true };
                 } else {
@@ -519,7 +711,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                 setIsLoading(false);
             }
         },
-        [cart, clearCart, startPolling]
+        [cart, clearCart, ensureRealtimeConnected]
     );
 
     const leaveSession = useCallback(async () => {
@@ -542,7 +734,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
             const data = await response.json();
 
             if (data.success) {
-                stopPolling();
+                disconnectRealtime();
                 clearStoredSession();
                 setSession(null);
                 setMyParticipantId(null);
@@ -567,7 +759,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setIsLoading(false);
         }
-    }, [session, deviceId, stopPolling]);
+    }, [session, deviceId, disconnectRealtime]);
 
     const updateMyCart = useCallback(
         async (items: BaseCartItem[], subtotal: number) => {
@@ -698,7 +890,6 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                 const data = await response.json();
 
                 if (data.success) {
-                    stopPolling();
                     setSplitBill(data.data.splitBill);
 
                     // Update session status
@@ -708,6 +899,10 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
 
                     // Clear local cart since order is now submitted
                     clearCart();
+
+                    // Disconnect realtime when order is submitted
+                    disconnectRealtime();
+                    clearStoredSession();
 
                     return {
                         success: true,
@@ -725,7 +920,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
                 setIsLoading(false);
             }
         },
-        [session, deviceId, stopPolling, clearCart]
+        [session, deviceId, clearCart, disconnectRealtime]
     );
 
     const cancelSession = useCallback(async () => {
@@ -748,7 +943,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
             const data = await response.json();
 
             if (data.success) {
-                stopPolling();
+                disconnectRealtime();
                 clearStoredSession();
                 setSession(null);
                 setMyParticipantId(null);
@@ -761,7 +956,7 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
         } finally {
             setIsLoading(false);
         }
-    }, [session, deviceId, stopPolling]);
+    }, [session, deviceId, disconnectRealtime]);
 
     const refreshSession = useCallback(async () => {
         if (!session) return;
@@ -770,13 +965,13 @@ export function GroupOrderProvider({ children }: { children: React.ReactNode }) 
     }, [session?.sessionCode]);
 
     const clearGroupOrderState = useCallback(() => {
-        stopPolling();
+        disconnectRealtime();
         clearStoredSession();
         setSession(null);
         setMyParticipantId(null);
         setSplitBill(null);
         setError(null);
-    }, [stopPolling]);
+    }, [disconnectRealtime]);
 
     // ============================================
     // CONTEXT VALUE

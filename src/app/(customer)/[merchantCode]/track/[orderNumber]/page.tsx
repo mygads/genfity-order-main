@@ -220,7 +220,6 @@ export default function OrderTrackPage() {
     const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showSplitBill, setShowSplitBill] = useState(false);
-    const [wsConnected, setWsConnected] = useState(false);
 
     const [waitEstimate, setWaitEstimate] = useState<{
         minMinutes: number;
@@ -267,6 +266,122 @@ export default function OrderTrackPage() {
         }
     }, [orderNumber, token]);
 
+    const applyOrderPayload = useCallback(async (raw: unknown) => {
+        // Convert decimal values
+        const convertDecimal = (value: unknown): number => {
+            if (!value) return 0;
+            if (typeof value === 'number') return value;
+            if (typeof value === 'string') return parseFloat(value) || 0;
+            if (typeof value === 'object' && value !== null && 'd' in value && Array.isArray((value as { d: number[] }).d)) {
+                const decimalObj = value as { s?: number; e?: number; d: number[] };
+                const sign = decimalObj.s || 1;
+                const exponent = decimalObj.e ?? 0;
+                const digits = decimalObj.d[0] || 0;
+                const digitsLength = digits.toString().length;
+                return sign * digits * Math.pow(10, exponent - digitsLength + 1);
+            }
+            return 0;
+        };
+
+        if (!raw || typeof raw !== 'object') {
+            return;
+        }
+
+        const record = raw as Record<string, unknown>;
+        const reservationRaw =
+            record.reservation && typeof record.reservation === 'object'
+                ? (record.reservation as Record<string, unknown>)
+                : null;
+        const merchantRaw =
+            record.merchant && typeof record.merchant === 'object'
+                ? (record.merchant as Record<string, unknown>)
+                : null;
+        const paymentRaw =
+            record.payment && typeof record.payment === 'object'
+                ? (record.payment as Record<string, unknown>)
+                : null;
+        const orderItemsRaw = Array.isArray(record.orderItems)
+            ? (record.orderItems as Array<Record<string, unknown>>)
+            : [];
+
+        const nextOrder: OrderData = {
+            id: String(record.id ?? ''),
+            orderNumber: String(record.orderNumber ?? ''),
+            status: record.status as OrderStatus,
+            orderType: record.orderType as OrderData['orderType'],
+            tableNumber: typeof record.tableNumber === 'string' ? record.tableNumber : null,
+            isScheduled: typeof record.isScheduled === 'boolean' ? record.isScheduled : undefined,
+            scheduledDate: typeof record.scheduledDate === 'string' ? record.scheduledDate : null,
+            scheduledTime: typeof record.scheduledTime === 'string' ? record.scheduledTime : null,
+            editedAt: typeof record.editedAt === 'string' ? record.editedAt : null,
+            changedByAdmin: Boolean(record.editedAt) || Boolean(record.changedByAdmin),
+            customerName: String(record.customerName ?? ''),
+            subtotal: convertDecimal(record.subtotal),
+            taxAmount: convertDecimal(record.taxAmount),
+            serviceChargeAmount: convertDecimal(record.serviceChargeAmount),
+            packagingFeeAmount: convertDecimal(record.packagingFeeAmount),
+            discountAmount: convertDecimal(record.discountAmount),
+            totalAmount: convertDecimal(record.totalAmount),
+            createdAt: String(record.createdAt ?? ''),
+            updatedAt: String(record.updatedAt ?? ''),
+            completedAt: typeof record.completedAt === 'string' ? record.completedAt : null,
+            placedAt: typeof record.placedAt === 'string' ? record.placedAt : null,
+            deliveryStatus: (record.deliveryStatus as DeliveryStatus | null | undefined) ?? null,
+            deliveryUnit: typeof record.deliveryUnit === 'string' ? record.deliveryUnit : null,
+            deliveryAddress: typeof record.deliveryAddress === 'string' ? record.deliveryAddress : null,
+            deliveryFeeAmount: convertDecimal(record.deliveryFeeAmount),
+            deliveryDistanceKm: record.deliveryDistanceKm !== null && record.deliveryDistanceKm !== undefined
+                ? convertDecimal(record.deliveryDistanceKm)
+                : null,
+            deliveryDeliveredAt: typeof record.deliveryDeliveredAt === 'string' ? record.deliveryDeliveredAt : null,
+            reservation: reservationRaw
+                ? {
+                    status: String(reservationRaw.status ?? ''),
+                    partySize: Number(reservationRaw.partySize ?? 0),
+                    reservationDate: String(reservationRaw.reservationDate ?? ''),
+                    reservationTime: String(reservationRaw.reservationTime ?? ''),
+                    tableNumber: typeof reservationRaw.tableNumber === 'string' ? reservationRaw.tableNumber : null,
+                }
+                : null,
+            orderItems: orderItemsRaw.map((item) => {
+                const addonsRaw = Array.isArray(item.addons) ? (item.addons as Array<Record<string, unknown>>) : [];
+                return {
+                    menuName: String(item.menuName ?? ''),
+                    quantity: Number(item.quantity ?? 0),
+                    menuPrice: convertDecimal(item.menuPrice),
+                    subtotal: convertDecimal(item.subtotal),
+                    notes: typeof item.notes === 'string' ? item.notes : null,
+                    addons: addonsRaw.map((addon) => ({
+                        name: String(addon.addonName ?? addon.name ?? ''),
+                        price: convertDecimal(addon.addonPrice ?? addon.price),
+                        quantity: Number(addon.quantity ?? 1),
+                    })),
+                };
+            }),
+            merchant: {
+                name: String(merchantRaw?.name ?? ''),
+                currency: String(merchantRaw?.currency ?? 'AUD'),
+            },
+            payment: paymentRaw
+                ? {
+                    status: typeof paymentRaw.status === 'string' ? paymentRaw.status : undefined,
+                    paymentMethod: typeof paymentRaw.paymentMethod === 'string' ? paymentRaw.paymentMethod : undefined,
+                    amount: convertDecimal(paymentRaw.amount),
+                    paidAt: typeof paymentRaw.paidAt === 'string' ? paymentRaw.paidAt : null,
+                }
+                : null,
+        };
+
+        if (nextOrder.status) {
+            await fetchWaitTimeEstimate(nextOrder.status);
+        }
+
+        setOrder(nextOrder);
+        setLastUpdated(new Date());
+        setError('');
+        setIsLoading(false);
+    }, [fetchWaitTimeEstimate]);
+
     // Fetch order data
     const fetchOrder = useCallback(async (showLoadingSpinner = false) => {
         if (showLoadingSpinner) setIsRefreshing(true);
@@ -285,88 +400,7 @@ export default function OrderTrackPage() {
                 await fetchWaitTimeEstimate(data.data.status as OrderStatus);
             }
 
-            // Convert decimal values
-            const convertDecimal = (value: unknown): number => {
-                if (!value) return 0;
-                if (typeof value === 'number') return value;
-                if (typeof value === 'string') return parseFloat(value) || 0;
-                if (typeof value === 'object' && value !== null && 'd' in value && Array.isArray((value as { d: number[] }).d)) {
-                    const decimalObj = value as { s?: number; e?: number; d: number[] };
-                    const sign = decimalObj.s || 1;
-                    const exponent = decimalObj.e ?? 0;
-                    const digits = decimalObj.d[0] || 0;
-                    const digitsLength = digits.toString().length;
-                    return sign * digits * Math.pow(10, exponent - digitsLength + 1);
-                }
-                return 0;
-            };
-
-            setOrder({
-                id: data.data.id,
-                orderNumber: data.data.orderNumber,
-                status: data.data.status,
-                orderType: data.data.orderType,
-                tableNumber: data.data.tableNumber,
-                customerName: data.data.customerName,
-                editedAt: data.data.editedAt ?? null,
-                changedByAdmin: Boolean(data.data.editedAt),
-                subtotal: convertDecimal(data.data.subtotal),
-                taxAmount: convertDecimal(data.data.taxAmount),
-                serviceChargeAmount: convertDecimal(data.data.serviceChargeAmount),
-                packagingFeeAmount: convertDecimal(data.data.packagingFeeAmount),
-                discountAmount: convertDecimal(data.data.discountAmount),
-                totalAmount: convertDecimal(data.data.totalAmount),
-                createdAt: data.data.createdAt,
-                updatedAt: data.data.updatedAt,
-                completedAt: data.data.completedAt,
-                placedAt: data.data.placedAt,
-                deliveryStatus: data.data.deliveryStatus,
-                deliveryUnit: data.data.deliveryUnit ?? null,
-                deliveryAddress: data.data.deliveryAddress,
-                deliveryFeeAmount: convertDecimal(data.data.deliveryFeeAmount),
-                deliveryDistanceKm: data.data.deliveryDistanceKm ? convertDecimal(data.data.deliveryDistanceKm) : null,
-                deliveryDeliveredAt: data.data.deliveryDeliveredAt ?? null,
-                reservation: data.data.reservation
-                    ? {
-                            status: data.data.reservation.status,
-                            partySize: data.data.reservation.partySize,
-                            reservationDate: data.data.reservation.reservationDate,
-                            reservationTime: data.data.reservation.reservationTime,
-                            tableNumber: data.data.reservation.tableNumber ?? null,
-                        }
-                    : null,
-                orderItems: data.data.orderItems?.map((item: {
-                    menuName: string;
-                    quantity: number;
-                    menuPrice: unknown;
-                    subtotal?: unknown;
-                    notes?: string;
-                    addons?: Array<{ addonName?: string; name?: string; price?: unknown; addonPrice?: unknown; subtotal?: unknown; quantity?: number }>;
-                }) => ({
-                    menuName: item.menuName,
-                    quantity: item.quantity,
-                    menuPrice: convertDecimal(item.menuPrice),
-                    subtotal: convertDecimal(item.subtotal),
-                    notes: item.notes,
-                    addons: (item.addons || []).map((addon) => ({
-                        name: addon.addonName || addon.name || '',
-                        price: convertDecimal(addon.addonPrice ?? addon.price),
-                        quantity: addon.quantity || 1,
-                    })),
-                })) || [],
-                merchant: {
-                    name: data.data.merchant?.name || '',
-                    currency: data.data.merchant?.currency || 'AUD',
-                },
-                                payment: data.data.payment
-                                    ? {
-                                            status: data.data.payment.status,
-                                            paymentMethod: data.data.payment.paymentMethod,
-                                            amount: convertDecimal(data.data.payment.amount),
-                                            paidAt: data.data.payment.paidAt || null,
-                                        }
-                                    : null,
-            });
+            await applyOrderPayload(data.data);
 
             // Fetch group order details (if any)
             try {
@@ -389,7 +423,7 @@ export default function OrderTrackPage() {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, [orderNumber, token, t]);
+    }, [orderNumber, token, t, fetchWaitTimeEstimate, applyOrderPayload]);
 
     // Initial fetch
     useEffect(() => {
@@ -400,37 +434,41 @@ export default function OrderTrackPage() {
     useEffect(() => {
         const wsBase = getOrderWsBaseUrl();
         if (!wsBase || !orderNumber || !token) {
-            setWsConnected(false);
             return;
         }
 
         const wsUrl = `${wsBase}/ws/public/order?orderNumber=${encodeURIComponent(orderNumber)}&token=${encodeURIComponent(token)}`;
         const ws = new WebSocket(wsUrl);
 
-        ws.onopen = () => setWsConnected(true);
-        ws.onclose = () => setWsConnected(false);
-        ws.onerror = () => setWsConnected(false);
-        ws.onmessage = () => {
-            fetchOrder(true);
+        ws.onopen = () => {};
+        ws.onclose = () => {};
+        ws.onerror = () => {};
+        ws.onmessage = (event) => {
+            try {
+                const payload: unknown = JSON.parse(event.data as string);
+                if (payload && typeof payload === 'object') {
+                    const record = payload as Record<string, unknown>;
+                    const typeValue = record.type;
+
+                    if (typeValue === 'order.state' && record.data) {
+                        void applyOrderPayload(record.data);
+                        return;
+                    }
+
+                    if (typeValue === 'order.refresh') {
+                        fetchOrder(true);
+                        return;
+                    }
+                }
+            } catch {
+                fetchOrder(true);
+            }
         };
 
         return () => {
             ws.close();
         };
-    }, [orderNumber, token, fetchOrder]);
-
-    // Auto-refresh every 5 seconds (only if not completed/cancelled, and WS not connected)
-    useEffect(() => {
-        if (wsConnected || !order || order.status === 'COMPLETED' || order.status === 'CANCELLED') {
-            return;
-        }
-
-        const interval = setInterval(() => {
-            fetchOrder(false); // Silent refresh
-        }, 5000);
-
-        return () => clearInterval(interval);
-    }, [order, fetchOrder]);
+    }, [orderNumber, token, fetchOrder, applyOrderPayload]);
 
     // Check if feedback exists for this order
     useEffect(() => {
@@ -451,7 +489,7 @@ export default function OrderTrackPage() {
         };
 
         checkFeedback();
-    }, [orderNumber, feedbackChecked]);
+    }, [orderNumber, feedbackChecked, token]);
 
     // Auto-show feedback modal when order is completed and no feedback yet
     useEffect(() => {
