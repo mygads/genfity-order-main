@@ -22,6 +22,13 @@ export async function verifyTurnstileToken(params: {
   const secret = process.env.TURNSTILE_SECRET_KEY;
   if (!secret) return;
 
+  if (!params.token || typeof params.token !== 'string') {
+    throw new ValidationError(
+      'Security verification required',
+      ERROR_CODES.VALIDATION_FAILED
+    );
+  }
+
   const formData = new FormData();
   formData.append('secret', secret);
   formData.append('response', params.token);
@@ -37,10 +44,7 @@ export async function verifyTurnstileToken(params: {
       }
     );
   } catch {
-    throw new ValidationError(
-      'Security verification failed',
-      ERROR_CODES.VALIDATION_FAILED
-    );
+    throw new ValidationError('Security verification temporarily unavailable', ERROR_CODES.VALIDATION_FAILED);
   }
 
   let json: TurnstileVerifyResponse | null = null;
@@ -51,9 +55,15 @@ export async function verifyTurnstileToken(params: {
   }
 
   if (!verifyResponse.ok || !json?.success) {
+    const errorCodes = json?.['error-codes'] || [];
+    const isExpiredOrDuplicate = errorCodes.includes('timeout-or-duplicate');
+
     throw new ValidationError(
-      'Security verification failed',
-      ERROR_CODES.VALIDATION_FAILED
+      isExpiredOrDuplicate
+        ? 'Security verification expired, please try again'
+        : 'Security verification failed',
+      ERROR_CODES.VALIDATION_FAILED,
+      errorCodes.length > 0 ? { turnstileErrorCodes: errorCodes } : undefined
     );
   }
 }

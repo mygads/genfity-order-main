@@ -147,6 +147,7 @@ function MerchantRegisterContent() {
     const [locationDetected, setLocationDetected] = useState(false);
     const [detectedCountryFromGPS, setDetectedCountryFromGPS] = useState<string | null>(null);
     const [turnstileToken, setTurnstileToken] = useState("");
+    const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
 
     // Get influencer referral code from URL parameter
     const influencerCodeFromUrl = searchParams.get('ref') || '';
@@ -257,6 +258,11 @@ function MerchantRegisterContent() {
         if (['country', 'currency', 'timezone'].includes(name)) {
             setLocationDetected(false);
         }
+    };
+
+    const resetTurnstile = () => {
+        setTurnstileToken("");
+        setTurnstileResetSignal((prev) => prev + 1);
     };
 
     // Auto-generate slug from merchant name
@@ -383,6 +389,7 @@ function MerchantRegisterContent() {
             const result = await response.json();
 
             if (!response.ok) {
+                resetTurnstile();
                 const message = result?.message || "Registration failed";
 
                 // Treat known email/role conflicts as field validation (requested: register page validation)
@@ -406,6 +413,7 @@ function MerchantRegisterContent() {
             }, 3000);
         } catch (err) {
             setError(err instanceof Error ? err.message : "An error occurred");
+            resetTurnstile();
         } finally {
             setIsSubmitting(false);
         }
@@ -946,6 +954,7 @@ function MerchantRegisterContent() {
                                                     onVerify={(token) => setTurnstileToken(token)}
                                                     onExpire={() => setTurnstileToken("")}
                                                     onError={() => setTurnstileToken("")}
+                                                    resetSignal={turnstileResetSignal}
                                                     theme="auto"
                                                 />
                                             </div>

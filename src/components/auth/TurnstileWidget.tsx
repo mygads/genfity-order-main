@@ -17,6 +17,11 @@ type TurnstileWidgetProps = {
   onVerify: (token: string) => void;
   onExpire?: () => void;
   onError?: () => void;
+  /**
+   * Increment/change this value to force the widget to reset (and require a fresh token).
+   * Useful because Turnstile tokens are single-use.
+   */
+  resetSignal?: number;
   theme?: 'light' | 'dark' | 'auto';
   size?: 'normal' | 'compact';
   className?: string;
@@ -67,6 +72,7 @@ export function TurnstileWidget({
   onVerify,
   onExpire,
   onError,
+  resetSignal,
   theme = 'auto',
   size = 'normal',
   className,
@@ -148,6 +154,13 @@ export function TurnstileWidget({
       }
     };
   }, [handleError, options]);
+
+  useEffect(() => {
+    const widgetId = widgetIdRef.current;
+    if (!widgetId) return;
+    if (!window.turnstile?.reset) return;
+    window.turnstile.reset(widgetId);
+  }, [resetSignal]);
 
   return (
     <div className={className}>

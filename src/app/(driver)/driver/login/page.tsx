@@ -38,6 +38,12 @@ function DriverLoginInner() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
+
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileResetSignal((prev) => prev + 1);
+  };
 
   const initialError = useMemo(() => {
     if (errorParam === 'expired') return t('driver.login.error.sessionExpired');
@@ -85,12 +91,14 @@ function DriverLoginInner() {
 
       if (!response.ok) {
         setError(json?.message || t('driver.login.error.loginFailed'));
+        resetTurnstile();
         return;
       }
 
       const role = json?.data?.user?.role as string | undefined;
       if (role !== 'DELIVERY') {
         setError(t('driver.login.error.deliveryOnly'));
+        resetTurnstile();
         return;
       }
 
@@ -113,6 +121,7 @@ function DriverLoginInner() {
       router.replace(redirectPath);
     } catch {
       setError(t('driver.login.error.network'));
+      resetTurnstile();
     } finally {
       setIsLoading(false);
     }
@@ -291,6 +300,7 @@ function DriverLoginInner() {
                       onVerify={(token) => setTurnstileToken(token)}
                       onExpire={() => setTurnstileToken('')}
                       onError={() => setTurnstileToken('')}
+                      resetSignal={turnstileResetSignal}
                       theme="auto"
                     />
                   </div>

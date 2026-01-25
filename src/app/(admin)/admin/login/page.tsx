@@ -185,6 +185,7 @@ function AdminLoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
 
   // Merchant selection state
@@ -232,6 +233,11 @@ function AdminLoginForm() {
     }));
     // Clear error when user types
     if (error) setError('');
+  };
+
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileResetSignal((prev) => prev + 1);
   };
 
   /**
@@ -377,6 +383,7 @@ function AdminLoginForm() {
         } else {
           setError(data.message || t('auth.error.invalidCredentials'));
         }
+        resetTurnstile();
         setIsLoading(false);
         return;
       }
@@ -385,6 +392,7 @@ function AdminLoginForm() {
       const allowedRoles = ['SUPER_ADMIN', 'MERCHANT_OWNER', 'MERCHANT_STAFF'];
       if (!allowedRoles.includes(data.data.user.role)) {
         setError(t('admin.login.error.adminOnly'));
+        resetTurnstile();
         setIsLoading(false);
         return;
       }
@@ -418,6 +426,7 @@ function AdminLoginForm() {
       );
     } catch {
       setError(t('admin.login.error.networkError'));
+      resetTurnstile();
     } finally {
       if (!showMerchantModal) {
         setIsLoading(false);
@@ -660,6 +669,7 @@ function AdminLoginForm() {
                         onVerify={(token) => setTurnstileToken(token)}
                         onExpire={() => setTurnstileToken('')}
                         onError={() => setTurnstileToken('')}
+                        resetSignal={turnstileResetSignal}
                         theme="auto"
                       />
                     </div>

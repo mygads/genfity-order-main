@@ -100,7 +100,13 @@ function InfluencerLoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [turnstileResetSignal, setTurnstileResetSignal] = useState(0);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  const resetTurnstile = () => {
+    setTurnstileToken('');
+    setTurnstileResetSignal((prev) => prev + 1);
+  };
 
   // Auto-rotate carousel every 5 seconds
   useEffect(() => {
@@ -152,6 +158,7 @@ function InfluencerLoginForm() {
 
       if (!response.ok) {
         setError(data.message || 'Login failed. Please try again.');
+        resetTurnstile();
         setIsLoading(false);
         return;
       }
@@ -164,6 +171,7 @@ function InfluencerLoginForm() {
       router.push('/influencer/dashboard');
     } catch {
       setError('Network error. Please try again.');
+      resetTurnstile();
       setIsLoading(false);
     }
   };
@@ -371,6 +379,7 @@ function InfluencerLoginForm() {
                       onVerify={(token) => setTurnstileToken(token)}
                       onExpire={() => setTurnstileToken('')}
                       onError={() => setTurnstileToken('')}
+                      resetSignal={turnstileResetSignal}
                       theme="auto"
                     />
                   </div>
