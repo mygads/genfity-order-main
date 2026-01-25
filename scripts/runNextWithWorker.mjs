@@ -28,11 +28,18 @@ function bin(name) {
 }
 
 function spawnChild(command, args, label) {
+  const needsShell =
+    process.platform === 'win32' &&
+    // Only enable shell for Windows .cmd shims (e.g. next.cmd, tsx.cmd).
+    // For real executables like node.exe (often under "C:\\Program Files"),
+    // using shell can break because the path isn't quoted.
+    String(command).toLowerCase().endsWith('.cmd');
+
   const child = spawn(command, args, {
     stdio: 'inherit',
     env: process.env,
-    // On Windows, .cmd shims require a shell to execute reliably.
-    shell: process.platform === 'win32',
+    // On Windows, only .cmd shims require a shell.
+    shell: needsShell,
   });
 
   child.on('exit', (code, signal) => {
@@ -67,8 +74,21 @@ if (mode !== 'dev' && mode !== 'start') {
 
 const shouldStartWorker = Boolean(process.env.RABBITMQ_URL);
 
-const nextCmd = bin('next');
-const nextArgs = mode === 'dev' ? ['dev'] : ['start'];
+// Next.js standalone output cannot be started with `next start`.
+// Use the generated `.next/standalone/server.js` when present.
+const standaloneServer = path.join(rootDir, '.next', 'standalone', 'server.js');
+
+const nextCmd =
+  mode === 'start' && fs.existsSync(standaloneServer)
+    ? process.execPath
+    : bin('next');
+
+const nextArgs =
+  mode === 'dev'
+    ? ['dev']
+    : fs.existsSync(standaloneServer)
+      ? [standaloneServer]
+      : ['start'];
 
 console.log('[runNextWithWorker] starting Next', { mode, worker: shouldStartWorker });
 

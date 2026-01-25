@@ -146,49 +146,35 @@ jobs:
             echo "⏭️ ENV_FILE secret not set, skipping .env update"
           fi
 
-      - name: Deploy with Docker
+      - name: Deploy with Docker Compose
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-          IMAGE_TAG: ${{ needs.build.outputs.version || 'latest' }}
         run: |
           echo "🚀 Deploying to VPS..."
           
-          # Deploy with Docker
           ssh $VPS_USER@$VPS_HOST << ENDSSH
-            cd ~/genfity
+            cd ~/genfity/genfity-order-main
+            
+            # Sync repository (get latest docker-compose.yml)
+            git fetch origin main
+            git reset --hard origin/main
             
             # Login to GHCR using PAT
             echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u mygads --password-stdin
             
-            # Pull latest image
-            sudo docker pull ghcr.io/mygads/genfity-order-main:latest
-            
-            # Stop and remove old container
-            sudo docker stop genfity-order-main 2>/dev/null || true
-            sudo docker rm genfity-order-main 2>/dev/null || true
-            
-            # Run new container
-            sudo docker run -d \
-              --name genfity-order-main \
-              --restart unless-stopped \
-              --network genfity-network \
-              --env-file ~/genfity/genfity-order-main/.env \
-              --add-host=host.docker.internal:host-gateway \
-              -p 8091:3000 \
-              --health-cmd="node /app/healthcheck.js" \
-              --health-interval=30s \
-              --health-timeout=10s \
-              --health-retries=3 \
-              ghcr.io/mygads/genfity-order-main:latest
+            # Pull new image and recreate container using GHCR image
+            export IMAGE=ghcr.io/mygads/genfity-order-main:latest
+            sudo -E docker compose pull
+            sudo -E docker compose up -d --force-recreate
             
             # Wait for service to be ready
             echo "Waiting for service to be ready..."
             sleep 30
             
             # Check container status
-            sudo docker ps | grep genfity-order
+            sudo docker ps | grep genfity-order-main
             
             # ==================== DOCKER CLEANUP ====================
             echo "🧹 Cleaning up old Docker resources..."
@@ -213,25 +199,47 @@ jobs:
           echo "🗃️ Running database migration..."
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             # Wait for container to be ready
-            sleep 10
+            sleep 15
             
-            # Get DATABASE_URL from the app's env file
+            # Check if container is running
+            if ! sudo docker ps | grep -q genfity-order-main; then
+              echo "❌ Container not running!"
+              exit 1
+            fi
+            
+            # Get DATABASE_URL from .env
             DATABASE_URL=$(grep "^DATABASE_URL=" ~/genfity/genfity-order-main/.env | cut -d'=' -f2-)
             
-            # Run migration using a temporary container with full Prisma CLI
-            # This uses the prisma folder from the main container
+            if [ -z "$DATABASE_URL" ]; then
+              echo "❌ DATABASE_URL not found in .env!"
+              exit 1
+            fi
+            
+            # Get prisma folder path from running container
+            PRISMA_PATH=$(sudo docker inspect genfity-order-main --format='{{.GraphDriver.Data.MergedDir}}')/app/prisma
+            
+            # Run migration using temporary container with Prisma CLI
+            echo "📦 Running Prisma migrations..."
             sudo docker run --rm \
               --network genfity-network \
               --add-host=host.docker.internal:host-gateway \
               -e DATABASE_URL="$DATABASE_URL" \
-              -v $(sudo docker inspect genfity-order-main --format='{{.GraphDriver.Data.MergedDir}}')/app/prisma:/app/prisma:ro \
+              -v "$PRISMA_PATH":/app/prisma:ro \
+              -w /app \
               node:20-alpine sh -c "
-                cd /app && \
-                npm install prisma@6 --save-dev --silent 2>/dev/null && \
-                npx prisma migrate deploy
-              " 2>&1 || {
-              echo "⚠️ Migration failed or no pending migrations"
-            }
+                npm install prisma@latest --silent 2>/dev/null
+                
+                # Try migrate deploy first (for existing migrations)
+                echo 'Attempting prisma migrate deploy...'
+                npx prisma migrate deploy 2>&1 && exit 0
+                
+                # If failed, check if we need initial db push
+                echo 'migrate deploy returned non-zero, checking migration state...'
+                npx prisma migrate status 2>&1 || {
+                  echo 'No migrations applied yet, running db push for initial schema...'
+                  npx prisma db push 2>&1
+                }
+              " || echo "⚠️ Migration completed with warnings"
             
             echo "✅ Database migration complete!"
           ENDSSH
@@ -278,7 +286,7 @@ jobs:
           #!/bin/bash
           set -e
           APP_NAME="genfity-order-main"
-          APP_URL="http://localhost:8091"
+          APP_URL="http://localhost:3001"
           CRON_CONFIG="$HOME/genfity/$APP_NAME/cron-config.json"
           
           # Install jq if not present

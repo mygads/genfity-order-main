@@ -376,6 +376,9 @@ class EmailService {
       to,
       subject: 'GENFITY - Test Email',
       html: getTestEmailTemplate({ supportEmail }),
+      // Force direct SMTP sending so this endpoint really validates credentials.
+      // (Otherwise it can enqueue and return true even if SMTP auth is broken.)
+      disableQueue: true,
     });
   }
 

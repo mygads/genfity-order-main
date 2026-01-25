@@ -1,4 +1,15 @@
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import dotenv from 'dotenv';
+
+// Load env deterministically from the app root, not process.cwd().
+// This prevents missing SMTP/RabbitMQ config when the worker is started from a different directory.
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const appRoot = path.resolve(__dirname, '..', '..');
+
+dotenv.config({ path: path.join(appRoot, '.env') });
 
 // Prevent enqueue recursion: the worker should execute side-effects directly.
 process.env.RABBITMQ_WORKER = '1';
