@@ -1,2 +1,0 @@
--- AlterTable
-ALTER TABLE "genfity"."merchants" ADD COLUMN IF NOT EXISTS "is_open" BOOLEAN NOT NULL DEFAULT true;
