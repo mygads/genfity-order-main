@@ -78,6 +78,26 @@ const shouldStartWorker = Boolean(process.env.RABBITMQ_URL);
 // Use the generated `.next/standalone/server.js` when present.
 const standaloneServer = path.join(rootDir, '.next', 'standalone', 'server.js');
 
+function ensureStandaloneAssets() {
+  const standaloneDir = path.join(rootDir, '.next', 'standalone');
+  if (!fs.existsSync(standaloneDir)) {
+    return;
+  }
+
+  const staticSrc = path.join(rootDir, '.next', 'static');
+  const staticDest = path.join(standaloneDir, '.next', 'static');
+  if (fs.existsSync(staticSrc)) {
+    fs.mkdirSync(path.dirname(staticDest), { recursive: true });
+    fs.cpSync(staticSrc, staticDest, { recursive: true });
+  }
+
+  const publicSrc = path.join(rootDir, 'public');
+  const publicDest = path.join(standaloneDir, 'public');
+  if (fs.existsSync(publicSrc)) {
+    fs.cpSync(publicSrc, publicDest, { recursive: true });
+  }
+}
+
 const nextCmd =
   mode === 'start' && fs.existsSync(standaloneServer)
     ? process.execPath
@@ -91,6 +111,10 @@ const nextArgs =
       : ['start'];
 
 console.log('[runNextWithWorker] starting Next', { mode, worker: shouldStartWorker });
+
+if (mode === 'start' && fs.existsSync(standaloneServer)) {
+  ensureStandaloneAssets();
+}
 
 const nextProc = spawnChild(nextCmd, nextArgs, 'next');
 let workerProc = null;

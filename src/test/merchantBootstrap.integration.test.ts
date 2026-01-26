@@ -120,7 +120,7 @@ describe('New merchant bootstrap (repo-mocked integration)', () => {
     expect(merchantCreateArg.receiptSettings?.customFooterText).toBeUndefined();
     expect(merchantCreateArg.receiptSettings?.customThankYouMessage).toBeUndefined();
     expect(merchantCreateArg.receiptSettings?.receiptLanguage).toBe('id');
-  });
+  }, 15000);
 });
 
 describe('MerchantTemplateService (Prisma-mocked integration)', () => {

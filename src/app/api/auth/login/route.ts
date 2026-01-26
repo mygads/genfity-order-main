@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
   try {
     // Parse request body
     const body = await request.json();
-    const { email, password, rememberMe = false, turnstileToken, client } = body;
+    const { email, password, rememberMe = false, turnstileToken, client, merchantId } = body;
 
     // Validate required fields
     if (!email || !password) {
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Call AuthService login with remember me flag
     const result = await authService.login(
-      { email, password, rememberMe, client },
+      { email, password, rememberMe, client, merchantId },
       userAgent,
       ipAddress
     );

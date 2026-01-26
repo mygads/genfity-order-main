@@ -99,6 +99,7 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   const [pendingCompleteStatusChange, setPendingCompleteStatusChange] = useState<{ orderId: string; newStatus: OrderStatus; options?: StatusUpdateOptions } | null>(null);
   const [updatingOrders, setUpdatingOrders] = useState<Set<string>>(new Set()); // Track orders being updated
   const previousOrderCountRef = useRef(0);
+  const previousOrdersRef = useRef<OrderListItem[]>([]);
   const chainingCompleteConfirmRef = useRef(false);
   const { showError, showSuccess } = useToast();
 
@@ -111,8 +112,45 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
   );
 
   // Helper to normalize order data from WebSocket payloads
-  const applyOrdersPayload = useCallback((raw: unknown): OrderListItem[] => {
+  const mergeOrderWithPrevious = useCallback((order: OrderListItem, previous?: OrderListItem): OrderListItem => {
+    if (!previous) return order;
+
+    const merged: OrderListItem = { ...order };
+
+    if (merged._count === undefined && previous._count !== undefined) {
+      merged._count = previous._count;
+    }
+
+    if (merged.payment === undefined && previous.payment !== undefined) {
+      merged.payment = previous.payment;
+    }
+
+    if (merged.customer === undefined && previous.customer !== undefined) {
+      merged.customer = previous.customer;
+    }
+
+    if (merged.reservation === undefined && previous.reservation !== undefined) {
+      merged.reservation = previous.reservation;
+    }
+
+    if (merged.deliveryDriver === undefined && previous.deliveryDriver !== undefined) {
+      merged.deliveryDriver = previous.deliveryDriver;
+    }
+
+    if (merged.deliveryFeeAmount === undefined && previous.deliveryFeeAmount !== undefined) {
+      merged.deliveryFeeAmount = previous.deliveryFeeAmount;
+    }
+
+    if (merged.deliveryDistanceKm === undefined && previous.deliveryDistanceKm !== undefined) {
+      merged.deliveryDistanceKm = previous.deliveryDistanceKm;
+    }
+
+    return merged;
+  }, []);
+
+  const applyOrdersPayload = useCallback((raw: unknown, previousOrders: OrderListItem[] = []): OrderListItem[] => {
     if (!Array.isArray(raw)) return [];
+    const previousById = new Map(previousOrders.map((order) => [String(order.id), order]));
     
     return raw.map((item: unknown) => {
       const data = item as Record<string, unknown>;
@@ -132,10 +170,11 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         deliveryFeeAmount: data.deliveryFeeAmount ? (typeof data.deliveryFeeAmount === 'string' ? parseFloat(data.deliveryFeeAmount) : data.deliveryFeeAmount) : undefined,
         deliveryDistanceKm: data.deliveryDistanceKm ? (typeof data.deliveryDistanceKm === 'string' ? parseFloat(data.deliveryDistanceKm as string) : data.deliveryDistanceKm) : undefined,
       } as OrderListItem;
-      
-      return order;
+
+      const previous = previousById.get(String(order.id));
+      return mergeOrderWithPrevious(order, previous);
     });
-  }, []);
+  }, [mergeOrderWithPrevious]);
 
   // SWR fetcher with auth
   const fetcher = async (url: string) => {
@@ -220,7 +259,12 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
         
         // Primary: payload push (P1 optimization)
         if (msg?.type === 'orders.state' && msg.data) {
-          const orders = applyOrdersPayload(msg.data);
+          const previousOrders = previousOrdersRef.current;
+          const orders = applyOrdersPayload(msg.data, previousOrders);
+
+          if (orders.length > 0) {
+            previousOrdersRef.current = orders;
+          }
           
           // Update SWR cache with payload directly (no HTTP refetch)
           mutate({ success: true, data: orders }, false);
@@ -249,9 +293,21 @@ export const OrderKanbanBoard: React.FC<OrderKanbanBoardProps> = ({
     };
   }, [mutate, applyOrdersPayload]);
 
-  // Extract orders from SWR data
-  const orders: OrderListItem[] = data?.success ? data.data : [];
+  const mergeOrdersWithPrevious = useCallback((current: OrderListItem[], previous: OrderListItem[]): OrderListItem[] => {
+    if (current.length === 0) return previous;
+    const previousById = new Map(previous.map((order) => [String(order.id), order]));
+    return current.map((order) => mergeOrderWithPrevious(order, previousById.get(String(order.id))));
+  }, [mergeOrderWithPrevious]);
+
+  const rawOrders: OrderListItem[] = data?.success ? data.data : previousOrdersRef.current;
+  const orders = mergeOrdersWithPrevious(rawOrders, previousOrdersRef.current);
   const loading = isLoading && !data; // Only show loading on initial load
+
+  useEffect(() => {
+    if (orders.length > 0) {
+      previousOrdersRef.current = orders;
+    }
+  }, [orders]);
 
   // Show error toast when fetch fails
   useEffect(() => {

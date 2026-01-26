@@ -723,14 +723,14 @@ export default function OrderSummaryCashPage() {
         </div>
 
         {/* Notification Message - ESB Style with 2-line layout */}
-        <div className="mx-auto mb-3 mt-2 flex w-full max-w-105 items-start gap-2 rounded-lg bg-warning-100 px-4 py-3">
-          <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginTop: '2px', color: '#dc6803' }} />
-          <p className="text-sm leading-5 text-gray-800">
-            {mode === 'delivery'
-              ? tOr('customer.orderSummary.deliveryQrInstruction', 'Save this QR to track your delivery status and driver updates.')
-              : tOr('customer.orderSummary.showQRInstruction', 'Show the QR code or 7-digit order number to our cashier.')}
-          </p>
-        </div>
+        {effectiveMode === 'delivery' ? (
+          <div className="mx-auto mb-3 mt-2 flex w-full max-w-105 items-start gap-2 rounded-lg bg-warning-100 px-4 py-3">
+            <FaQrcode className="shrink-0" style={{ width: '20px', height: '20px', marginTop: '2px', color: '#dc6803' }} />
+            <p className="text-sm leading-5 text-gray-800">
+              {tOr('customer.orderSummary.deliveryQrInstruction', 'Save this QR to track your delivery status and driver updates.')}
+            </p>
+          </div>
+        ) : null}
 
         {/* ✅ Push Notification Prompt Banner */}
         {showPushPrompt && isPushSupported && !isPushSubscribed && (

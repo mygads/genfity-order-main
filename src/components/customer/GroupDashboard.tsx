@@ -178,22 +178,22 @@ export default function GroupDashboard({
                     <div className="flex gap-2 p-3 border-b border-gray-100">
                         <button
                             onClick={() => setActiveTab("participants")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-xs transition-colors ${activeTab === "participants"
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === "participants"
                                 ? "bg-orange-100 text-orange-700 border border-orange-200"
                                 : "bg-gray-50 text-gray-600 border border-gray-200"
                                 }`}
                         >
-                            <HiUserGroup className="w-3.5 h-3.5" />
+                            <HiUserGroup className="w-5 h-5" />
                             <span>{t("groupOrder.participants") || "Participants"} ({participants.length})</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("share")}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-xs transition-colors ${activeTab === "share"
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg font-medium text-sm transition-colors ${activeTab === "share"
                                 ? "bg-orange-100 text-orange-700 border border-orange-200"
                                 : "bg-gray-50 text-gray-600 border border-gray-200"
                                 }`}
                         >
-                            <HiQrCode className="w-3.5 h-3.5" />
+                            <HiQrCode className="w-5 h-5" />
                             <span>{t("groupOrder.shareCode") || "Share this code"}</span>
                         </button>
                     </div>
@@ -495,7 +495,7 @@ function ConfirmModal({
     isProcessing,
 }: ConfirmModalProps) {
     return (
-        <div className="fixed inset-0 z-110 flex items-end justify-center">
+        <div className="fixed inset-0 z-1000 flex items-end justify-center">
             <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
             <div className="relative bg-white rounded-t-2xl p-4 w-full max-w-125 shadow-xl animate-slideUp">
                 <h3 className="text-lg font-bold text-gray-900 mb-2">

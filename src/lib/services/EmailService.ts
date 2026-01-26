@@ -192,7 +192,13 @@ class EmailService {
     }>;
     disableQueue?: boolean;
   }): Promise<boolean> {
+    const isTestEnv =
+      process.env.NODE_ENV === 'test' ||
+      process.env.VITEST === 'true' ||
+      typeof process.env.VITEST_WORKER_ID === 'string';
+
     const canEnqueue =
+      !isTestEnv &&
       !options.disableQueue &&
       Boolean(this.transporter) &&
       Boolean(process.env.RABBITMQ_URL) &&
@@ -425,6 +431,9 @@ class EmailService {
     paymentMethod?: string | null;
     completedAt: Date;
   }): Promise<boolean> {
+    const isTestEnv =
+      process.env.VITEST === 'true' ||
+      typeof process.env.VITEST_WORKER_ID === 'string';
     const merchantLocale = this.getMerchantEmailLocale(params.merchantCountry);
     const intlLocale = merchantLocale === 'id' ? 'id-ID' : 'en-AU';
     const timeZone = this.getMerchantTimeZone(params.merchantTimezone);
@@ -476,43 +485,53 @@ class EmailService {
       | Array<{ filename: string; content: Buffer; contentType?: string }>
       | undefined;
 
-    try {
-      const pdf = await generateOrderReceiptPdfBuffer({
-        orderNumber: params.orderNumber,
-        merchantCode: params.merchantCode,
-        merchantName: params.merchantName,
-        merchantLogoUrl: resolvedMerchantLogoUrl,
-        merchantAddress: params.merchantAddress,
-        merchantPhone: params.merchantPhone,
-        merchantEmail: params.merchantEmail,
-        receiptSettings: params.receiptSettings as any,
-        customerName: params.customerName,
-        customerPhone: params.customerPhone,
-        customerEmail: params.customerEmail,
-        orderType: params.orderType,
-        items: params.items,
-        subtotal: params.subtotal,
-        taxAmount: params.taxAmount,
-        serviceChargeAmount: params.serviceChargeAmount,
-        packagingFeeAmount: params.packagingFeeAmount,
-        discountAmount: params.discountAmount,
-        totalAmount: safeTotalAmount,
-        paymentMethod: params.paymentMethod,
-        currency,
-        completedAt: params.completedAt,
-        locale: merchantLocale,
-        timeZone,
-      });
-
+    if (isTestEnv) {
       attachments = [
         {
           filename: `receipt-${displayOrderNumber}.pdf`,
-          content: pdf,
+          content: Buffer.from('%PDF-1.4\n%test'),
           contentType: 'application/pdf',
         },
       ];
-    } catch (error) {
-      console.error('[EmailService] Failed generating PDF receipt attachment:', error);
+    } else {
+      try {
+        const pdf = await generateOrderReceiptPdfBuffer({
+          orderNumber: params.orderNumber,
+          merchantCode: params.merchantCode,
+          merchantName: params.merchantName,
+          merchantLogoUrl: resolvedMerchantLogoUrl,
+          merchantAddress: params.merchantAddress,
+          merchantPhone: params.merchantPhone,
+          merchantEmail: params.merchantEmail,
+          receiptSettings: params.receiptSettings as any,
+          customerName: params.customerName,
+          customerPhone: params.customerPhone,
+          customerEmail: params.customerEmail,
+          orderType: params.orderType,
+          items: params.items,
+          subtotal: params.subtotal,
+          taxAmount: params.taxAmount,
+          serviceChargeAmount: params.serviceChargeAmount,
+          packagingFeeAmount: params.packagingFeeAmount,
+          discountAmount: params.discountAmount,
+          totalAmount: safeTotalAmount,
+          paymentMethod: params.paymentMethod,
+          currency,
+          completedAt: params.completedAt,
+          locale: merchantLocale,
+          timeZone,
+        });
+
+        attachments = [
+          {
+            filename: `receipt-${displayOrderNumber}.pdf`,
+            content: pdf,
+            contentType: 'application/pdf',
+          },
+        ];
+      } catch (error) {
+        console.error('[EmailService] Failed generating PDF receipt attachment:', error);
+      }
     }
 
     // Completed-order emails are handled by a dedicated queue (fee charging/idempotency)

@@ -166,6 +166,7 @@ set the `NEXT_PUBLIC_ORDER_API_BASE_URL` and `NEXT_PUBLIC_ORDER_WS_URL` variable
 Next.js app uses the Go API and WebSocket endpoints.
 
 The Go service reads its own `.env` file, so Next.js only needs the two `NEXT_PUBLIC_ORDER_*` values above.
+Set `NEXT_PUBLIC_ORDER_API_ROUTE_SCOPE` to `merchant` to route merchant APIs through Go (valid: `off`, `public`, `merchant`, `all`).
 
 4. **Setup database**
    ```bash

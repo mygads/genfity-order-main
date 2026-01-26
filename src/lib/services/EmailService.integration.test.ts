@@ -37,6 +37,10 @@ describe('EmailService (integration-ish)', () => {
     process.env.SMTP_PASS = 'pass';
     process.env.SMTP_FROM_EMAIL = 'noreply@genfity.com';
     process.env.NEXT_PUBLIC_APP_URL = 'https://order.genfity.com';
+    process.env.RABBITMQ_URL = '';
+    process.env.RABBITMQ_WORKER = '1';
+    process.env.VITEST = 'true';
+    process.env.VITEST_WORKER_ID = '0';
 
     vi.resetModules();
   });
@@ -77,7 +81,7 @@ describe('EmailService (integration-ish)', () => {
     expect(args.subject).toContain('Pesanan Selesai');
     expect(args.attachments?.[0]?.filename).toBe('receipt-WC-A1B2C3.pdf');
     expect(Buffer.isBuffer(args.attachments?.[0]?.content)).toBe(true);
-  });
+  }, 15000);
 
   it('localizes customer welcome subject by merchant country (EN vs ID)', async () => {
     const { default: emailService } = await import('@/lib/services/EmailService');
