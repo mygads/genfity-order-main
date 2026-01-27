@@ -15,9 +15,10 @@ import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useCustomerPushNotifications } from '@/hooks/useCustomerPushNotifications';
 import { customerTrackUrl } from '@/lib/utils/customerRoutes';
 import { getPublicAppOrigin } from '@/lib/utils/publicAppOrigin';
-import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes } from 'react-icons/fa';
+import { FaBell, FaCheck, FaCheckCircle, FaChevronDown, FaCopy, FaInfoCircle, FaMoneyBillWave, FaMotorcycle, FaQrcode, FaStickyNote, FaTimes, FaUpload } from 'react-icons/fa';
 import { formatPaymentMethodLabel, formatPaymentStatusLabel } from '@/lib/utils/paymentDisplay';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import type { MerchantPaymentAccount, MerchantPaymentSettings } from '@/lib/types/paymentSettings';
 
 // ✅ Order Summary Data Interface
 interface OrderSummaryData {
@@ -38,6 +39,9 @@ interface OrderSummaryData {
     status?: string;
     amount?: number;
     paidAt?: string | null;
+    customerPaidAt?: string | null;
+    customerProofUrl?: string | null;
+    customerProofMeta?: Record<string, unknown> | null;
   } | null;
   orderItems: Array<{
     menuName: string;
@@ -68,6 +72,8 @@ interface MerchantInfo {
   currency: string;
   enableTax: boolean;
   taxPercentage: number;
+  paymentSettings?: MerchantPaymentSettings;
+  paymentAccounts?: MerchantPaymentAccount[];
 }
 
 /**
@@ -119,6 +125,14 @@ export default function OrderSummaryCashPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [isTrackingLinkCopied, setIsTrackingLinkCopied] = useState(false);
+  const [copiedPaymentFieldKey, setCopiedPaymentFieldKey] = useState<string>('');
+  const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+  const [showPaymentNote, setShowPaymentNote] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmNote, setConfirmNote] = useState('');
+  const [confirmSuccess, setConfirmSuccess] = useState(false);
+  const [proofUploading, setProofUploading] = useState(false);
+  const [proofError, setProofError] = useState('');
 
   // ✅ Push Notification Hook
   const {
@@ -185,6 +199,8 @@ export default function OrderSummaryCashPage() {
             currency: merchantData.data.currency,
             enableTax: merchantData.data.enableTax,
             taxPercentage: merchantData.data.taxPercentage,
+            paymentSettings: merchantData.data.paymentSettings,
+            paymentAccounts: merchantData.data.paymentAccounts,
           });
         }
 
@@ -266,6 +282,9 @@ export default function OrderSummaryCashPage() {
                 status: data.data.payment.status,
                 amount: convertDecimal(data.data.payment.amount),
                 paidAt: data.data.payment.paidAt ?? null,
+                customerPaidAt: data.data.payment.customerPaidAt ?? null,
+                customerProofUrl: data.data.payment.customerProofUrl ?? null,
+                customerProofMeta: (data.data.payment.customerProofMeta ?? null) as Record<string, unknown> | null,
               }
             : null,
           orderItems: convertedOrderItems,
@@ -410,6 +429,110 @@ export default function OrderSummaryCashPage() {
     router.push(`/${merchantCode}`);
   };
 
+  const handleConfirmPayment = async () => {
+    if (!orderNumber || confirming) return;
+    setConfirming(true);
+    setConfirmSuccess(false);
+    setProofError('');
+
+    try {
+      const response = await fetch(
+        buildOrderApiUrl(`/api/public/orders/${orderNumber}/confirm-payment?token=${encodeURIComponent(trackingToken)}`),
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ note: confirmNote.trim() || undefined }),
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to confirm payment');
+      }
+
+      setConfirmSuccess(true);
+      setOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              payment: {
+                ...prev.payment,
+                customerPaidAt: new Date().toISOString(),
+              },
+            }
+          : prev
+      );
+    } catch (error) {
+      setProofError(error instanceof Error ? error.message : 'Failed to confirm payment');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const handleUploadProof = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !orderNumber) return;
+
+    setProofUploading(true);
+    setProofError('');
+    try {
+      const body = new FormData();
+      body.append('file', file);
+
+      const response = await fetch(
+        `/api/public/orders/${orderNumber}/upload-proof?token=${encodeURIComponent(trackingToken)}`,
+        {
+          method: 'POST',
+          body,
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.message || 'Failed to upload proof');
+      }
+
+      const proofUrl = data?.data?.proofUrl as string | undefined;
+      if (proofUrl) {
+        setOrder((prev) =>
+          prev
+            ? {
+                ...prev,
+                payment: {
+                  ...prev.payment,
+                  customerProofUrl: proofUrl,
+                },
+              }
+            : prev
+        );
+      }
+    } catch (error) {
+      setProofError(error instanceof Error ? error.message : 'Failed to upload proof');
+    } finally {
+      setProofUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const copyToClipboard = async (value: string, key: string) => {
+    if (!value) return;
+
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopiedPaymentFieldKey(key);
+      window.setTimeout(() => setCopiedPaymentFieldKey(''), 1500);
+    } catch {
+      // Clipboard might be unavailable (non-secure context)
+      setCopiedPaymentFieldKey('');
+    }
+  };
+
+  const formatAccountNumberGrouped = (value: string) => {
+    const normalized = String(value || '').replace(/\s+/g, '').trim();
+    if (!normalized) return '';
+    return normalized.replace(/(.{4})/g, '$1 ').trim();
+  };
+
   /**
    * ✅ Handle "View History" button click
    */
@@ -451,6 +574,25 @@ export default function OrderSummaryCashPage() {
   // SUCCESS STATE - ESB DESIGN
   // ========================================
   const effectiveMode = order.mode || mode;
+
+  const paymentMethod = order?.payment?.paymentMethod;
+  const isCashPayment =
+    !paymentMethod ||
+    paymentMethod === 'CASH' ||
+    paymentMethod === 'CASH_ON_COUNTER' ||
+    paymentMethod === 'CASH_ON_DELIVERY';
+  const paymentRequiresProof = merchantInfo?.paymentSettings?.requirePaymentProof === true;
+  const hasProof = Boolean(order?.payment?.customerProofUrl);
+
+  const activeAccounts = Array.isArray(merchantInfo?.paymentAccounts)
+    ? merchantInfo?.paymentAccounts.filter((account) => account.isActive)
+    : [];
+
+  const selectedAccountId = String(order?.payment?.customerProofMeta?.accountId || '');
+  const selectedAccount = selectedAccountId
+    ? activeAccounts.find((account) => String(account.id) === selectedAccountId) || null
+    : null;
+  const selectedAccountMeta = order?.payment?.customerProofMeta || null;
 
   return (
     <>
@@ -713,14 +855,313 @@ export default function OrderSummaryCashPage() {
                     </div>
                   ) : null}
                 </div>
-              ) : (
+              ) : isCashPayment ? (
                 <p className="mt-1 text-xs leading-5 text-gray-600">
                   {tOr('customer.orderSummary.payAtCashierHint', 'Show this QR to the cashier/staff to process your order.')}
                 </p>
+              ) : (
+                <div className="mt-1 space-y-1">
+                  <p className="text-xs leading-5 text-gray-600">
+                    {tOr('customer.orderSummary.deliveryPaymentMethod', 'Payment: {method}').replace(
+                      '{method}',
+                      formatPaymentMethodLabel(
+                        {
+                          orderType: effectiveMode === 'dinein' ? 'DINE_IN' : 'TAKEAWAY',
+                          paymentStatus: order?.payment?.status,
+                          paymentMethod: order?.payment?.paymentMethod,
+                        },
+                        { t }
+                      )
+                    )}
+                  </p>
+                  <p className="text-xs leading-5 text-gray-600">
+                    {tOr('customer.orderSummary.paymentStatus', 'Status')}: {formatPaymentStatusLabel(order?.payment?.status, { t }) || '-'}
+                  </p>
+                  {order?.payment?.customerPaidAt ? (
+                    <p className="text-xs text-green-600">
+                      {tOr('customer.payment.confirmed', 'Payment confirmation submitted.')}
+                    </p>
+                  ) : null}
+                </div>
               )}
             </div>
           </div>
         </div>
+
+        {/* Online payment details (only for non-cash, non-delivery orders) */}
+        {!isCashPayment && effectiveMode !== 'delivery' ? (
+          <div className="mx-auto mb-3 w-full max-w-105 rounded-xl border border-gray-200 bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 text-[#f05a28]">
+                  <FaInfoCircle className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {tOr('customer.payment.completeTitle', 'Complete your payment')}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-gray-600">
+                    {paymentMethod === 'MANUAL_TRANSFER'
+                      ? tOr('customer.payment.transferShortHint', 'Transfer to the account below, then confirm.')
+                      : paymentMethod === 'QRIS'
+                        ? tOr('customer.payment.qrisShortHint', 'Scan the QRIS code, then confirm.')
+                        : tOr('customer.payment.confirmShortHint', 'After paying, tap “I have paid”.')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {order.payment?.customerPaidAt ? (
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">
+                    {tOr('customer.payment.confirmedShort', 'Confirmed')}
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-semibold text-orange-700">
+                    {tOr('customer.payment.unpaidShort', 'Unpaid')}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {paymentMethod === 'MANUAL_TRANSFER' ? (
+                <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-50 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                        1
+                      </span>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {tOr('customer.payment.stepTransfer', 'Transfer')}
+                      </p>
+                    </div>
+                    {(selectedAccount || selectedAccountMeta) ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowPaymentDetails((prev) => !prev)}
+                        className="text-xs font-semibold text-gray-600 hover:text-gray-800"
+                      >
+                        {showPaymentDetails
+                          ? tOr('customer.payment.hideDetails', 'Hide details')
+                          : tOr('customer.payment.showDetails', 'Show details')}
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {activeAccounts.length === 0 ? (
+                    <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 ring-1 ring-gray-200">
+                      {tOr('customer.payment.methods.noAccounts', 'No transfer accounts are available.')}
+                    </div>
+                  ) : selectedAccount || selectedAccountMeta ? (
+                    (() => {
+                      const providerName = selectedAccount?.providerName || String(selectedAccountMeta?.providerName || '');
+                      const accountName = selectedAccount?.accountName || String(selectedAccountMeta?.accountName || '');
+                      const accountNumber = selectedAccount?.accountNumber || String(selectedAccountMeta?.accountNumber || '');
+                      const bsb = selectedAccount?.bsb || String((selectedAccountMeta as any)?.bsb || '');
+                      const copyKey = selectedAccount
+                        ? `accountNumber-${String(selectedAccount.id)}`
+                        : 'accountNumber-meta';
+
+                      return (
+                        <div className="mt-3 rounded-lg bg-gray-50 px-3 py-2 ring-1 ring-gray-200">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold text-gray-900">
+                                {providerName || tOr('customer.payment.transferSelected', 'Selected account')}
+                              </div>
+                              <div className="mt-0.5 font-mono text-xs text-gray-700">{formatAccountNumberGrouped(accountNumber)}</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(String(accountNumber || '').replace(/\s+/g, ''), copyKey)}
+                              className="shrink-0 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                            >
+                              {copiedPaymentFieldKey === copyKey ? (
+                                <>
+                                  <FaCheck className="h-3 w-3 text-green-600" />
+                                  <span>{tOr('customer.payment.copied', 'Copied')}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <FaCopy className="h-3 w-3" />
+                                  <span>{tOr('customer.payment.copy', 'Copy')}</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+
+                          {showPaymentDetails ? (
+                            <div className="mt-2 space-y-1 border-t border-gray-200 pt-2 text-xs text-gray-600">
+                              {accountName ? (
+                                <div>
+                                  <span className="font-medium text-gray-700">{tOr('customer.payment.accountNameLabel', 'Account name')}:</span>{' '}
+                                  <span className="text-gray-800">{accountName}</span>
+                                </div>
+                              ) : null}
+                              <div>
+                                <span className="font-medium text-gray-700">{tOr('customer.payment.accountNumberLabel', 'Account number')}:</span>{' '}
+                                <span className="font-mono text-gray-800">{formatAccountNumberGrouped(accountNumber)}</span>
+                              </div>
+                              {bsb ? (
+                                <div>
+                                  <span className="font-medium text-gray-700">{tOr('customer.payment.bsbLabel', 'BSB')}:</span>{' '}
+                                  <span className="font-mono text-gray-800">{bsb}</span>
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      );
+                    })()
+                  ) : (
+                    <div className="mt-3 space-y-2">
+                      {activeAccounts.map((account) => {
+                        const copyKey = `accountNumber-${String(account.id)}`;
+                        return (
+                          <div key={String(account.id)} className="rounded-lg bg-gray-50 px-3 py-2 ring-1 ring-gray-200">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-xs font-semibold text-gray-900">{account.providerName}</div>
+                                <div className="mt-0.5 font-mono text-xs text-gray-700">{formatAccountNumberGrouped(account.accountNumber)}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => copyToClipboard(String(account.accountNumber || '').replace(/\s+/g, ''), copyKey)}
+                                className="shrink-0 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                              >
+                                {copiedPaymentFieldKey === copyKey ? (
+                                  <>
+                                    <FaCheck className="h-3 w-3 text-green-600" />
+                                    <span>{tOr('customer.payment.copied', 'Copied')}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FaCopy className="h-3 w-3" />
+                                    <span>{tOr('customer.payment.copy', 'Copy')}</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              {paymentMethod === 'QRIS' && merchantInfo?.paymentSettings?.qrisImageUrl ? (
+                <div className="rounded-lg border border-gray-200 bg-white p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-50 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                        1
+                      </span>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {tOr('customer.payment.qrisTitle', 'Scan QRIS')}
+                      </p>
+                    </div>
+                    <a
+                      href={merchantInfo.paymentSettings.qrisImageUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-semibold text-gray-600 hover:text-gray-800"
+                    >
+                      {tOr('customer.payment.showDetails', 'Show details')}
+                    </a>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-center">
+                    <img
+                      src={merchantInfo.paymentSettings.qrisImageUrl}
+                      alt="QRIS"
+                      className="h-44 w-44 rounded-xl border border-gray-200 bg-white object-cover"
+                    />
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="rounded-lg border border-gray-200 bg-white p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gray-50 text-xs font-semibold text-gray-700 ring-1 ring-gray-200">
+                      {paymentMethod === 'MANUAL_TRANSFER' || paymentMethod === 'QRIS' ? 2 : 1}
+                    </span>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {tOr('customer.payment.confirmTitle', 'Confirm payment')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {paymentRequiresProof ? (
+                      <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                        <FaUpload className="h-3 w-3" />
+                        {proofUploading
+                          ? tOr('customer.payment.proofUploading', 'Uploading...')
+                          : hasProof
+                            ? tOr('customer.payment.replaceProof', 'Replace proof')
+                            : tOr('customer.payment.uploadProof', 'Upload proof')}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleUploadProof}
+                          className="hidden"
+                          disabled={proofUploading}
+                        />
+                      </label>
+                    ) : null}
+
+                    {hasProof && order?.payment?.customerProofUrl ? (
+                      <a
+                        href={order.payment.customerProofUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-semibold text-[#f05a28] hover:underline"
+                      >
+                        {tOr('customer.payment.viewProof', 'View proof')}
+                      </a>
+                    ) : null}
+
+                    {order.payment?.customerPaidAt ? <FaCheckCircle className="text-green-500" /> : null}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowPaymentNote((prev) => !prev)}
+                  className="mt-3 text-xs font-semibold text-gray-600 hover:text-gray-800"
+                >
+                  {showPaymentNote
+                    ? tOr('customer.payment.hideNote', 'Hide note')
+                    : tOr('customer.payment.addNote', 'Add note (optional)')}
+                </button>
+
+                {showPaymentNote ? (
+                  <textarea
+                    value={confirmNote}
+                    onChange={(event) => setConfirmNote(event.target.value)}
+                    placeholder={tOr('customer.payment.confirmNotePlaceholder', 'Add a note (optional)')}
+                    className="mt-2 w-full rounded-lg border border-gray-200 bg-white p-3 text-xs text-gray-700 outline-none focus:border-[#f05a28]"
+                    rows={2}
+                  />
+                ) : null}
+
+                {proofError ? <p className="mt-2 text-xs text-red-600">{proofError}</p> : null}
+
+                <button
+                  type="button"
+                  onClick={handleConfirmPayment}
+                  disabled={confirming || (paymentRequiresProof && !hasProof)}
+                  className="mt-3 w-full rounded-lg bg-[#f05a28] px-4 py-2.5 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                >
+                  {confirming
+                    ? tOr('customer.payment.confirming', 'Submitting...')
+                    : confirmSuccess
+                      ? tOr('customer.payment.confirmed', 'Payment submitted')
+                      : tOr('customer.payment.confirmButton', 'I have paid')}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
 
         {/* Notification Message - ESB Style with 2-line layout */}
         {effectiveMode === 'delivery' ? (

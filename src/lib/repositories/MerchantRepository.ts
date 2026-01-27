@@ -37,6 +37,12 @@ export class MerchantRepository {
             dayOfWeek: 'asc',
           },
         },
+        paymentSettings: true,
+        paymentAccounts: {
+          orderBy: {
+            sortOrder: 'asc',
+          },
+        },
         merchantBalance: {
           select: {
             id: true,
@@ -93,6 +99,12 @@ export class MerchantRepository {
         openingHours: {
           orderBy: {
             dayOfWeek: 'asc',
+          },
+        },
+        paymentSettings: true,
+        paymentAccounts: {
+          orderBy: {
+            sortOrder: 'asc',
           },
         },
       },

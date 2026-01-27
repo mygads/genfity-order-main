@@ -519,10 +519,16 @@ function buildPaymentSection(
     if (type === 'DELIVERY') {
       if (method === 'CASH_ON_DELIVERY') return tr('Cash on delivery', 'Tunai saat antar');
       if (method === 'CARD_ON_DELIVERY') return tr('Card on delivery', 'Kartu saat antar');
+      if (method === 'MANUAL_TRANSFER') return tr('Manual transfer', 'Transfer manual');
+      if (method === 'QRIS') return tr('QRIS', 'QRIS');
+      if (method === 'ONLINE') return tr('Online payment', 'Pembayaran online');
       return order.paymentMethod ? String(order.paymentMethod).replace(/_/g, ' ') : null;
     }
 
     // DINE_IN / TAKEAWAY
+    if (method === 'MANUAL_TRANSFER') return tr('Manual transfer', 'Transfer manual');
+    if (method === 'QRIS') return tr('QRIS', 'QRIS');
+    if (method === 'ONLINE') return tr('Online payment', 'Pembayaran online');
     if (!isPaid) return tr('Pay at cashier', 'Bayar di kasir');
     if (method === 'CASH_ON_COUNTER') return tr('Cash at cashier', 'Tunai di kasir');
     if (method === 'CARD_ON_COUNTER') return tr('Card at cashier', 'Kartu di kasir');

@@ -18,9 +18,11 @@ import { calculateCartSubtotal } from '@/lib/utils/priceCalculator';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
-import { FaArrowLeft, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaPhone, FaTable, FaTag, FaToggleOff, FaToggleOn, FaUser, FaUsers } from 'react-icons/fa';
+import { FaArrowLeft, FaCashRegister, FaCheckCircle, FaChevronDown, FaClock, FaEnvelope, FaExclamationCircle, FaMoneyCheckAlt, FaPhone, FaQrcode, FaTable, FaTag, FaToggleOff, FaToggleOn, FaUniversity, FaUser, FaUsers, FaWallet } from 'react-icons/fa';
 import ReservationDetailsModal, { type ReservationDetails } from '@/components/customer/ReservationDetailsModal';
 import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
+import QrisBadge from '@/components/common/QrisBadge';
+import PaymentEmptyState from '@/components/common/PaymentEmptyState';
 
 function isValidHHMM(value: string): boolean {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -142,6 +144,8 @@ export default function PaymentPage() {
     tableNumber?: string;
     deliveryAddress?: string;
     scheduledTime?: string;
+    paymentMethod?: string;
+    paymentAccount?: string;
   }>({});
 
   // ✅ NEW: Refs for focusing invalid fields
@@ -157,6 +161,9 @@ export default function PaymentPage() {
   const [merchantPackagingFee, setMerchantPackagingFee] = useState(0);
   const [merchantCurrency, setMerchantCurrency] = useState('AUD');
 
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
+  const [selectedPaymentAccountId, setSelectedPaymentAccountId] = useState<string>('');
+
   // ✅ NEW: Scheduled order (same-day only; validated on server in merchant timezone)
   const [isScheduledOrder, setIsScheduledOrder] = useState(isReservationFlow ? false : isScheduledRequested);
   const [scheduledTime, setScheduledTime] = useState('');
@@ -169,6 +176,32 @@ export default function PaymentPage() {
   const isScheduledOrderEnabled = contextMerchantInfo?.isScheduledOrderEnabled === true;
   const requireTableNumberForDineIn = contextMerchantInfo?.requireTableNumberForDineIn === true;
   const shouldShowTableNumberField = mode === 'dinein' && requireTableNumberForDineIn && !isReservationFlow;
+
+  const paymentSettings = contextMerchantInfo?.paymentSettings;
+  const activePaymentAccounts = useMemo(() => {
+    const raw = Array.isArray(contextMerchantInfo?.paymentAccounts) ? contextMerchantInfo?.paymentAccounts : [];
+    return raw.filter((account) => account.isActive !== false);
+  }, [contextMerchantInfo?.paymentAccounts]);
+
+  const isPayAtCashierEnabled = paymentSettings?.payAtCashierEnabled !== false;
+  const isManualTransferEnabled = paymentSettings?.manualTransferEnabled === true;
+  const isQrisEnabled = paymentSettings?.qrisEnabled === true;
+  const isQrisAvailable = isQrisEnabled && Boolean(paymentSettings?.qrisImageUrl);
+
+  const defaultPaymentMethod = useMemo(() => {
+    if (mode === 'delivery') {
+      if (isManualTransferEnabled) return 'MANUAL_TRANSFER';
+      if (isQrisAvailable) return 'QRIS';
+      return 'CASH_ON_DELIVERY';
+    }
+
+    if (isPayAtCashierEnabled) return 'CASH_ON_COUNTER';
+    if (isManualTransferEnabled) return 'MANUAL_TRANSFER';
+    if (isQrisAvailable) return 'QRIS';
+    return 'CASH_ON_COUNTER';
+    }, [mode, isManualTransferEnabled, isPayAtCashierEnabled, isQrisAvailable]);
+
+  const payAtCashierMethod = mode === 'delivery' ? 'CASH_ON_DELIVERY' : 'CASH_ON_COUNTER';
 
   const isCustomerVoucherEnabled = (contextMerchantInfo as any)?.customerVouchersEnabled === true;
 
@@ -508,6 +541,26 @@ export default function PaymentPage() {
     }
   }, [isInitialized, contextMerchantInfo, mode]);
 
+  useEffect(() => {
+    if (!isInitialized) return;
+    if (!selectedPaymentMethod) {
+      setSelectedPaymentMethod(defaultPaymentMethod);
+    }
+
+    if (activePaymentAccounts.length > 0 && !selectedPaymentAccountId) {
+      const firstAccount = activePaymentAccounts[0];
+      if (firstAccount?.id) {
+        setSelectedPaymentAccountId(String(firstAccount.id));
+      }
+    }
+  }, [
+    isInitialized,
+    defaultPaymentMethod,
+    selectedPaymentMethod,
+    activePaymentAccounts,
+    selectedPaymentAccountId,
+  ]);
+
   // Load valid scheduled slots for today (merchant timezone) when scheduling is enabled.
   useEffect(() => {
     if (!isScheduledOrderEnabled || !isScheduledOrder) {
@@ -706,6 +759,20 @@ export default function PaymentPage() {
       }
     }
 
+    // Validate payment method selection
+    const effectiveMethod = selectedPaymentMethod || defaultPaymentMethod;
+    if (effectiveMethod === 'MANUAL_TRANSFER') {
+      if (activePaymentAccounts.length === 0) {
+        errors.paymentMethod = tOr(t, 'customer.payment.methods.noAccounts', 'No transfer accounts are available.');
+      } else if (!selectedPaymentAccountId) {
+        errors.paymentAccount = tOr(t, 'customer.payment.methods.selectAccountError', 'Please select a transfer account.');
+      }
+    }
+
+    if (effectiveMethod === 'QRIS' && !isQrisAvailable) {
+      errors.paymentMethod = tOr(t, 'customer.payment.methods.qrisUnavailable', 'QRIS is not available yet.');
+    }
+
     // If there are errors, set them and focus first invalid field
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -828,7 +895,11 @@ export default function PaymentPage() {
         customerName: name.trim(),
         customerEmail: email.trim() || undefined,
         customerPhone: phone.trim() || undefined,
-        paymentMethod: mode === 'delivery' ? 'CASH_ON_DELIVERY' : 'CASH_ON_COUNTER',
+        paymentMethod: selectedPaymentMethod || defaultPaymentMethod,
+        paymentAccountId:
+          selectedPaymentMethod === 'MANUAL_TRANSFER' && selectedPaymentAccountId
+            ? selectedPaymentAccountId
+            : undefined,
         items: cart.items.map((item) => ({
           menuId: item.menuId.toString(),
           quantity: item.quantity,
@@ -948,8 +1019,9 @@ export default function PaymentPage() {
       // ========================================
 
       // ✅ 5. Navigate to summary
+      const summaryPath = isOnlinePayment ? 'order-summary-online' : 'order-summary-cash';
       router.push(
-        `/${merchantCode}/order-summary-cash?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&mode=${encodeURIComponent(mode)}${trackingToken ? `&token=${encodeURIComponent(trackingToken)}` : ''}`
+        `/${merchantCode}/${summaryPath}?orderNumber=${encodeURIComponent(orderData.data.orderNumber)}&mode=${encodeURIComponent(mode)}${trackingToken ? `&token=${encodeURIComponent(trackingToken)}` : ''}`
       );
 
       // ✅ 6. Clear cart context AFTER navigation (delayed)
@@ -991,6 +1063,66 @@ export default function PaymentPage() {
       return formatCurrency(Math.max(0, voucherDiscountValue));
     }
     return '';
+  })();
+
+  const effectivePaymentMethod = selectedPaymentMethod || defaultPaymentMethod;
+  const isOnlinePayment = effectivePaymentMethod === 'MANUAL_TRANSFER' || effectivePaymentMethod === 'QRIS';
+  const hasOnlineMethods = isManualTransferEnabled || isQrisAvailable;
+  const onlineMethodsCount = (isManualTransferEnabled ? 1 : 0) + (isQrisAvailable ? 1 : 0);
+  const paymentOptionsCount = (isPayAtCashierEnabled ? 1 : 0) + onlineMethodsCount;
+  const hasMultiplePaymentOptions = paymentOptionsCount > 1;
+  const payAtCashierLabel = mode === 'delivery'
+    ? tOr(t, 'customer.payment.methods.cashOnDelivery', 'Cash on delivery')
+    : tOr(t, 'customer.payment.methods.payAtCashier', 'Pay at cashier');
+  const singlePaymentLabel = !hasMultiplePaymentOptions
+    ? (() => {
+        if (isPayAtCashierEnabled && !hasOnlineMethods) return payAtCashierLabel;
+        if (!isPayAtCashierEnabled && isManualTransferEnabled && !isQrisAvailable) return tOr(t, 'customer.payment.methods.manualTransfer', 'Manual transfer');
+        if (!isPayAtCashierEnabled && !isManualTransferEnabled && isQrisAvailable) return tOr(t, 'customer.payment.methods.qris', 'QRIS');
+        return payAtCashierLabel;
+      })()
+    : '';
+  const handleSelectOnlineMethod = () => {
+    if (isManualTransferEnabled && activePaymentAccounts.length > 0) {
+      setSelectedPaymentMethod('MANUAL_TRANSFER');
+      const firstAccount = activePaymentAccounts[0];
+      if (firstAccount?.id) {
+        setSelectedPaymentAccountId(String(firstAccount.id));
+      }
+      return;
+    }
+
+    if (isQrisAvailable) {
+      setSelectedPaymentMethod('QRIS');
+      setSelectedPaymentAccountId('');
+      return;
+    }
+
+    if (isManualTransferEnabled) {
+      setSelectedPaymentMethod('MANUAL_TRANSFER');
+    }
+  };
+  const handleSelectCashierMethod = () => {
+    setSelectedPaymentMethod(payAtCashierMethod);
+    setSelectedPaymentAccountId('');
+  };
+  const paymentInstructionImage =
+    effectivePaymentMethod === 'CASH_ON_DELIVERY'
+      ? '/images/cod.png'
+      : isOnlinePayment
+        ? '/images/ic-pay-now.svg'
+        : '/images/cashier.png';
+  const paymentInstructionText = (() => {
+    if (effectivePaymentMethod === 'CASH_ON_DELIVERY') {
+      return t('customer.payment.payOnDeliveryHint') || 'Pay on delivery. You can track your driver after the order is accepted.';
+    }
+    if (effectivePaymentMethod === 'MANUAL_TRANSFER') {
+      return tOr(t, 'customer.payment.methods.manualTransferHint', 'Transfer to the selected account after placing your order.');
+    }
+    if (effectivePaymentMethod === 'QRIS') {
+      return tOr(t, 'customer.payment.methods.qrisHint', 'Scan the QRIS code after placing your order.');
+    }
+    return t('customer.payment.showQRCode');
   })();
 
   // Loading state while cart initializes
@@ -1489,11 +1621,169 @@ export default function PaymentPage() {
             )}
           </form>
 
+          {/* Payment Method Selection */}
+          {(isPayAtCashierEnabled || hasOnlineMethods) && (
+            <div className="mb-8 mt-4 pt-4 border-t border-gray-200">
+              <div className="text-md font-semibold text-gray-900">
+                {tOr(t, 'customer.payment.methods.title', 'Payment Method')}
+              </div>
+
+              {isPayAtCashierEnabled && hasOnlineMethods && hasMultiplePaymentOptions && (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSelectOnlineMethod}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${isOnlinePayment
+                      ? 'border-[#f05a28] text-[#f05a28] bg-orange-50'
+                      : 'border-gray-200 text-gray-600 bg-white'
+                      }`}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <FaMoneyCheckAlt className="h-4 w-4" />
+                      {tOr(t, 'payment.display.online', 'Online payment')}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSelectCashierMethod}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-semibold transition ${!isOnlinePayment
+                      ? 'border-[#f05a28] text-[#f05a28] bg-orange-50'
+                      : 'border-gray-200 text-gray-600 bg-white'
+                      }`}
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      <FaCashRegister className="h-4 w-4" />
+                      {payAtCashierLabel}
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {!hasMultiplePaymentOptions && singlePaymentLabel ? (
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700">
+                  {isOnlinePayment ? <FaMoneyCheckAlt className="h-4 w-4 text-gray-500" /> : <FaCashRegister className="h-4 w-4 text-gray-500" />}
+                  <span>{singlePaymentLabel}</span>
+                </div>
+              ) : null}
+
+              {hasOnlineMethods && isOnlinePayment && (
+                <div className="mt-4">
+                  {/* <div className="text-sm font-semibold text-gray-900">
+                    {tOr(t, 'customer.payment.methods.completePayment', 'Complete payment')}
+                  </div> */}
+                  <div className="mt-3 space-y-3">
+                    {isQrisAvailable && (
+                      <label className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-50 text-orange-600">
+                            <FaQrcode className="h-4 w-4" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-gray-900">
+                              {tOr(t, 'customer.payment.methods.qris', 'QRIS')}
+                            </span>
+                            <QrisBadge
+                              size="sm"
+                              label={tOr(t, 'customer.payment.methods.qris', 'QRIS')}
+                              showIcon
+                            />
+                          </div>
+                        </div>
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="QRIS"
+                          checked={effectivePaymentMethod === 'QRIS'}
+                          onChange={() => {
+                            setSelectedPaymentMethod('QRIS');
+                            setSelectedPaymentAccountId('');
+                            if (fieldErrors.paymentMethod) {
+                              setFieldErrors((prev) => ({ ...prev, paymentMethod: undefined, paymentAccount: undefined }));
+                            }
+                          }}
+                          className="h-4 w-4 accent-[#f05a28]"
+                        />
+                      </label>
+                    )}
+
+                    {isManualTransferEnabled && activePaymentAccounts.map((account) => {
+                      const accountId = account.id ? String(account.id) : '';
+                      const label = account.providerName || account.accountName;
+                      const subtitle = account.providerName && account.accountName
+                        ? account.accountName
+                        : account.accountNumber;
+                      const accountIcon = account.type === 'EWALLET' ? <FaWallet className="h-4 w-4" /> : <FaUniversity className="h-4 w-4" />;
+                      return (
+                        <label
+                          key={accountId || label}
+                          className="flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-700"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-600">
+                              {accountIcon}
+                            </div>
+                            <div>
+                              <div className="font-semibold text-gray-900">{label}</div>
+                              <div className="text-xs text-gray-500">
+                                {subtitle}
+                                {account.accountNumber ? ` • ${account.accountNumber}` : ''}
+                              </div>
+                            </div>
+                          </div>
+                          <input
+                            type="radio"
+                            name="paymentAccount"
+                            value={accountId}
+                            checked={selectedPaymentAccountId === accountId && effectivePaymentMethod === 'MANUAL_TRANSFER'}
+                            onChange={() => {
+                              setSelectedPaymentMethod('MANUAL_TRANSFER');
+                              setSelectedPaymentAccountId(accountId);
+                              if (fieldErrors.paymentAccount || fieldErrors.paymentMethod) {
+                                setFieldErrors((prev) => ({ ...prev, paymentAccount: undefined, paymentMethod: undefined }));
+                              }
+                            }}
+                            className="h-4 w-4 accent-[#f05a28]"
+                          />
+                        </label>
+                      );
+                    })}
+                  </div>
+
+                  {isManualTransferEnabled && activePaymentAccounts.length === 0 ? (
+                    <PaymentEmptyState
+                      className="mt-3 border-dashed border-orange-200 bg-orange-50 p-3"
+                      title={tOr(t, 'customer.payment.transferAccountsTitle', 'Transfer to')}
+                      description={tOr(t, 'customer.payment.methods.noAccounts', 'No transfer accounts are available.')}
+                      iconWrapperClassName="mt-0.5 rounded-full bg-orange-100 p-2 text-orange-600"
+                      titleClassName="text-xs font-semibold text-orange-700"
+                      descriptionClassName="text-xs text-orange-700"
+                    />
+                  ) : null}
+                </div>
+              )}
+
+              {!hasOnlineMethods && isPayAtCashierEnabled && !isOnlinePayment && (
+                <p className="mt-3 text-xs text-gray-500">
+                  {mode === 'delivery'
+                    ? tOr(t, 'customer.payment.methods.cashOnDeliveryDesc', 'Pay when the driver arrives.')
+                    : tOr(t, 'customer.payment.methods.payAtCashierDesc', 'Pay when you arrive at the cashier.')}
+                </p>
+              )}
+
+              {fieldErrors.paymentMethod ? (
+                <p className="mt-2 text-xs text-red-500">{fieldErrors.paymentMethod}</p>
+              ) : null}
+              {fieldErrors.paymentAccount ? (
+                <p className="mt-2 text-xs text-red-500">{fieldErrors.paymentAccount}</p>
+              ) : null}
+            </div>
+          )}
+
           {/* Voucher */}
           {isCustomerVoucherEnabled ? (
-            <div className="mt-4 rounded-xl border border-gray-200 bg-white p-4">
+            <div className="mb-4 mt-4 pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold text-gray-900">
+                <div className="text-md font-semibold text-gray-900">
                   {tOr(t, 'customer.payment.voucher.title', 'Voucher')}
                 </div>
                 {voucherStatus === 'valid' && voucherCode.trim() && (
@@ -1519,7 +1809,7 @@ export default function PaymentPage() {
                 <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-green-800 truncate">
+                      <div className="text-base font-semibold text-green-800 truncate">
                         {voucherLabel || tOr(t, 'customer.payment.voucher.title', 'Voucher')}
                       </div>
                       {voucherTypeLabel ? (
@@ -1538,13 +1828,13 @@ export default function PaymentPage() {
                 </div>
               ) : (
                 <div className="mt-2">
-                  <label
+                  {/* <label
                     htmlFor="voucherCode"
                     className="mb-1 block"
                     style={{ fontSize: '14px', color: '#212529' }}
                   >
                     {tOr(t, 'customer.payment.voucher.codeLabel', 'Voucher code')}
-                  </label>
+                  </label> */}
 
                   <div className="flex gap-2">
                     <div className="relative flex-1">
@@ -1614,10 +1904,16 @@ export default function PaymentPage() {
         >
           <div>
             <Image
-              src={mode === 'delivery' ? '/images/cod.png' : '/images/cashier.png'}
-              alt={mode === 'delivery'
-                ? tOr(t, 'customer.payment.altPayOnDelivery', 'Pay on Delivery')
-                : tOr(t, 'customer.payment.altPayAtCashier', 'Pay at Cashier')}
+              src={paymentInstructionImage}
+              alt={
+                effectivePaymentMethod === 'CASH_ON_DELIVERY'
+                  ? tOr(t, 'customer.payment.altPayOnDelivery', 'Pay on Delivery')
+                  : effectivePaymentMethod === 'MANUAL_TRANSFER'
+                    ? tOr(t, 'customer.payment.methods.manualTransfer', 'Manual transfer')
+                    : effectivePaymentMethod === 'QRIS'
+                      ? tOr(t, 'customer.payment.methods.qris', 'QRIS')
+                      : tOr(t, 'customer.payment.altPayAtCashier', 'Pay at Cashier')
+              }
               width={300}
               height={300}
               style={{ maxWidth: '300px', height: 'auto' }}
@@ -1625,9 +1921,7 @@ export default function PaymentPage() {
           </div>
           <div>
             <span>
-              {mode === 'delivery'
-                ? (t('customer.payment.payOnDeliveryHint') || 'Pay on delivery. You can track your driver after the order is accepted.')
-                : t('customer.payment.showQRCode')}
+              {paymentInstructionText}
             </span>
           </div>
         </div>
@@ -1739,9 +2033,11 @@ export default function PaymentPage() {
           >
             {isLoading
               ? t('customer.payment.processing')
-              : (mode === 'delivery'
-                ? tOr(t, 'customer.payment.placeDeliveryOrder', 'Place delivery order')
-                : t('customer.payment.payAtCashier'))}
+              : (isOnlinePayment
+                ? tOr(t, 'customer.payment.placeOrder', 'Place order')
+                : (mode === 'delivery'
+                  ? tOr(t, 'customer.payment.placeDeliveryOrder', 'Place delivery order')
+                  : t('customer.payment.payAtCashier')))}
           </button>
         </div>
       </div>

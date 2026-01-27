@@ -97,6 +97,7 @@ interface _OrderRequestBody {
   items: OrderItemInput[];
   notes?: string;
   paymentMethod?: string;
+  paymentAccountId?: string;
   voucherCode?: string;
 }
 
@@ -160,6 +161,23 @@ interface MerchantWithConfig {
   enableServiceCharge?: boolean;
   serviceChargePercent?: number | null;
   enablePackagingFee?: boolean;
+
+  paymentSettings?: {
+    payAtCashierEnabled?: boolean;
+    manualTransferEnabled?: boolean;
+    qrisEnabled?: boolean;
+    requirePaymentProof?: boolean;
+    qrisImageUrl?: string | null;
+  } | null;
+  paymentAccounts?: Array<{
+    id: bigint;
+    type: string;
+    providerName: string;
+    accountName: string;
+    accountNumber: string;
+    bsb?: string | null;
+    isActive: boolean;
+  }>;
 
   // Opening hours + schedules
   openingHours?: Array<{
@@ -326,6 +344,8 @@ export async function POST(req: NextRequest) {
       include: {
         openingHours: true,
         modeSchedules: true,
+        paymentSettings: true,
+        paymentAccounts: true,
       },
     }) as MerchantWithConfig | null;
 
@@ -1060,15 +1080,70 @@ export async function POST(req: NextRequest) {
 
       // 1b. Create Payment record (orderId is required and unique)
       // For DELIVERY, default to CASH_ON_DELIVERY; for others, default to CASH_ON_COUNTER.
-      const requestedPaymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod : '';
-      const allowedMethods = body.orderType === 'DELIVERY'
-        ? new Set(['CASH_ON_DELIVERY', 'ONLINE'])
-        : new Set(['CASH_ON_COUNTER', 'CARD_ON_COUNTER']);
+      const paymentSettings = merchant.paymentSettings || {};
+      const payAtCashierEnabled = paymentSettings.payAtCashierEnabled !== false;
+      const manualTransferEnabled = paymentSettings.manualTransferEnabled === true;
+      const qrisEnabled = paymentSettings.qrisEnabled === true && Boolean(paymentSettings.qrisImageUrl);
 
-      const defaultMethod = body.orderType === 'DELIVERY' ? 'CASH_ON_DELIVERY' : 'CASH_ON_COUNTER';
-      const paymentMethod = requestedPaymentMethod || defaultMethod;
+      const requestedPaymentMethod = typeof body.paymentMethod === 'string' ? body.paymentMethod.toUpperCase() : '';
+      const requestedAccountId = typeof body.paymentAccountId === 'string' ? body.paymentAccountId : '';
+
+      const allowedMethods = new Set<string>();
+      if (body.orderType === 'DELIVERY') {
+        if (payAtCashierEnabled) allowedMethods.add('CASH_ON_DELIVERY');
+      } else {
+        if (payAtCashierEnabled) {
+          allowedMethods.add('CASH_ON_COUNTER');
+          allowedMethods.add('CARD_ON_COUNTER');
+        }
+      }
+      if (manualTransferEnabled) allowedMethods.add('MANUAL_TRANSFER');
+      if (qrisEnabled) allowedMethods.add('QRIS');
+      if (manualTransferEnabled || qrisEnabled) allowedMethods.add('ONLINE');
+
+      const defaultMethod = body.orderType === 'DELIVERY'
+        ? (payAtCashierEnabled ? 'CASH_ON_DELIVERY' : manualTransferEnabled ? 'MANUAL_TRANSFER' : qrisEnabled ? 'QRIS' : 'CASH_ON_DELIVERY')
+        : (payAtCashierEnabled ? 'CASH_ON_COUNTER' : manualTransferEnabled ? 'MANUAL_TRANSFER' : qrisEnabled ? 'QRIS' : 'CASH_ON_COUNTER');
+
+      let paymentMethod = requestedPaymentMethod || defaultMethod;
+      if (paymentMethod === 'ONLINE') {
+        paymentMethod = manualTransferEnabled ? 'MANUAL_TRANSFER' : qrisEnabled ? 'QRIS' : paymentMethod;
+      }
+
       if (!allowedMethods.has(paymentMethod)) {
         throw new ValidationError('Invalid payment method');
+      }
+
+      const customerPaymentNote: string | null = null;
+      let customerProofMeta: Record<string, unknown> | null = null;
+
+      if (paymentMethod === 'MANUAL_TRANSFER') {
+        const activeAccounts = Array.isArray(merchant.paymentAccounts)
+          ? merchant.paymentAccounts.filter((account) => account.isActive)
+          : [];
+
+        if (activeAccounts.length === 0) {
+          throw new ValidationError('No transfer accounts are available');
+        }
+
+        if (requestedAccountId) {
+          const matched = activeAccounts.find((account) => String(account.id) === requestedAccountId);
+          if (!matched) {
+            throw new ValidationError('Invalid transfer account');
+          }
+          customerProofMeta = {
+            accountId: matched.id.toString(),
+            type: matched.type,
+            providerName: matched.providerName,
+            accountName: matched.accountName,
+            accountNumber: matched.accountNumber,
+            bsb: matched.bsb || null,
+          };
+        }
+      }
+
+      if (paymentMethod === 'QRIS' && !paymentSettings.qrisImageUrl) {
+        throw new ValidationError('QRIS is not available');
       }
 
       await tx.payment.create({
@@ -1077,6 +1152,8 @@ export async function POST(req: NextRequest) {
           amount: totalAmountAfterDiscount,
           paymentMethod: paymentMethod as any,
           status: 'PENDING',
+          customerPaymentNote: customerPaymentNote,
+          customerProofMeta: customerProofMeta as any,
         },
       });
 

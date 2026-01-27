@@ -25,6 +25,7 @@ import {
   FaCreditCard,
   FaPrint,
   FaCheck,
+  FaCheckCircle,
   FaSpinner,
   FaChevronDown,
   FaImage,
@@ -110,6 +111,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [driversLoading, setDriversLoading] = useState(false);
   const [selectedDriverUserId, setSelectedDriverUserId] = useState<string>('');
   const [assigningDriver, setAssigningDriver] = useState(false);
+  const [proofLightboxUrl, setProofLightboxUrl] = useState<string | null>(null);
   const { showSuccess, showError } = useToast();
   const { merchant } = useMerchant();
   const { t } = useTranslation();
@@ -133,6 +135,40 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   );
   const hasAdminChanges = Boolean((order as any)?.editedAt || (order as any)?.editedByUserId);
   const isPaymentPending = !order?.payment || order.payment.status === 'PENDING';
+  const customerProofMeta = (order?.payment as any)?.customerProofMeta as Record<string, unknown> | null;
+  const customerPaidAt = (order?.payment as any)?.customerPaidAt as string | null | undefined;
+  const transferAccountLabel = customerProofMeta
+    ? [
+        customerProofMeta.providerName,
+        customerProofMeta.accountName,
+        customerProofMeta.accountNumber,
+      ]
+        .filter((value) => typeof value === 'string' && value.trim() !== '')
+        .join(' • ')
+    : '';
+
+  const rawCustomerPaymentNote = ((order?.payment as any)?.customerPaymentNote as string | null | undefined) || '';
+  const cleanedCustomerPaymentNote = (() => {
+    const trimmed = rawCustomerPaymentNote.trim();
+    if (!trimmed) return '';
+
+    const parts = trimmed
+      .split('|')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    // If the first segment is our auto-generated transfer summary, keep only the user segment(s).
+    if (parts.length > 1 && /^transfer to\s+/i.test(parts[0] || '')) {
+      return parts.slice(1).join(' | ').trim();
+    }
+
+    // If transfer metadata is already displayed, don't repeat the auto-generated transfer note.
+    if (transferAccountLabel && /^transfer to\s+/i.test(trimmed)) {
+      return '';
+    }
+
+    return trimmed;
+  })();
 
   const apiOrderId = React.useMemo(() => {
     if (/^\d+$/.test(String(orderId))) return String(orderId);
@@ -826,6 +862,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {order.payment.status === 'COMPLETED' ? 'Paid' : 'Unpaid'}
                     </span>
+                    {customerPaidAt ? (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">
+                        {t('admin.payment.paidByCustomerBadge') || 'Paid by customer'}
+                      </span>
+                    ) : null}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
                     {formatPaymentMethodLabel({
@@ -835,6 +876,109 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     })}{' '}
                     • {formatCurrency(Number((order.payment as any).amount ?? order.totalAmount))}
                   </div>
+                </div>
+              )}
+
+              {order.payment && ((order.payment as any).customerPaidAt || (order.payment as any).customerProofUrl || (order.payment as any).customerPaymentNote || customerProofMeta) && (
+                <div className="mb-4 rounded-lg border border-gray-100 dark:border-gray-800 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                      {t('admin.payment.customerConfirmation') || 'Customer confirmation'}
+                    </p>
+                    {(order.payment as any).customerPaidAt ? (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-semibold text-green-700">
+                        Confirmed
+                      </span>
+                    ) : (order.payment as any).customerProofUrl ? (
+                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
+                        Proof uploaded
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="mt-2 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    {(order.payment as any).customerPaidAt ? (
+                      <div className="flex items-center gap-2">
+                        <FaCheckCircle className="h-4 w-4 text-green-500" />
+                        <span>
+                          {t('admin.payment.customerPaidAt') || 'Paid at'}: {new Date((order.payment as any).customerPaidAt).toLocaleString()}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {order.payment?.paymentMethod === 'MANUAL_TRANSFER' && transferAccountLabel ? (
+                      <div className="flex items-start gap-2">
+                        <FaMoneyBillWave className="mt-0.5 h-4 w-4 text-gray-400" />
+                        <span>
+                          {t('admin.payment.transferAccountLabel') || 'Transfer account'}: {transferAccountLabel}
+                        </span>
+                      </div>
+                    ) : null}
+
+                    {cleanedCustomerPaymentNote ? (
+                      <div className="flex items-start gap-2">
+                        <FaStickyNote className="mt-0.5 h-4 w-4 text-gray-400" />
+                        <span>{cleanedCustomerPaymentNote}</span>
+                      </div>
+                    ) : null}
+
+                    {(order.payment as any).customerProofUrl ? (
+                      <div className="flex items-start gap-3">
+                        <FaImage className="mt-1 h-4 w-4 text-gray-400" />
+                        <div>
+                          <p className="text-xs text-gray-500">{t('admin.payment.customerProof') || 'Payment proof'}</p>
+                          <button
+                            type="button"
+                            onClick={() => setProofLightboxUrl((order.payment as any).customerProofUrl)}
+                            className="mt-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-900"
+                          >
+                            <FaEye className="h-3.5 w-3.5" />
+                            {t('admin.payment.viewProof') || 'View proof'}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {proofLightboxUrl ? (
+                    <div
+                      className="fixed inset-0 z-1100 flex items-center justify-center bg-black/70 p-4"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setProofLightboxUrl(null);
+                      }}
+                    >
+                      <div
+                        className="relative w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-gray-900"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-800">
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                              {t('admin.payment.customerProof') || 'Payment proof'}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {t('admin.payment.paidByCustomerBadge') || 'Paid by customer'}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setProofLightboxUrl(null)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                            aria-label={t('common.close') || 'Close'}
+                          >
+                            <FaTimes className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-center bg-gray-50 p-4 dark:bg-gray-950">
+                          <img
+                            src={proofLightboxUrl}
+                            alt={t('admin.payment.customerProof') || 'Payment proof'}
+                            className="max-h-[70vh] w-auto max-w-full rounded-lg object-contain"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
 

@@ -7,6 +7,10 @@ export function hasMerchantUnsavedChanges({
   originalOpeningHours,
   discountVoucherSettings,
   originalDiscountVoucherSettings,
+  paymentSettings,
+  originalPaymentSettings,
+  paymentAccounts,
+  originalPaymentAccounts,
 }: {
   formData: MerchantFormData;
   originalFormData: MerchantFormData | null;
@@ -14,6 +18,10 @@ export function hasMerchantUnsavedChanges({
   originalOpeningHours: OpeningHour[];
   discountVoucherSettings?: { posDiscountsEnabled: boolean; customerVouchersEnabled: boolean };
   originalDiscountVoucherSettings?: { posDiscountsEnabled: boolean; customerVouchersEnabled: boolean } | null;
+  paymentSettings?: unknown;
+  originalPaymentSettings?: unknown;
+  paymentAccounts?: unknown;
+  originalPaymentAccounts?: unknown;
 }): boolean {
   if (!originalFormData) return false;
 
@@ -25,5 +33,15 @@ export function hasMerchantUnsavedChanges({
       ? JSON.stringify(discountVoucherSettings) !== JSON.stringify(originalDiscountVoucherSettings)
       : false;
 
-  return formChanged || hoursChanged || discountVoucherChanged;
+  const paymentSettingsChanged =
+    paymentSettings && originalPaymentSettings
+      ? JSON.stringify(paymentSettings) !== JSON.stringify(originalPaymentSettings)
+      : false;
+
+  const paymentAccountsChanged =
+    paymentAccounts && originalPaymentAccounts
+      ? JSON.stringify(paymentAccounts) !== JSON.stringify(originalPaymentAccounts)
+      : false;
+
+  return formChanged || hoursChanged || discountVoucherChanged || paymentSettingsChanged || paymentAccountsChanged;
 }

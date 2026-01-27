@@ -511,6 +511,10 @@ model Merchant {
   // Receipt Template Settings (JSON field with customization options)
   receiptSettings        Json?                 @map("receipt_settings") @db.JsonB
 
+  // Payment settings (manual transfer, QRIS, pay-at-cashier)
+  paymentSettings       MerchantPaymentSettings?
+  paymentAccounts       MerchantPaymentAccount[]
+
   // Feature flags (structured JSON) for safe onboarding of new features
   // Example: { "reservations": { "enabled": true } }
   features               Json?                 @map("features") @db.JsonB
@@ -525,6 +529,51 @@ model Merchant {
   @@index([parentMerchantId])
   @@index([referredByInfluencerId])
   @@map("merchants")
+}
+
+// ============================================
+// MERCHANT PAYMENT SETTINGS
+// ============================================
+
+model MerchantPaymentSettings {
+  id                    BigInt   @id @default(autoincrement())
+  merchantId            BigInt   @unique @map("merchant_id")
+  payAtCashierEnabled   Boolean  @default(true) @map("pay_at_cashier_enabled")
+  manualTransferEnabled Boolean  @default(false) @map("manual_transfer_enabled")
+  qrisEnabled           Boolean  @default(false) @map("qris_enabled")
+  requirePaymentProof   Boolean  @default(false) @map("require_payment_proof")
+  qrisImageUrl          String?  @map("qris_image_url")
+  qrisImageMeta         Json?    @map("qris_image_meta") @db.JsonB
+  qrisImageUploadedAt   DateTime? @map("qris_image_uploaded_at") @db.Timestamptz(6)
+  createdAt             DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("merchant_payment_settings")
+}
+
+model MerchantPaymentAccount {
+  id            BigInt             @id @default(autoincrement())
+  merchantId    BigInt             @map("merchant_id")
+  type          PaymentAccountType @default(BANK)
+  providerName  String             @map("provider_name")
+  accountName   String             @map("account_name")
+  accountNumber String             @map("account_number")
+  bsb           String?            @map("bsb")
+  country       String?            @map("country")
+  currency      String?            @map("currency")
+  isActive      Boolean            @default(true) @map("is_active")
+  sortOrder     Int                @default(0) @map("sort_order")
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@index([isActive])
+  @@map("merchant_payment_accounts")
 }
 
 enum CustomerDisplayMode {
@@ -1157,6 +1206,11 @@ model Payment {
   gatewayResponse      Json?         @map("gateway_response")
   gatewayCallbackAt    DateTime?     @map("gateway_callback_at") @db.Timestamptz(6)
   notes                String?
+  customerPaidAt        DateTime?     @map("customer_paid_at") @db.Timestamptz(6)
+  customerProofUrl      String?       @map("customer_proof_url")
+  customerProofMeta     Json?         @map("customer_proof_meta") @db.JsonB
+  customerProofUploadedAt DateTime?   @map("customer_proof_uploaded_at") @db.Timestamptz(6)
+  customerPaymentNote   String?       @map("customer_payment_note")
   metadata             Json?
   createdAt            DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt            DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
@@ -1519,7 +1573,14 @@ enum PaymentMethod {
   CASH_ON_COUNTER
   CARD_ON_COUNTER
   CASH_ON_DELIVERY
+  MANUAL_TRANSFER
+  QRIS
   ONLINE
+}
+
+enum PaymentAccountType {
+  BANK
+  EWALLET
 }
 
 enum PaymentStatus {

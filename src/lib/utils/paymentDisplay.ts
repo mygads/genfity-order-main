@@ -41,6 +41,18 @@ export function formatPaymentMethodLabel(
   const type = String(input.orderType || '').toUpperCase();
   const paid = isPaid(input.paymentStatus);
 
+  if (method === 'MANUAL_TRANSFER') {
+    return tr(options.t, 'payment.display.manualTransfer', 'Manual transfer');
+  }
+
+  if (method === 'QRIS') {
+    return tr(options.t, 'payment.display.qris', 'QRIS');
+  }
+
+  if (method === 'ONLINE') {
+    return tr(options.t, 'payment.display.online', 'Online payment');
+  }
+
   if (type === 'DELIVERY') {
     if (method === 'CASH_ON_DELIVERY') {
       return tr(options.t, 'payment.display.cashOnDelivery', 'Cash on delivery');

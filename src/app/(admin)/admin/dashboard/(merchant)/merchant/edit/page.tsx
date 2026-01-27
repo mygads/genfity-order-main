@@ -17,6 +17,7 @@ import {
   FaTag,
   FaCodeBranch,
   FaExclamationTriangle,
+  FaCreditCard,
 } from "react-icons/fa";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AdminFormFooter from "@/components/common/AdminFormFooter";
@@ -46,9 +47,11 @@ import TableSettingsTabComponent from "@/components/merchants/merchant-edit/tabs
 import FeesTabComponent from "@/components/merchants/merchant-edit/tabs/FeesTab";
 import PinTab from "@/components/merchants/merchant-edit/tabs/PinTab";
 import BranchesTab from "@/components/merchants/merchant-edit/tabs/BranchesTab";
+import PaymentMethodsTab from "@/components/merchants/merchant-edit/tabs/PaymentMethodsTab";
 import type { MerchantFormData, OpeningHour } from "@/components/merchants/merchant-edit/types";
 import { hasMerchantUnsavedChanges } from "@/components/merchants/merchant-edit/utils/unsavedChanges";
 import type { PerDayModeScheduleHandle } from "@/components/merchants/PerDayModeSchedule";
+import type { MerchantPaymentAccount, MerchantPaymentSettings } from "@/lib/types/paymentSettings";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
@@ -82,6 +85,19 @@ export default function EditMerchantPage() {
   const [posCustomItemsMaxNameLength, setPosCustomItemsMaxNameLength] = useState<number>(80);
   const [posCustomItemsMaxPrice, setPosCustomItemsMaxPrice] = useState<number>(1);
   const [posEditOrdersEnabled, setPosEditOrdersEnabled] = useState(false);
+
+  const [paymentSettings, setPaymentSettings] = useState<MerchantPaymentSettings>({
+    payAtCashierEnabled: true,
+    manualTransferEnabled: false,
+    qrisEnabled: false,
+    requirePaymentProof: false,
+    qrisImageUrl: null,
+    qrisImageMeta: null,
+    qrisImageUploadedAt: null,
+  });
+  const [paymentAccounts, setPaymentAccounts] = useState<MerchantPaymentAccount[]>([]);
+  const [originalPaymentSettings, setOriginalPaymentSettings] = useState<MerchantPaymentSettings | null>(null);
+  const [originalPaymentAccounts, setOriginalPaymentAccounts] = useState<MerchantPaymentAccount[]>([]);
 
   const [receiptBillingInfo, setReceiptBillingInfo] = useState<{
     balance: number;
@@ -220,6 +236,7 @@ export default function EditMerchantPage() {
       'table-settings',
       'fees',
       'discount-voucher',
+      'payment-methods',
       'pos-settings',
       'receipt',
       'pin',
@@ -321,6 +338,71 @@ export default function EditMerchantPage() {
           features: merchant.features,
         });
         setPosEditOrdersEnabled(posEditOrder.enabled);
+      }
+
+      // Payment settings hydration via dedicated endpoint
+      try {
+        const paymentSettingsResponse = await fetch('/api/merchant/payment-settings', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const paymentSettingsData = await paymentSettingsResponse.json();
+
+        if (paymentSettingsResponse.ok && paymentSettingsData?.data?.settings) {
+          const settings = paymentSettingsData.data.settings as MerchantPaymentSettings;
+          const accounts = Array.isArray(paymentSettingsData.data.accounts)
+            ? (paymentSettingsData.data.accounts as MerchantPaymentAccount[])
+            : [];
+
+          setPaymentSettings(settings);
+          setPaymentAccounts(accounts);
+          setOriginalPaymentSettings(settings);
+          setOriginalPaymentAccounts(accounts);
+        } else {
+          setPaymentSettings({
+            payAtCashierEnabled: true,
+            manualTransferEnabled: false,
+            qrisEnabled: false,
+            requirePaymentProof: false,
+            qrisImageUrl: null,
+            qrisImageMeta: null,
+            qrisImageUploadedAt: null,
+          });
+          setPaymentAccounts([]);
+          setOriginalPaymentSettings({
+            payAtCashierEnabled: true,
+            manualTransferEnabled: false,
+            qrisEnabled: false,
+            requirePaymentProof: false,
+            qrisImageUrl: null,
+            qrisImageMeta: null,
+            qrisImageUploadedAt: null,
+          });
+          setOriginalPaymentAccounts([]);
+        }
+      } catch {
+        setPaymentSettings({
+          payAtCashierEnabled: true,
+          manualTransferEnabled: false,
+          qrisEnabled: false,
+          requirePaymentProof: false,
+          qrisImageUrl: null,
+          qrisImageMeta: null,
+          qrisImageUploadedAt: null,
+        });
+        setPaymentAccounts([]);
+        setOriginalPaymentSettings({
+          payAtCashierEnabled: true,
+          manualTransferEnabled: false,
+          qrisEnabled: false,
+          requirePaymentProof: false,
+          qrisImageUrl: null,
+          qrisImageMeta: null,
+          qrisImageUploadedAt: null,
+        });
+        setOriginalPaymentAccounts([]);
       }
 
       setFormData({
@@ -533,11 +615,27 @@ export default function EditMerchantPage() {
       originalOpeningHours,
       discountVoucherSettings: { posDiscountsEnabled, customerVouchersEnabled },
       originalDiscountVoucherSettings,
+      paymentSettings,
+      originalPaymentSettings,
+      paymentAccounts,
+      originalPaymentAccounts,
     });
 
     const perDayDirty = perDayModeScheduleRef.current?.isDirty?.() ?? false;
     return baseHasUnsaved || perDayDirty;
-  }, [formData, originalFormData, openingHours, originalOpeningHours, posDiscountsEnabled, customerVouchersEnabled, originalDiscountVoucherSettings]);
+  }, [
+    formData,
+    originalFormData,
+    openingHours,
+    originalOpeningHours,
+    posDiscountsEnabled,
+    customerVouchersEnabled,
+    originalDiscountVoucherSettings,
+    paymentSettings,
+    originalPaymentSettings,
+    paymentAccounts,
+    originalPaymentAccounts,
+  ]);
 
   const syncActiveTabToUrl = useCallback((tabId: string) => {
     if (typeof window === 'undefined') return;
@@ -579,6 +677,12 @@ export default function EditMerchantPage() {
     if (originalDiscountVoucherSettings) {
       setPosDiscountsEnabled(originalDiscountVoucherSettings.posDiscountsEnabled);
       setCustomerVouchersEnabled(originalDiscountVoucherSettings.customerVouchersEnabled);
+    }
+    if (originalPaymentSettings) {
+      setPaymentSettings(originalPaymentSettings);
+    }
+    if (originalPaymentAccounts) {
+      setPaymentAccounts(JSON.parse(JSON.stringify(originalPaymentAccounts)));
     }
     void perDayModeScheduleRef.current?.reset?.();
     confirmTabChange();
@@ -1018,6 +1122,23 @@ export default function EditMerchantPage() {
         throw new Error(posSettingsData.message || "Failed to update POS settings");
       }
 
+      const paymentSettingsResponse = await fetch('/api/merchant/payment-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          settings: paymentSettings,
+          accounts: paymentAccounts,
+        }),
+      });
+
+      const paymentSettingsData = await paymentSettingsResponse.json();
+      if (!paymentSettingsResponse.ok || !paymentSettingsData?.success) {
+        throw new Error(paymentSettingsData?.message || 'Failed to update payment settings');
+      }
+
       // Update opening hours
       const hoursResponse = await fetch("/api/merchant/opening-hours", {
         method: "PUT",
@@ -1072,6 +1193,20 @@ export default function EditMerchantPage() {
         posDiscountsEnabled: savedPosDiscountsEnabled,
         customerVouchersEnabled: savedCustomerVouchersEnabled,
       });
+
+      if (paymentSettingsData?.data?.settings) {
+        setPaymentSettings(paymentSettingsData.data.settings);
+        setOriginalPaymentSettings(paymentSettingsData.data.settings);
+      } else {
+        setOriginalPaymentSettings(paymentSettings);
+      }
+
+      if (Array.isArray(paymentSettingsData?.data?.accounts)) {
+        setPaymentAccounts(paymentSettingsData.data.accounts as MerchantPaymentAccount[]);
+        setOriginalPaymentAccounts(paymentSettingsData.data.accounts as MerchantPaymentAccount[]);
+      } else {
+        setOriginalPaymentAccounts(paymentAccounts);
+      }
 
       // Update original data to reflect saved state
       setOriginalFormData({ ...formData });
@@ -1252,6 +1387,21 @@ export default function EditMerchantPage() {
         return <TableSettingsTabComponent formData={formData} setFormData={setFormData} />;
       case "fees":
         return <FeesTabComponent formData={formData} setFormData={setFormData} />;
+      case 'payment-methods':
+        return (
+          <PaymentMethodsTab
+            t={t}
+            country={formData.country}
+            currency={formData.currency}
+            authToken={authToken}
+            settings={paymentSettings}
+            accounts={paymentAccounts}
+            onSettingsChange={setPaymentSettings}
+            onAccountsChange={setPaymentAccounts}
+            showSuccess={showSuccess}
+            showError={showError}
+          />
+        );
       case 'discount-voucher':
         return (
           <DiscountVoucherTab
@@ -1440,6 +1590,12 @@ export default function EditMerchantPage() {
           label: t('admin.merchant.feesCharges'),
           description: tOr(t, 'admin.merchantEdit.nav.feesDesc', 'Tax, service charge, packaging fee'),
           icon: <FaMoneyBillWave className="h-4 w-4" />,
+        },
+        {
+          id: 'payment-methods',
+          label: tOr(t, 'admin.merchantEdit.paymentMethods.navLabel', 'Payment methods'),
+          description: tOr(t, 'admin.merchantEdit.paymentMethods.navDesc', 'Cashier, transfer, and QRIS options'),
+          icon: <FaCreditCard className="h-4 w-4" />,
         },
         {
           id: 'discount-voucher',

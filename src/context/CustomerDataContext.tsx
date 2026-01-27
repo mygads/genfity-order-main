@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect, Rea
 import useSWR, { mutate as globalMutate } from 'swr';
 import { extractAddonDataFromMenus, type CachedAddonCategory } from '@/lib/utils/addonExtractor';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+import type { MerchantPaymentAccount, MerchantPaymentSettings } from '@/lib/types/paymentSettings';
 
 /**
  * GENFITY - Customer Data Context (SWR-Powered)
@@ -104,6 +105,8 @@ export interface MerchantInfo {
   // Scheduled orders (pickup/delivery scheduling)
   isScheduledOrderEnabled?: boolean;
   openingHours: OpeningHour[];
+  paymentSettings?: MerchantPaymentSettings;
+  paymentAccounts?: MerchantPaymentAccount[];
 }
 
 // Stock update for real-time updates

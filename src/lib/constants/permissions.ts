@@ -283,6 +283,7 @@ export const API_PERMISSION_MAP: Record<string, StaffPermission> = {
   '/api/merchant/analytics': STAFF_PERMISSIONS.REVENUE,
   '/api/merchant/reports': STAFF_PERMISSIONS.REPORTS,
   '/api/merchant/revenue': STAFF_PERMISSIONS.REVENUE,
+  '/api/merchant/payment-settings': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   'PUT /api/merchant/profile': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/api/merchant/opening-hours': STAFF_PERMISSIONS.MERCHANT_SETTINGS,
   '/api/merchant/special-hours': STAFF_PERMISSIONS.MERCHANT_SETTINGS,

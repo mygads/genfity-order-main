@@ -202,6 +202,27 @@ export class BlobService {
   }
 
   /**
+   * Upload merchant QRIS image
+   * @param merchantCode Merchant code
+   * @param file Image file
+   * @returns Upload result
+   */
+  static async uploadMerchantQris(
+    merchantCode: string,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const timestamp = Date.now();
+    const pathname = `merchants/${merchantCode}/payment/qris-${timestamp}.jpg`;
+
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 31536000, // 1 year
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
    * Upload merchant promo banner
    * @param merchantId Merchant ID
    * @param file Image file
@@ -282,6 +303,28 @@ export class BlobService {
       access: 'public',
       addRandomSuffix: true,
       cacheControlMaxAge: 31536000, // 1 year
+      contentType: 'image/jpeg',
+    });
+  }
+
+  /**
+   * Upload customer payment proof
+   * @param merchantCode Merchant code
+   * @param orderNumber Order number
+   * @param file Image file
+   */
+  static async uploadPaymentProof(
+    merchantCode: string,
+    orderNumber: string,
+    file: File | Buffer
+  ): Promise<UploadResult> {
+    const timestamp = Date.now();
+    const pathname = `merchants/${merchantCode}/orders/${orderNumber}/payment-proof-${timestamp}.jpg`;
+
+    return this.uploadFile(file, pathname, {
+      access: 'public',
+      addRandomSuffix: true,
+      cacheControlMaxAge: 31536000,
       contentType: 'image/jpeg',
     });
   }
@@ -512,6 +555,22 @@ export class BlobService {
   }
 
   /**
+   * Delete old merchant QRIS image before uploading new one
+   * @param merchantCode Merchant code
+   */
+  static async deleteOldMerchantQris(merchantCode: string): Promise<void> {
+    try {
+      const blobs = await this.listFiles(`merchants/${merchantCode}/payment/qris-`);
+
+      for (const blob of blobs) {
+        await this.deleteFile(blob.url);
+      }
+    } catch (error) {
+      console.warn('Failed to delete old QRIS image:', error);
+    }
+  }
+
+  /**
    * Delete old menu image before uploading new one
    * @param merchantId Merchant ID
    * @param menuId Menu ID
@@ -530,6 +589,23 @@ export class BlobService {
       }
     } catch (error) {
       console.warn('Failed to delete old menu image:', error);
+    }
+  }
+
+  /**
+   * Delete existing payment proof images for an order
+   * @param merchantCode Merchant code
+   * @param orderNumber Order number
+   */
+  static async deleteOldPaymentProof(merchantCode: string, orderNumber: string): Promise<void> {
+    try {
+      const prefix = `merchants/${merchantCode}/orders/${orderNumber}/payment-proof-`;
+      const blobs = await this.listFiles(prefix);
+      for (const blob of blobs) {
+        await this.deleteFile(blob.url);
+      }
+    } catch (error) {
+      console.warn('Failed to delete old payment proof:', error);
     }
   }
 

@@ -111,6 +111,40 @@ export async function GET(
     const refreshedMerchant = await merchantService.getMerchantByCode(params.code);
     const refreshedData = refreshedMerchant as unknown as Record<string, any>;
 
+    const paymentSettingsRaw = merchantData.paymentSettings as Record<string, any> | undefined | null;
+    const paymentAccountsRaw = Array.isArray(merchantData.paymentAccounts)
+      ? (merchantData.paymentAccounts as Array<Record<string, any>>)
+      : [];
+
+    const isQrisEligible = String(merchantData.country || '').toLowerCase() === 'indonesia'
+      && String(merchantData.currency || '').toUpperCase() === 'IDR';
+
+    const paymentSettings = {
+      payAtCashierEnabled: paymentSettingsRaw?.payAtCashierEnabled ?? true,
+      manualTransferEnabled: paymentSettingsRaw?.manualTransferEnabled ?? false,
+      qrisEnabled: isQrisEligible ? (paymentSettingsRaw?.qrisEnabled ?? false) : false,
+      requirePaymentProof: paymentSettingsRaw?.requirePaymentProof ?? false,
+      qrisImageUrl: isQrisEligible ? (paymentSettingsRaw?.qrisImageUrl ?? null) : null,
+      qrisImageMeta: isQrisEligible ? (paymentSettingsRaw?.qrisImageMeta ?? null) : null,
+      qrisImageUploadedAt: isQrisEligible ? (paymentSettingsRaw?.qrisImageUploadedAt ?? null) : null,
+    };
+
+    const activePaymentAccounts = paymentAccountsRaw
+      .filter((account) => account?.isActive !== false)
+      .map((account) => ({
+        id: account.id?.toString?.() ?? String(account.id ?? ''),
+        type: account.type ?? 'BANK',
+        providerName: account.providerName ?? '',
+        accountName: account.accountName ?? '',
+        accountNumber: account.accountNumber ?? '',
+        bsb: account.bsb ?? null,
+        country: account.country ?? null,
+        currency: account.currency ?? null,
+        isActive: account.isActive !== false,
+        sortOrder: typeof account.sortOrder === 'number' ? account.sortOrder : 0,
+      }))
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
     // Return merchant info (exclude sensitive data)
     // Use refreshed data for isOpen as it may have been updated by auto-switch
     const publicMerchantInfo = {
@@ -176,6 +210,8 @@ export async function GET(
       // Scheduled orders
       isScheduledOrderEnabled: merchantData.isScheduledOrderEnabled ?? false,
       openingHours: merchant.openingHours,
+      paymentSettings,
+      paymentAccounts: activePaymentAccounts,
     };
 
     return NextResponse.json({

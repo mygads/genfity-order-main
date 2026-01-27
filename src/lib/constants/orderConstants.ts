@@ -103,6 +103,8 @@ export const PAYMENT_METHOD_LABELS = {
   CASH_ON_COUNTER: 'Cash',
   CARD_ON_COUNTER: 'Card',
   CASH_ON_DELIVERY: 'Cash on Delivery',
+  MANUAL_TRANSFER: 'Manual transfer',
+  QRIS: 'QRIS',
   ONLINE: 'Online',
 } as const satisfies Record<PaymentMethod, string>;
 

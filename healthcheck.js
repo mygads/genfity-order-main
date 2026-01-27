@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const http = require('http');
 
 // Use HOSTNAME env var if set, otherwise try container hostname, fallback to 0.0.0.0
