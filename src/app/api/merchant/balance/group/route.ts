@@ -9,6 +9,7 @@ import { withMerchantOwner } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { successResponse, handleError } from '@/lib/middleware/errorHandler';
 import { decimalToNumber } from '@/lib/utils/serializer';
+import { PaymentStatus } from '@prisma/client';
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -63,7 +64,12 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
 
     const ids = Array.from(merchantIds);
 
-    const [merchantsResult, balances, subscriptions] = await Promise.all([
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - 30 * MS_PER_DAY);
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const [merchantsResult, balances, subscriptions, paidOrdersAgg] = await Promise.all([
       prismaClient.merchant.findMany({
         where: { id: { in: ids } },
         select: {
@@ -71,8 +77,10 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
           code: true,
           name: true,
           isActive: true,
+          country: true,
           currency: true,
           timezone: true,
+          logoUrl: true,
           parentMerchant: {
             select: { id: true },
           },
@@ -97,6 +105,27 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
           suspendReason: true,
         },
       }),
+      prisma.order.groupBy({
+        by: ['merchantId'],
+        where: {
+          merchantId: { in: ids },
+          placedAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+          payment: {
+            is: {
+              status: PaymentStatus.COMPLETED,
+            },
+          },
+        },
+        _count: {
+          _all: true,
+        },
+        _sum: {
+          totalAmount: true,
+        },
+      }),
     ]);
 
     const merchants = merchantsResult as Array<{
@@ -104,10 +133,24 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
       code: string;
       name: string;
       isActive: boolean;
+      country: string | null;
       currency: string;
       timezone: string | null;
+      logoUrl: string | null;
       parentMerchant: { id: bigint } | null;
     }>;
+
+    const earningsMap = new Map<string, { paidOrders30d: number; revenue30d: number }>();
+    (paidOrdersAgg as Array<{
+      merchantId: bigint;
+      _count: { _all: number };
+      _sum: { totalAmount: unknown };
+    }>).forEach((row) => {
+      earningsMap.set(row.merchantId.toString(), {
+        paidOrders30d: row._count?._all ?? 0,
+        revenue30d: decimalToNumber((row._sum?.totalAmount as any) ?? 0),
+      });
+    });
 
     const balanceMap = new Map(
       balances.map((balance) => [balance.merchantId.toString(), balance])
@@ -120,6 +163,10 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
       merchants.map((merchant) => {
         const balance = balanceMap.get(merchant.id.toString());
         const subscription = subscriptionMap.get(merchant.id.toString());
+        const earnings = earningsMap.get(merchant.id.toString()) || {
+          paidOrders30d: 0,
+          revenue30d: 0,
+        };
         const subscriptionType = subscription?.type ?? 'NONE';
         const daysRemaining = subscription?.type === 'TRIAL'
           ? getDaysRemaining(subscription.trialEndsAt)
@@ -139,12 +186,15 @@ async function handleGet(_request: NextRequest, authContext: AuthContext) {
             branchType,
             parentMerchantId: parentMerchantId ? parentMerchantId.toString() : null,
             isActive: merchant.isActive,
+            country: merchant.country,
             currency: merchant.currency,
             timezone: merchant.timezone,
+            logoUrl: merchant.logoUrl,
             balance: {
               amount: balance ? decimalToNumber(balance.balance) : 0,
               lastTopupAt: balance?.lastTopupAt ?? null,
             },
+            earnings,
             subscription: {
               type: subscriptionType,
               status: subscription?.status ?? 'CANCELLED',

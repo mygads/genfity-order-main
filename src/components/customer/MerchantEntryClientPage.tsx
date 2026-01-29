@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import jsQR from 'jsqr';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -184,80 +186,125 @@ export default function MerchantEntryClientPage() {
       <div className="flex-1 flex flex-col max-w-125 mx-auto w-full bg-white shadow-sm">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
           <div className="flex items-center px-4 py-3">
+            <div className="w-10" aria-hidden="true" />
             <h1 className="flex-1 text-center font-semibold text-gray-900 text-base">{t('customer.selectMerchant') || 'Select Merchant'}</h1>
+            <Link
+              href="/profile"
+              aria-label={t('customer.profile.title') || 'Profile'}
+              className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 active:scale-95 transition-all duration-200 -mr-1"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
           </div>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-center px-6 py-12 gap-5">
-          <form onSubmit={handleSubmit} className="w-full max-w-xs">
-            <div className="flex items-center bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
-              <input
-                type="text"
-                value={merchantCode}
-                onChange={(e) => setMerchantCode(e.target.value.toUpperCase())}
-                placeholder={placeholder}
-                className="flex-1 px-4 py-3 bg-transparent border-none focus:ring-0 outline-none text-sm font-medium text-gray-900 placeholder:text-gray-400 uppercase"
-              />
-              <div className="flex items-center border-l border-gray-200">
-                <button
-                  type="button"
-                  onClick={startScanner}
-                  className="p-3 text-gray-400 hover:text-brand-500 transition-colors hover:bg-gray-100"
-                  title={t('landing.hero.scanQR')}
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="14" y="14" width="3" height="3" />
-                    <path d="M17 14v3h3" />
-                    <path d="M14 17h3v3" />
-                  </svg>
-                </button>
-                <button
-                  type="submit"
-                  disabled={!merchantCode.trim()}
-                  className="p-3 text-gray-400 hover:text-brand-500 transition-colors disabled:opacity-30 hover:bg-gray-100"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <line x1="5" y1="12" x2="19" y2="12" />
-                    <polyline points="12 5 19 12 12 19" />
-                  </svg>
-                </button>
+        <main className="flex-1 flex flex-col items-center justify-center px-4 py-10">
+          <div className="w-full max-w-sm">
+            <div className="flex justify-center mb-6">
+              <div className="flex items-center gap-2">
+                <Image
+                  className="dark:hidden"
+                  src="/images/logo/logo.png"
+                  alt="Genfity"
+                  width={200}
+                  height={100}
+                  priority
+                />
+                <Image
+                  className="hidden dark:block"
+                  src="/images/logo/logo-dark-mode.png"
+                  alt="Genfity"
+                  width={200}
+                  height={100}
+                  priority
+                />
               </div>
             </div>
-          </form>
 
-          {error && (
-            <div className="w-full max-w-xs text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
+            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-5">
+              <p className="text-sm text-gray-600 text-center mb-4">
+                {t('landing.hero.scanInstructions') || 'Scan the merchant QR code or enter the merchant code.'}
+              </p>
+
+              <form onSubmit={handleSubmit} className="w-full">
+                <div className="flex items-center bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:border-brand-500 focus-within:ring-1 focus-within:ring-brand-500 transition-all">
+                  <input
+                    type="text"
+                    value={merchantCode}
+                    onChange={(e) => setMerchantCode(e.target.value.toUpperCase())}
+                    placeholder={placeholder}
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="flex-1 px-4 py-3 bg-transparent border-none focus:ring-0 outline-none text-sm font-semibold text-gray-900 placeholder:text-gray-400 uppercase"
+                  />
+                  <div className="flex items-center border-l border-gray-200">
+                    <button
+                      type="button"
+                      onClick={startScanner}
+                      className="p-3 text-gray-400 hover:text-brand-500 transition-colors hover:bg-gray-100"
+                      title={t('landing.hero.scanQR')}
+                      aria-label={t('landing.hero.scanQR')}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="3" y="3" width="7" height="7" rx="1" />
+                        <rect x="14" y="3" width="7" height="7" rx="1" />
+                        <rect x="3" y="14" width="7" height="7" rx="1" />
+                        <rect x="14" y="14" width="3" height="3" />
+                        <path d="M17 14v3h3" />
+                        <path d="M14 17h3v3" />
+                      </svg>
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={!merchantCode.trim()}
+                      className="p-3 text-gray-400 hover:text-brand-500 transition-colors disabled:opacity-30 hover:bg-gray-100"
+                      aria-label={t('common.next') || 'Continue'}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <polyline points="12 5 19 12 12 19" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                    {error}
+                  </div>
+                )}
+              </form>
             </div>
-          )}
-
-          <p className="text-xs text-gray-500 text-center max-w-xs">
-            {t('landing.hero.scanInstructions') || 'Scan the merchant QR code or enter the merchant code.'}
-          </p>
+          </div>
         </main>
+
+        <footer className="py-4 text-center border-t border-gray-100">
+          <p className="text-xs text-gray-400">{t('landing.footer')}</p>
+        </footer>
       </div>
 
       {/* Scanner Modal */}

@@ -18,6 +18,8 @@ interface MerchantData {
   description?: string;
   address?: string;
   phone?: string;
+  country?: string | null;
+  currency?: string | null;
   logoUrl?: string | null;
   bannerUrl?: string | null;
   // Ordering modes

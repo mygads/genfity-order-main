@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import jsQR from 'jsqr';
@@ -200,7 +201,18 @@ export default function CustomerMerchantNotFound() {
       <div className="flex-1 flex flex-col max-w-125 mx-auto w-full bg-white shadow-sm">
         <header className="sticky top-0 z-10 bg-white border-b border-gray-300 shadow-md">
           <div className="flex items-center px-4 py-3">
+            <div className="w-10" aria-hidden="true" />
             <h1 className="flex-1 text-center font-semibold text-gray-900 text-base">{t('common.notFound')}</h1>
+            <Link
+              href="/profile"
+              aria-label={t('customer.profile.title') || 'Profile'}
+              className="relative w-9 h-9 flex items-center justify-center rounded-full bg-white shadow-sm hover:bg-gray-50 active:scale-95 transition-all duration-200 -mr-1"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </Link>
           </div>
         </header>
 

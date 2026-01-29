@@ -6,6 +6,7 @@ import SettingsCard from '@/components/merchants/merchant-edit/ui/SettingsCard';
 import Button from '@/components/ui/Button';
 import Switch from '@/components/ui/Switch';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import { Modal } from '@/components/ui/modal';
 import {
   COUNTRIES,
   CURRENCIES,
@@ -55,6 +56,8 @@ type BranchFormState = {
 
 type BranchFormErrors = Partial<Record<keyof BranchFormState | 'parentMerchantId', string>>;
 
+type CreateMode = 'MAIN' | 'BRANCH';
+
 const DEFAULT_FORM_STATE: BranchFormState = {
   name: '',
   code: '',
@@ -72,12 +75,31 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [setMainLoading, setSetMainLoading] = useState<string | null>(null);
+  const [createMode, setCreateMode] = useState<CreateMode>('BRANCH');
   const [parentMerchantId, setParentMerchantId] = useState<string | null>(null);
   const [formData, setFormData] = useState<BranchFormState>(DEFAULT_FORM_STATE);
   const [formErrors, setFormErrors] = useState<BranchFormErrors>({});
   const [pendingMainBranch, setPendingMainBranch] = useState<BranchMerchant | null>(null);
+  const [copyFromMerchantId, setCopyFromMerchantId] = useState<string>('');
+  const [convertModalOpen, setConvertModalOpen] = useState(false);
+  const [convertMerchant, setConvertMerchant] = useState<BranchMerchant | null>(null);
+  const [convertTargetMainId, setConvertTargetMainId] = useState<string>('');
+  const [converting, setConverting] = useState(false);
 
   const mainMerchants = useMemo(() => groups.map((group) => group.main), [groups]);
+
+  const allOwnedMerchants = useMemo(() => {
+    const list: BranchMerchant[] = [];
+    for (const group of groups) {
+      list.push(group.main);
+      for (const branch of group.branches) list.push(branch);
+    }
+    return list;
+  }, [groups]);
+
+  const merchantLookup = useMemo(() => {
+    return new Map(allOwnedMerchants.map((merchant) => [merchant.id, merchant]));
+  }, [allOwnedMerchants]);
   const mainMerchantLookup = useMemo(() => {
     return new Map(mainMerchants.map((merchant) => [merchant.id, merchant]));
   }, [mainMerchants]);
@@ -107,6 +129,11 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
 
       const fetchedGroups = (result?.data?.groups || []) as BranchGroup[];
       setGroups(fetchedGroups);
+
+      setCreateMode((prev) => {
+        if (fetchedGroups.length === 0) return 'MAIN';
+        return prev;
+      });
 
       const currentMerchantId = getAdminAuth({ skipRedirect: true })?.user?.merchantId
         || (typeof window !== 'undefined' ? localStorage.getItem('merchantId') : null);
@@ -174,6 +201,22 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
     }));
   };
 
+  const handleCopyFromChange = (value: string) => {
+    setCopyFromMerchantId(value);
+
+    if (!value) return;
+    const source = merchantLookup.get(value);
+    if (!source) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      country: source.country || prev.country,
+      currency: source.currency || prev.currency,
+      timezone: source.timezone || prev.timezone,
+      isOpen: prev.isOpen,
+    }));
+  };
+
   const handleInputChange = (field: keyof BranchFormState, value: string | boolean) => {
     setFormData((prev) => ({
       ...prev,
@@ -186,11 +229,13 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
 
   const validateForm = () => {
     const errors: BranchFormErrors = {};
-    if (!parentMerchantId) {
+    if (createMode === 'BRANCH' && !parentMerchantId) {
       errors.parentMerchantId = tOr(t, 'admin.merchantEdit.branches.validationParent', 'Main merchant is required.');
     }
     if (!formData.name.trim() || formData.name.trim().length < 2) {
-      errors.name = tOr(t, 'admin.merchantEdit.branches.validationName', 'Branch name must be at least 2 characters.');
+      errors.name = createMode === 'MAIN'
+        ? tOr(t, 'admin.merchantEdit.branches.validationMainName', 'Merchant name must be at least 2 characters.')
+        : tOr(t, 'admin.merchantEdit.branches.validationName', 'Branch name must be at least 2 characters.');
     }
 
     const code = formData.code.trim();
@@ -210,6 +255,144 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleCreateMainMerchant = async () => {
+    if (!validateForm()) return;
+
+    setSubmitting(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        showError(
+          tOr(t, 'admin.merchantEdit.branches.errorTitle', 'Error'),
+          tOr(t, 'admin.merchantEdit.branches.createMainFailed', 'Failed to create main merchant.')
+        );
+        return;
+      }
+
+      const payload = {
+        name: formData.name.trim(),
+        code: formData.code.trim().toUpperCase(),
+        address: formData.address.trim() || undefined,
+        phoneNumber: formData.phoneNumber.trim() || undefined,
+        email: formData.email.trim() || undefined,
+        country: formData.country,
+        currency: formData.currency,
+        timezone: formData.timezone,
+        isOpen: formData.isOpen,
+        copyFromMerchantId: copyFromMerchantId || undefined,
+      };
+
+      const response = await fetch('/api/merchant/main', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to create main merchant');
+      }
+
+      showSuccess(
+        tOr(t, 'admin.merchantEdit.branches.successTitle', 'Success'),
+        tOr(t, 'admin.merchantEdit.branches.createMainSuccess', 'Main merchant created successfully.')
+      );
+
+      setCopyFromMerchantId('');
+      setFormData((prev) => ({
+        ...prev,
+        name: '',
+        code: '',
+        address: '',
+        phoneNumber: '',
+        email: '',
+      }));
+
+      await fetchBranches();
+    } catch (error) {
+      showError(
+        tOr(t, 'admin.merchantEdit.branches.errorTitle', 'Error'),
+        error instanceof Error
+          ? error.message
+          : tOr(t, 'admin.merchantEdit.branches.createMainFailed', 'Failed to create main merchant.')
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openConvertToBranchModal = (merchant: BranchMerchant) => {
+    setConvertMerchant(merchant);
+    setConvertTargetMainId('');
+    setConvertModalOpen(true);
+  };
+
+  const openMoveToAnotherMainModal = (merchant: BranchMerchant) => {
+    setConvertMerchant(merchant);
+    setConvertTargetMainId('');
+    setConvertModalOpen(true);
+  };
+
+  const closeConvertToBranchModal = () => {
+    if (converting) return;
+    setConvertModalOpen(false);
+    setConvertMerchant(null);
+    setConvertTargetMainId('');
+  };
+
+  const handleConvertToBranch = async () => {
+    if (!convertMerchant || !convertTargetMainId) return;
+
+    setConverting(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        showError(
+          tOr(t, 'admin.merchantEdit.branches.errorTitle', 'Error'),
+          tOr(t, 'admin.merchantEdit.branches.convertFailed', 'Failed to convert merchant.')
+        );
+        return;
+      }
+
+      const response = await fetch('/api/merchant/branches/move', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          merchantId: convertMerchant.id,
+          targetMainMerchantId: convertTargetMainId,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || 'Failed to convert merchant');
+      }
+
+      showSuccess(
+        tOr(t, 'admin.merchantEdit.branches.successTitle', 'Success'),
+        tOr(t, 'admin.merchantEdit.branches.convertSuccess', 'Merchant updated successfully.')
+      );
+
+      closeConvertToBranchModal();
+      await fetchBranches();
+    } catch (error) {
+      showError(
+        tOr(t, 'admin.merchantEdit.branches.errorTitle', 'Error'),
+        error instanceof Error
+          ? error.message
+          : tOr(t, 'admin.merchantEdit.branches.convertFailed', 'Failed to convert merchant.')
+      );
+    } finally {
+      setConverting(false);
+    }
   };
 
   const handleCreateBranch = async () => {
@@ -349,7 +532,7 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         <div className="space-y-5">
           <SettingsCard
             title={tOr(t, 'admin.merchantEdit.branches.listTitle', 'Branch overview')}
-            description={tOr(t, 'admin.merchantEdit.branches.listDesc', 'Main store and outlets in this group.')}
+            description={tOr(t, 'admin.merchantEdit.branches.listDesc', 'Manage your groups and switch a branch to be the main store.')}
             className="bg-gray-50/60 dark:bg-gray-950/40"
           >
             {loading ? (
@@ -376,10 +559,31 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">/{group.main.code}</p>
                       </div>
-                      <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
-                        {tOr(t, 'admin.merchantEdit.branches.mainBadge', 'Main')}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-900/30 dark:text-brand-200">
+                          {tOr(t, 'admin.merchantEdit.branches.mainBadge', 'Main')}
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={group.branches.length > 0}
+                          onClick={() => openConvertToBranchModal(group.main)}
+                        >
+                          {tOr(t, 'admin.merchantEdit.branches.convertToBranchButton', 'Convert to branch')}
+                        </Button>
+                      </div>
                     </div>
+
+                    {group.branches.length > 0 ? (
+                      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        {tOr(
+                          t,
+                          'admin.merchantEdit.branches.convertMainDisabledHint',
+                          'Convert to branch is disabled while this main merchant still has branches.'
+                        )}
+                      </p>
+                    ) : null}
 
                     {group.branches.length > 0 ? (
                       <div className="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-100 dark:divide-gray-800 dark:border-gray-800">
@@ -393,6 +597,16 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
                               <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-900 dark:text-gray-200">
                                 {tOr(t, 'admin.merchantEdit.branches.branchBadge', 'Branch')}
                               </span>
+                              {mainMerchants.length > 1 ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openMoveToAnotherMainModal(branch)}
+                                >
+                                  {tOr(t, 'admin.merchantEdit.branches.moveToAnotherMainButton', 'Move to another main')}
+                                </Button>
+                              ) : null}
                               <Button
                                 type="button"
                                 size="sm"
@@ -418,51 +632,117 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
           </SettingsCard>
 
           <SettingsCard
-            title={tOr(t, 'admin.merchantEdit.branches.createTitle', 'Create new branch')}
-            description={tOr(t, 'admin.merchantEdit.branches.createDesc', 'Add a new outlet under a main merchant.')}
+            title={createMode === 'MAIN'
+              ? tOr(t, 'admin.merchantEdit.branches.createMainTitle', 'Create new main merchant')
+              : tOr(t, 'admin.merchantEdit.branches.createTitle', 'Create new branch')}
+            description={createMode === 'MAIN'
+              ? tOr(t, 'admin.merchantEdit.branches.createMainDesc', 'Create a new merchant group as a main store.')
+              : tOr(t, 'admin.merchantEdit.branches.createDesc', 'Add a new outlet under a main merchant.')}
             className="bg-gray-50/60 dark:bg-gray-950/40"
           >
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={createMode === 'BRANCH' ? 'primary' : 'outline'}
+                onClick={() => {
+                  setCreateMode('BRANCH');
+                  setFormErrors({});
+                }}
+              >
+                {tOr(t, 'admin.merchantEdit.branches.modeBranch', 'Create branch')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={createMode === 'MAIN' ? 'primary' : 'outline'}
+                onClick={() => {
+                  setCreateMode('MAIN');
+                  setFormErrors({});
+                }}
+              >
+                {tOr(t, 'admin.merchantEdit.branches.modeMain', 'Create main')}
+              </Button>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {tOr(t, 'admin.merchantEdit.branches.parentLabel', 'Main merchant')}
-                </label>
-                <select
-                  value={parentMerchantId ?? ''}
-                  onChange={(event) => handleParentChange(event.target.value)}
-                  className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                >
-                  <option value="" disabled>
-                    {tOr(t, 'admin.merchantEdit.branches.parentPlaceholder', 'Select main merchant')}
-                  </option>
-                  {mainMerchants.map((merchant) => (
-                    <option key={merchant.id} value={merchant.id}>
-                      {merchant.name}
+              {createMode === 'MAIN' ? (
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.branches.copyFromLabel', 'Copy settings from (optional)')}
+                  </label>
+                  <select
+                    value={copyFromMerchantId}
+                    onChange={(event) => handleCopyFromChange(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="">
+                      {tOr(t, 'admin.merchantEdit.branches.copyFromNone', 'Do not copy')}
                     </option>
-                  ))}
-                </select>
-                {formErrors.parentMerchantId ? (
-                  <p className="mt-1 text-xs text-red-500">{formErrors.parentMerchantId}</p>
-                ) : null}
-              </div>
+                    {allOwnedMerchants.map((merchant) => (
+                      <option key={merchant.id} value={merchant.id}>
+                        {merchant.name} /{merchant.code}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    {tOr(
+                      t,
+                      'admin.merchantEdit.branches.copyFromHint',
+                      'Copies store settings like taxes, service charges, and feature toggles. Does not copy logo/banner assets.'
+                    )}
+                  </p>
+                </div>
+              ) : null}
+
+              {createMode === 'BRANCH' ? (
+                <div className="md:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {tOr(t, 'admin.merchantEdit.branches.parentLabel', 'Main merchant')}
+                  </label>
+                  <select
+                    value={parentMerchantId ?? ''}
+                    onChange={(event) => handleParentChange(event.target.value)}
+                    className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+                  >
+                    <option value="" disabled>
+                      {tOr(t, 'admin.merchantEdit.branches.parentPlaceholder', 'Select main merchant')}
+                    </option>
+                    {mainMerchants.map((merchant) => (
+                      <option key={merchant.id} value={merchant.id}>
+                        {merchant.name}
+                      </option>
+                    ))}
+                  </select>
+                  {formErrors.parentMerchantId ? (
+                    <p className="mt-1 text-xs text-red-500">{formErrors.parentMerchantId}</p>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {tOr(t, 'admin.merchantEdit.branches.branchNameLabel', 'Branch name')}
+                  {createMode === 'MAIN'
+                    ? tOr(t, 'admin.merchantEdit.branches.mainNameLabel', 'Merchant name')
+                    : tOr(t, 'admin.merchantEdit.branches.branchNameLabel', 'Branch name')}
                 </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(event) => handleInputChange('name', event.target.value)}
                   className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
-                  placeholder={tOr(t, 'admin.merchantEdit.branches.branchNamePlaceholder', 'Downtown outlet')}
+                  placeholder={createMode === 'MAIN'
+                    ? tOr(t, 'admin.merchantEdit.branches.mainNamePlaceholder', 'My new store')
+                    : tOr(t, 'admin.merchantEdit.branches.branchNamePlaceholder', 'Downtown outlet')}
                 />
                 {formErrors.name ? <p className="mt-1 text-xs text-red-500">{formErrors.name}</p> : null}
               </div>
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {tOr(t, 'admin.merchantEdit.branches.branchCodeLabel', 'Branch code')}
+                  {createMode === 'MAIN'
+                    ? tOr(t, 'admin.merchantEdit.branches.mainCodeLabel', 'Merchant code')
+                    : tOr(t, 'admin.merchantEdit.branches.branchCodeLabel', 'Branch code')}
                 </label>
                 <input
                   type="text"
@@ -590,11 +870,13 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
                 type="button"
                 variant="primary"
                 isLoading={submitting}
-                onClick={handleCreateBranch}
+                onClick={createMode === 'MAIN' ? handleCreateMainMerchant : handleCreateBranch}
               >
                 {submitting
                   ? tOr(t, 'admin.merchantEdit.branches.creatingButton', 'Creating...')
-                  : tOr(t, 'admin.merchantEdit.branches.createButton', 'Create branch')}
+                  : (createMode === 'MAIN'
+                      ? tOr(t, 'admin.merchantEdit.branches.createMainButton', 'Create main merchant')
+                      : tOr(t, 'admin.merchantEdit.branches.createButton', 'Create branch'))}
               </Button>
             </div>
           </SettingsCard>
@@ -622,6 +904,83 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         onConfirm={handleConfirmSetMain}
         onCancel={() => setPendingMainBranch(null)}
       />
+
+      <Modal
+        isOpen={convertModalOpen}
+        onClose={closeConvertToBranchModal}
+        className="max-w-2xl p-6"
+        disableImplicitClose={converting}
+      >
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {convertMerchant?.branchType === 'BRANCH'
+                ? tOr(t, 'admin.merchantEdit.branches.moveModalTitle', 'Move to another main')
+                : tOr(t, 'admin.merchantEdit.branches.convertModalTitle', 'Convert to branch')}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {convertMerchant
+                ? (convertMerchant.branchType === 'BRANCH'
+                    ? tOr(
+                        t,
+                        'admin.merchantEdit.branches.moveModalDesc',
+                        'Move {name} to another main merchant group.',
+                        { name: convertMerchant.name }
+                      )
+                    : tOr(
+                        t,
+                        'admin.merchantEdit.branches.convertModalDesc',
+                        'Move {name} under another main merchant.',
+                        { name: convertMerchant.name }
+                      ))
+                : tOr(t, 'admin.merchantEdit.branches.convertModalDescFallback', 'Move this merchant under another main merchant.')}
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+              {tOr(t, 'admin.merchantEdit.branches.convertTargetLabel', 'Target main merchant')}
+            </label>
+            <select
+              value={convertTargetMainId}
+              onChange={(event) => setConvertTargetMainId(event.target.value)}
+              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-900 dark:text-white"
+            >
+              <option value="" disabled>
+                {tOr(t, 'admin.merchantEdit.branches.convertTargetPlaceholder', 'Select a main merchant')}
+              </option>
+              {mainMerchants
+                .filter((m) => m.id !== convertMerchant?.id)
+                .filter((m) => (convertMerchant?.parentMerchantId ? m.id !== convertMerchant.parentMerchantId : true))
+                .map((merchant) => (
+                  <option key={merchant.id} value={merchant.id}>
+                    {merchant.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={closeConvertToBranchModal}
+              disabled={converting}
+            >
+              {tOr(t, 'common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={converting}
+              disabled={!convertMerchant || !convertTargetMainId}
+              onClick={handleConvertToBranch}
+            >
+              {tOr(t, 'admin.merchantEdit.branches.convertConfirmButton', 'Convert')}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

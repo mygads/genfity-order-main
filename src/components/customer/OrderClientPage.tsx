@@ -1382,8 +1382,14 @@ export default function OrderClientPage({
           }}
           merchant={{
             name: merchantInfo.name,
+            description: merchantInfo.description,
             address: merchantInfo.address,
             phone: merchantInfo.phone,
+            logoUrl: merchantInfo.logoUrl ?? undefined,
+            currency: merchantInfo.currency,
+            country: merchantInfo.country,
+            latitude: typeof merchantInfo.latitude === 'string' ? Number(merchantInfo.latitude) : merchantInfo.latitude,
+            longitude: typeof merchantInfo.longitude === 'string' ? Number(merchantInfo.longitude) : merchantInfo.longitude,
             openingHours: (Array.isArray(displayOpeningHours) ? displayOpeningHours : []).map(h => ({ ...h, is24Hours: (h as { is24Hours?: boolean }).is24Hours ?? false })),
           }}
         />

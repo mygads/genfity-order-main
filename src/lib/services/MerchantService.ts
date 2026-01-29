@@ -74,6 +74,26 @@ export interface CreateBranchInput {
 }
 
 /**
+ * Main merchant creation input (merchant owner)
+ * Creates a new MAIN merchant (a new group), not a branch.
+ */
+export interface CreateOwnerMainMerchantInput {
+  name: string;
+  code: string;
+  description?: string;
+  address?: string;
+  phoneNumber?: string;
+  email?: string;
+  isOpen?: boolean;
+  country?: string;
+  currency?: string;
+  timezone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  copyFromMerchantId?: bigint;
+}
+
+/**
  * Merchant update input
  */
 export interface UpdateMerchantInput {
@@ -579,6 +599,363 @@ class MerchantService {
     }
 
     return merchant;
+  }
+
+  /**
+   * Create a new MAIN merchant (new group) for an existing merchant owner.
+   *
+   * Note: This does NOT create a new owner user; it links the existing owner to the new merchant.
+   */
+  async createOwnerMainMerchant(ownerUserId: bigint, input: CreateOwnerMainMerchantInput): Promise<Merchant> {
+    validateRequired(input.name, 'Merchant name');
+    validateRequired(input.code, 'Merchant code');
+
+    const owner = await userRepository.findById(ownerUserId);
+    if (!owner) {
+      throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    if (owner.role !== 'MERCHANT_OWNER') {
+      throw new AuthorizationError('Only merchant owners can create merchants', ERROR_CODES.FORBIDDEN);
+    }
+
+    const normalizedCode = input.code.trim().toUpperCase();
+    validateMerchantCode(normalizedCode);
+
+    let merchantCode = normalizedCode;
+    let codeExists = await merchantRepository.codeExists(merchantCode);
+    let attempts = 0;
+    const maxAttempts = 10;
+
+    while (codeExists && attempts < maxAttempts) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      merchantCode = '';
+      for (let i = 0; i < 4; i++) {
+        merchantCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      codeExists = await merchantRepository.codeExists(merchantCode);
+      attempts++;
+    }
+
+    if (codeExists) {
+      throw new ConflictError(
+        'Unable to generate unique merchant code. Please try again.',
+        ERROR_CODES.MERCHANT_CODE_EXISTS
+      );
+    }
+
+    const currency = input.currency || 'AUD';
+
+    let copyFromSettings: {
+      enableTax: boolean;
+      taxPercentage: unknown;
+      enableServiceCharge: boolean;
+      serviceChargePercent: unknown;
+      enablePackagingFee: boolean;
+      packagingFeeAmount: unknown;
+      isDineInEnabled: boolean;
+      isTakeawayEnabled: boolean;
+      isDeliveryEnabled: boolean;
+      enforceDeliveryZones: boolean;
+      requireTableNumberForDineIn: boolean;
+      posPayImmediately: boolean;
+      isReservationEnabled: boolean;
+      isScheduledOrderEnabled: boolean;
+      reservationMenuRequired: boolean;
+      reservationMinItemCount: number;
+      deliveryMaxDistanceKm: unknown;
+      deliveryFeeBase: unknown;
+      deliveryFeePerKm: unknown;
+      deliveryFeeMin: unknown;
+      deliveryFeeMax: unknown;
+      features: unknown;
+      receiptSettings: unknown;
+    } | null = null;
+
+    if (input.copyFromMerchantId) {
+      const source = await prisma.merchant.findUnique({
+        where: { id: input.copyFromMerchantId },
+        select: {
+          id: true,
+          parentMerchantId: true,
+          branchType: true,
+          enableTax: true,
+          taxPercentage: true,
+          enableServiceCharge: true,
+          serviceChargePercent: true,
+          enablePackagingFee: true,
+          packagingFeeAmount: true,
+          isDineInEnabled: true,
+          isTakeawayEnabled: true,
+          isDeliveryEnabled: true,
+          enforceDeliveryZones: true,
+          requireTableNumberForDineIn: true,
+          posPayImmediately: true,
+          isReservationEnabled: true,
+          isScheduledOrderEnabled: true,
+          reservationMenuRequired: true,
+          reservationMinItemCount: true,
+          deliveryMaxDistanceKm: true,
+          deliveryFeeBase: true,
+          deliveryFeePerKm: true,
+          deliveryFeeMin: true,
+          deliveryFeeMax: true,
+          features: true,
+          receiptSettings: true,
+        },
+      });
+
+      if (!source) {
+        throw new NotFoundError('Copy-from merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+      }
+
+      const sourceMainId = source.parentMerchantId ?? source.id;
+      const ownerLink = await prisma.merchantUser.findFirst({
+        where: {
+          userId: ownerUserId,
+          merchantId: sourceMainId,
+          role: 'OWNER',
+          isActive: true,
+        },
+        select: { id: true },
+      });
+
+      if (!ownerLink) {
+        throw new AuthorizationError('You do not have access to the selected merchant', ERROR_CODES.FORBIDDEN);
+      }
+
+      copyFromSettings = {
+        enableTax: source.enableTax,
+        taxPercentage: source.taxPercentage,
+        enableServiceCharge: source.enableServiceCharge,
+        serviceChargePercent: source.serviceChargePercent,
+        enablePackagingFee: source.enablePackagingFee,
+        packagingFeeAmount: source.packagingFeeAmount,
+        isDineInEnabled: source.isDineInEnabled,
+        isTakeawayEnabled: source.isTakeawayEnabled,
+        isDeliveryEnabled: source.isDeliveryEnabled,
+        enforceDeliveryZones: source.enforceDeliveryZones,
+        requireTableNumberForDineIn: source.requireTableNumberForDineIn,
+        posPayImmediately: source.posPayImmediately,
+        isReservationEnabled: source.isReservationEnabled,
+        isScheduledOrderEnabled: source.isScheduledOrderEnabled,
+        reservationMenuRequired: source.reservationMenuRequired,
+        reservationMinItemCount: source.reservationMinItemCount,
+        deliveryMaxDistanceKm: source.deliveryMaxDistanceKm,
+        deliveryFeeBase: source.deliveryFeeBase,
+        deliveryFeePerKm: source.deliveryFeePerKm,
+        deliveryFeeMin: source.deliveryFeeMin,
+        deliveryFeeMax: source.deliveryFeeMax,
+        features: source.features,
+        receiptSettings: source.receiptSettings,
+      };
+    }
+
+    const receiptSettings: ReceiptSettings = {
+      ...DEFAULT_RECEIPT_SETTINGS,
+      receiptLanguage: currency === 'IDR' ? 'id' : 'en',
+      showEmail: true,
+      showCustomerPhone: true,
+      showAddonPrices: true,
+      showUnitPrice: true,
+      showCustomFooterText: false,
+      customFooterText: undefined,
+      customThankYouMessage: undefined,
+      sendCompletedOrderEmailToCustomer: false,
+    };
+
+    const features = {
+      orderVouchers: {
+        posDiscountsEnabled: true,
+        customerEnabled: false,
+      },
+      pos: {
+        customItems: {
+          enabled: false,
+        },
+      },
+    };
+
+    const merchantCreateData = {
+      name: input.name,
+      code: merchantCode,
+      description: input.description,
+      address: input.address,
+      phone: input.phoneNumber,
+      email: input.email || owner.email,
+      isOpen: input.isOpen ?? true,
+      country: input.country || 'Australia',
+      currency,
+      timezone: input.timezone || 'Australia/Sydney',
+      latitude: input.latitude || null,
+      longitude: input.longitude || null,
+      branchType: 'MAIN',
+      parentMerchantId: null,
+      enableTax: copyFromSettings?.enableTax ?? false,
+      taxPercentage: (copyFromSettings?.taxPercentage as unknown) ?? null,
+      enableServiceCharge: copyFromSettings?.enableServiceCharge ?? false,
+      serviceChargePercent: (copyFromSettings?.serviceChargePercent as unknown) ?? null,
+      enablePackagingFee: copyFromSettings?.enablePackagingFee ?? false,
+      packagingFeeAmount: (copyFromSettings?.packagingFeeAmount as unknown) ?? null,
+      isDineInEnabled: copyFromSettings?.isDineInEnabled ?? true,
+      isTakeawayEnabled: copyFromSettings?.isTakeawayEnabled ?? true,
+      isDeliveryEnabled: copyFromSettings?.isDeliveryEnabled ?? false,
+      enforceDeliveryZones: copyFromSettings?.enforceDeliveryZones ?? true,
+      requireTableNumberForDineIn: copyFromSettings?.requireTableNumberForDineIn ?? true,
+      posPayImmediately: true,
+      isReservationEnabled: copyFromSettings?.isReservationEnabled ?? false,
+      isScheduledOrderEnabled: copyFromSettings?.isScheduledOrderEnabled ?? false,
+      reservationMenuRequired: copyFromSettings?.reservationMenuRequired ?? false,
+      reservationMinItemCount: copyFromSettings?.reservationMinItemCount ?? 0,
+      deliveryMaxDistanceKm: (copyFromSettings?.deliveryMaxDistanceKm as unknown) ?? null,
+      deliveryFeeBase: (copyFromSettings?.deliveryFeeBase as unknown) ?? null,
+      deliveryFeePerKm: (copyFromSettings?.deliveryFeePerKm as unknown) ?? null,
+      deliveryFeeMin: (copyFromSettings?.deliveryFeeMin as unknown) ?? null,
+      deliveryFeeMax: (copyFromSettings?.deliveryFeeMax as unknown) ?? null,
+      features: (copyFromSettings?.features as unknown) ?? features,
+      receiptSettings: (copyFromSettings?.receiptSettings as unknown) ?? (receiptSettings as unknown as Prisma.InputJsonValue),
+      isActive: true,
+    } as Prisma.MerchantCreateInput;
+
+    const merchant = await merchantRepository.createWithUser(
+      merchantCreateData,
+      owner.id,
+      'OWNER'
+    );
+
+    try {
+      const { default: subscriptionRepository } = await import('@/lib/repositories/SubscriptionRepository');
+      const { default: balanceRepository } = await import('@/lib/repositories/BalanceRepository');
+      const { default: subscriptionService } = await import('@/lib/services/SubscriptionService');
+      const { default: userNotificationService } = await import('@/lib/services/UserNotificationService');
+      const { default: merchantTemplateService } = await import('@/lib/services/MerchantTemplateService');
+
+      const pricing = await subscriptionService.getPlanPricing(currency);
+      const trialDays = pricing.trialDays || 30;
+
+      await subscriptionRepository.createMerchantSubscription(merchant.id, trialDays);
+      await balanceRepository.getOrCreateBalance(merchant.id);
+
+      try {
+        await merchantTemplateService.createTemplateData(
+          merchant.id,
+          owner.id,
+          currency
+        );
+      } catch (templateError) {
+        console.warn('⚠️ Failed to create template data for main merchant:', templateError);
+      }
+
+      userNotificationService.notifyNewMerchantRegistration(
+        merchant.name,
+        merchant.code,
+        merchant.id
+      ).catch(err => {
+        console.error('⚠️ New main merchant notification failed:', err);
+      });
+    } catch (subscriptionError) {
+      console.warn('Failed to create main merchant subscription:', subscriptionError);
+    }
+
+    return merchant;
+  }
+
+  /**
+   * Move an existing merchant to be a BRANCH under another MAIN merchant.
+   * - If the merchant is MAIN, it must have no branches.
+   * - Target must be MAIN.
+   */
+  async moveMerchantToMain(ownerUserId: bigint, merchantId: bigint, targetMainMerchantId: bigint): Promise<void> {
+    const owner = await userRepository.findById(ownerUserId);
+    if (!owner) {
+      throw new NotFoundError('User not found', ERROR_CODES.USER_NOT_FOUND);
+    }
+
+    if (owner.role !== 'MERCHANT_OWNER') {
+      throw new AuthorizationError('Only merchant owners can manage branches', ERROR_CODES.FORBIDDEN);
+    }
+
+    if (merchantId === targetMainMerchantId) {
+      throw new ValidationError('Target main merchant must be different', ERROR_CODES.VALIDATION_FAILED);
+    }
+
+    const [merchant, target] = await Promise.all([
+      prisma.merchant.findUnique({
+        where: { id: merchantId },
+        select: {
+          id: true,
+          parentMerchantId: true,
+          branchType: true,
+        },
+      }),
+      prisma.merchant.findUnique({
+        where: { id: targetMainMerchantId },
+        select: {
+          id: true,
+          parentMerchantId: true,
+          branchType: true,
+        },
+      }),
+    ]);
+
+    if (!merchant) {
+      throw new NotFoundError('Merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+    }
+    if (!target) {
+      throw new NotFoundError('Target main merchant not found', ERROR_CODES.MERCHANT_NOT_FOUND);
+    }
+
+    if (target.parentMerchantId !== null || target.branchType !== 'MAIN') {
+      throw new ValidationError('Target merchant must be a MAIN merchant', ERROR_CODES.VALIDATION_FAILED);
+    }
+
+    const merchantGroupMainId = merchant.parentMerchantId ?? merchant.id;
+
+    const [merchantOwnerLink, targetOwnerLink] = await Promise.all([
+      prisma.merchantUser.findFirst({
+        where: {
+          userId: ownerUserId,
+          merchantId: merchantGroupMainId,
+          role: 'OWNER',
+          isActive: true,
+        },
+        select: { id: true },
+      }),
+      prisma.merchantUser.findFirst({
+        where: {
+          userId: ownerUserId,
+          merchantId: target.id,
+          role: 'OWNER',
+          isActive: true,
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    if (!merchantOwnerLink || !targetOwnerLink) {
+      throw new AuthorizationError('You do not have access to this operation', ERROR_CODES.FORBIDDEN);
+    }
+
+    if (merchant.parentMerchantId === null && merchant.branchType === 'MAIN') {
+      const branchCount = await prisma.merchant.count({
+        where: { parentMerchantId: merchant.id },
+      });
+
+      if (branchCount > 0) {
+        throw new ValidationError(
+          'This main merchant still has branches. Move branches first, or promote a branch as main within the group.',
+          ERROR_CODES.VALIDATION_FAILED
+        );
+      }
+    }
+
+    await prisma.merchant.update({
+      where: { id: merchant.id },
+      data: {
+        branchType: 'BRANCH',
+        parentMerchantId: target.id,
+      },
+    });
   }
 
   /**

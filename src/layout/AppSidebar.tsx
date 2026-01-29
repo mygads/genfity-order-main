@@ -750,7 +750,7 @@ const AppSidebar: React.FC = () => {
             isExpanded={isExpanded || isHovered || isMobileOpen}
           />
           {merchantOptions && merchantOptions.length > 1 && (isExpanded || isHovered || isMobileOpen) && (
-            <div className="mt-3 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
+            <div className="my-3 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:text-gray-200">
               <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                 {t('admin.sidebar.switchMerchant')}
               </label>

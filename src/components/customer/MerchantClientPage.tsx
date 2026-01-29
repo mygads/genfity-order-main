@@ -32,6 +32,8 @@ interface MerchantData {
     description?: string;
     address?: string;
     phone?: string;
+    currency?: string | null;
+    country?: string | null;
     logoUrl?: string | null;
     bannerUrl?: string | null;
     deliveryLabel?: string | null;
@@ -330,7 +332,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                             <div className="mb-3 flex justify-center">
                                 <span className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
                                     <FaCheckCircle className="h-3 w-3" />
-                                    <span>scheduled order</span>
+                                    <span>{tOr(t, 'customer.scheduledOrders.badge', 'Scheduled order')}</span>
                                 </span>
                             </div>
                         )}
@@ -391,7 +393,9 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                                     <span>{resolvedDeliveryLabel}</span>
                                     {(!storeOpen || !isDeliveryAvailable) && (
                                         <span className="text-xs bg-gray-300 text-gray-600 px-2 py-0.5 rounded">
-                                            {merchantHasDeliveryCoords ? t('customer.mode.unavailableNow') : (t('customer.delivery.requiresLocation') || 'Setup required')}
+                                            {merchantHasDeliveryCoords
+                                                ? t('customer.mode.unavailableNow')
+                                                : tOr(t, 'customer.delivery.requiresLocation', 'Setup required')}
                                         </span>
                                     )}
                                 </button>
@@ -457,8 +461,14 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
                 onClose={() => setShowOutletInfo(false)}
                 merchant={{
                     name: merchant.name,
+                    description: merchant.description,
                     address: merchant.address,
                     phone: merchant.phone,
+                    logoUrl: merchant.logoUrl ?? undefined,
+                    currency: merchant.currency ?? undefined,
+                    country: merchant.country ?? undefined,
+                    latitude: typeof merchant.latitude === 'string' ? Number(merchant.latitude) : merchant.latitude,
+                    longitude: typeof merchant.longitude === 'string' ? Number(merchant.longitude) : merchant.longitude,
                     openingHours: displayOpeningHours.map(h => ({
                         ...h,
                         is24Hours: h.is24Hours ?? false,

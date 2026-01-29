@@ -8,6 +8,7 @@ import { formatCurrency } from '@/lib/utils/format';
 import { getCurrencyConfig } from '@/lib/constants/location';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import { useMerchant } from '@/context/MerchantContext';
+import { Modal } from '@/components/ui/modal';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -22,11 +23,17 @@ interface GroupMerchant {
   branchType: 'MAIN' | 'BRANCH';
   parentMerchantId: string | null;
   isActive: boolean;
+  country: string | null;
   currency: string;
   timezone: string | null;
+  logoUrl: string | null;
   balance: {
     amount: number;
     lastTopupAt: string | null;
+  };
+  earnings: {
+    paidOrders30d: number;
+    revenue30d: number;
   };
   subscription: {
     type: 'TRIAL' | 'DEPOSIT' | 'MONTHLY' | 'NONE';
@@ -53,6 +60,7 @@ export default function GroupBillingPage() {
     isMerchantInactive ? null : '/api/merchant/balance/group'
   );
 
+  const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [fromMerchantId, setFromMerchantId] = useState('');
   const [toMerchantId, setToMerchantId] = useState('');
   const [amount, setAmount] = useState('');
@@ -61,6 +69,11 @@ export default function GroupBillingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useState<string | null>(null);
+
+  const [promoteTarget, setPromoteTarget] = useState<GroupMerchant | null>(null);
+  const [promoteConfirmOpen, setPromoteConfirmOpen] = useState(false);
+  const [promoteSubmittingId, setPromoteSubmittingId] = useState<string | null>(null);
+  const [promoteError, setPromoteError] = useState<string | null>(null);
 
   const groups = data?.data?.groups || [];
 
@@ -77,6 +90,17 @@ export default function GroupBillingPage() {
   const isCurrencyMismatch = Boolean(
     fromMerchant && toMerchant && fromMerchant.currency !== toMerchant.currency
   );
+  const isCountryMismatch = Boolean(
+    fromMerchant && toMerchant && fromMerchant.country && toMerchant.country && fromMerchant.country !== toMerchant.country
+  );
+  const isTransferBlocked = Boolean(
+    isSubmitting
+    || !fromMerchantId
+    || !toMerchantId
+    || fromMerchantId === toMerchantId
+    || isCurrencyMismatch
+    || isCountryMismatch
+  );
 
   const formatBalance = (value: number, currency: string) =>
     formatCurrency(value, currency, locale === 'id' ? 'id' : 'en');
@@ -89,6 +113,55 @@ export default function GroupBillingPage() {
 
   const getBranchTypeLabel = (type: GroupMerchant['branchType']) =>
     t(`admin.groupBilling.type.${type}`);
+
+  const openTransferModal = (preset?: { fromMerchantId?: string; toMerchantId?: string }) => {
+    setTransferError(null);
+    setTransferSuccess(null);
+    setAmount('');
+    setNote('');
+    setFromMerchantId(preset?.fromMerchantId ?? '');
+    setToMerchantId(preset?.toMerchantId ?? '');
+    setTransferModalOpen(true);
+  };
+
+  const openPromoteConfirm = (target: GroupMerchant) => {
+    setPromoteError(null);
+    setPromoteTarget(target);
+    setPromoteConfirmOpen(true);
+  };
+
+  const handleConfirmPromote = async () => {
+    if (!promoteTarget) return;
+
+    setPromoteConfirmOpen(false);
+    setPromoteSubmittingId(promoteTarget.id);
+    setPromoteError(null);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/merchant/branches/set-main', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ merchantId: promoteTarget.id }),
+      });
+
+      const result = await response.json();
+      if (!response.ok || !result?.success) {
+        setPromoteError(result?.message || t('admin.groupBilling.actions.setMainError'));
+        return;
+      }
+
+      await mutate();
+    } catch (err) {
+      setPromoteError(err instanceof Error ? err.message : t('admin.groupBilling.actions.setMainError'));
+    } finally {
+      setPromoteSubmittingId(null);
+      setPromoteTarget(null);
+    }
+  };
 
   const handleSubmitTransfer = () => {
     setTransferError(null);
@@ -106,6 +179,11 @@ export default function GroupBillingPage() {
 
     if (isCurrencyMismatch) {
       setTransferError(t('admin.groupBilling.transfer.validation.currencyMismatch'));
+      return;
+    }
+
+    if (isCountryMismatch) {
+      setTransferError(t('admin.groupBilling.transfer.validation.countryMismatch'));
       return;
     }
 
@@ -143,6 +221,7 @@ export default function GroupBillingPage() {
       }
 
       setTransferSuccess(t('admin.groupBilling.transfer.successMessage'));
+      setTransferModalOpen(false);
       setAmount('');
       setNote('');
       await mutate();
@@ -169,18 +248,35 @@ export default function GroupBillingPage() {
     <div className="space-y-6">
       <PageBreadcrumb pageTitle={t('admin.groupBilling.title')} />
 
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {t('admin.groupBilling.title')}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {t('admin.groupBilling.subtitle')}
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t('admin.groupBilling.title')}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('admin.groupBilling.subtitle')}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => openTransferModal()}
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600"
+        >
+          {t('admin.groupBilling.transfer.title')}
+        </button>
       </div>
 
       {error && (
         <div className="rounded-lg border border-error-200 bg-error-50 p-4 text-sm text-error-700 dark:border-error-800 dark:bg-error-900/20 dark:text-error-400">
           {error.message}
+        </div>
+      )}
+
+      {promoteError && (
+        <div className="rounded-lg border border-error-200 bg-error-50 p-4 text-sm text-error-700 dark:border-error-800 dark:bg-error-900/20 dark:text-error-400">
+          {promoteError}
+        </div>
+      )}
+
+      {transferSuccess && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
+          {transferSuccess}
         </div>
       )}
 
@@ -192,26 +288,110 @@ export default function GroupBillingPage() {
         <div className="space-y-6">
           {groups.map((group) => {
             const groupMerchants = [group.main, ...group.branches];
-            const totalBalance = groupMerchants.reduce((sum, merchant) => sum + (merchant.balance?.amount ?? 0), 0);
-            const groupCurrency = group.main.currency || 'IDR';
+            const totalsByCurrency = new Map<string, { balance: number; revenue30d: number }>();
+            for (const m of groupMerchants) {
+              const currency = m.currency || 'IDR';
+              const prev = totalsByCurrency.get(currency) || { balance: 0, revenue30d: 0 };
+              prev.balance += m.balance?.amount ?? 0;
+              prev.revenue30d += m.earnings?.revenue30d ?? 0;
+              totalsByCurrency.set(currency, prev);
+            }
+
+            const currencies = Array.from(totalsByCurrency.keys()).sort();
+            const isMultiCurrency = currencies.length > 1;
+            const groupCurrency = group.main.currency || currencies[0] || 'IDR';
+            const totalBalance = isMultiCurrency
+              ? null
+              : totalsByCurrency.get(groupCurrency)?.balance ?? 0;
+            const totalRevenue30d = isMultiCurrency
+              ? null
+              : totalsByCurrency.get(groupCurrency)?.revenue30d ?? 0;
+            const totalPaidOrders30d = groupMerchants.reduce(
+              (sum, m) => sum + (m.earnings?.paidOrders30d ?? 0),
+              0
+            );
 
             return (
               <div key={group.main.id} className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {group.main.name}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">/{group.main.code}</p>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {t('admin.groupBilling.groupsSubtitle')}
-                    </p>
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 overflow-hidden rounded-xl border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
+                      {group.main.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={group.main.logoUrl}
+                          alt={group.main.name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-600 dark:text-gray-300">
+                          {group.main.name?.slice(0, 2)?.toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="text-base font-semibold text-gray-900 dark:text-white">
+                        {group.main.name}
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                        <span>/{group.main.code}</span>
+                        {group.main.country ? (
+                          <span className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                            {group.main.country}
+                          </span>
+                        ) : null}
+                        {currencies.map((currency) => (
+                          <span
+                            key={currency}
+                            className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-gray-600 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                          >
+                            {currency}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        {t('admin.groupBilling.groupsSubtitle')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="rounded-lg bg-gray-50 px-4 py-2 text-right text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-200">
-                    <p className="text-xs uppercase text-gray-400">{t('admin.groupBilling.table.balance')}</p>
-                    <p className="text-base font-semibold">
-                      {formatBalance(totalBalance, groupCurrency)}
-                    </p>
+
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-800">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.groupBilling.stats.balanceTotal')}</p>
+                      <div className="mt-0.5 space-y-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+                        {isMultiCurrency
+                          ? currencies.map((currency) => (
+                              <div key={currency}>{formatBalance(totalsByCurrency.get(currency)?.balance ?? 0, currency)}</div>
+                            ))
+                          : <div>{formatBalance(totalBalance ?? 0, groupCurrency)}</div>}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-800">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.groupBilling.stats.revenue30d')}</p>
+                      <div className="mt-0.5 space-y-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+                        {isMultiCurrency
+                          ? currencies.map((currency) => (
+                              <div key={currency}>{formatBalance(totalsByCurrency.get(currency)?.revenue30d ?? 0, currency)}</div>
+                            ))
+                          : <div>{formatBalance(totalRevenue30d ?? 0, groupCurrency)}</div>}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-800">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.groupBilling.stats.orders30d')}</p>
+                      <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+                        {totalPaidOrders30d}
+                      </p>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-800 dark:bg-gray-800">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{t('admin.groupBilling.stats.branches')}</p>
+                      <p className="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
+                        {groupMerchants.length}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
@@ -224,143 +404,234 @@ export default function GroupBillingPage() {
                         <th className="px-3 py-2 text-left">{t('admin.groupBilling.table.subscription')}</th>
                         <th className="px-3 py-2 text-left">{t('admin.groupBilling.table.status')}</th>
                         <th className="px-3 py-2 text-right">{t('admin.groupBilling.table.daysRemaining')}</th>
+                        <th className="px-3 py-2 text-right">{t('admin.groupBilling.table.revenue30d')}</th>
                         <th className="px-3 py-2 text-right">{t('admin.groupBilling.table.balance')}</th>
+                        <th className="px-3 py-2 text-right">{t('admin.groupBilling.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-700 dark:text-gray-200">
                       {groupMerchants.map((merchant) => (
                         <tr key={merchant.id} className="border-t border-gray-100 dark:border-gray-800">
                           <td className="px-3 py-2">
-                            <div className="font-medium text-gray-900 dark:text-white">{merchant.name}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">/{merchant.code}</div>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-gray-800">
+                                {merchant.logoUrl ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={merchant.logoUrl}
+                                    alt={merchant.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                    {merchant.name?.slice(0, 2)?.toUpperCase()}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900 dark:text-white">{merchant.name}</div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">/{merchant.code}</div>
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-3 py-2">{getBranchTypeLabel(merchant.branchType)}</td>
+                          <td className="px-3 py-2">
+                            <span className={
+                              merchant.branchType === 'MAIN'
+                                ? 'inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
+                                : 'inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-700 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                            }>
+                              {getBranchTypeLabel(merchant.branchType)}
+                            </span>
+                          </td>
                           <td className="px-3 py-2">{getSubscriptionLabel(merchant.subscription.type)}</td>
                           <td className="px-3 py-2">{getStatusLabel(merchant.subscription.status)}</td>
                           <td className="px-3 py-2 text-right">
                             {merchant.subscription.daysRemaining ?? '—'}
                           </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {merchant.earnings?.paidOrders30d ?? 0} {t('admin.groupBilling.table.orders30dShort')}
+                            </div>
+                            <div className="font-medium">
+                              {formatBalance(merchant.earnings?.revenue30d ?? 0, merchant.currency)}
+                            </div>
+                          </td>
                           <td className="px-3 py-2 text-right font-medium">
                             {formatBalance(merchant.balance?.amount ?? 0, merchant.currency)}
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => openTransferModal({ fromMerchantId: merchant.id })}
+                                className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+                              >
+                                {t('admin.groupBilling.transfer.submit')}
+                              </button>
+
+                              {merchant.branchType === 'BRANCH' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => openPromoteConfirm(merchant)}
+                                  disabled={promoteSubmittingId === merchant.id}
+                                  className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
+                                >
+                                  {promoteSubmittingId === merchant.id
+                                    ? t('admin.groupBilling.actions.promoting')
+                                    : t('admin.groupBilling.actions.setMain')}
+                                </button>
+                              ) : null}
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
               </div>
             );
           })}
         </div>
       )}
 
-      <div className="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {t('admin.groupBilling.transfer.title')}
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {t('admin.groupBilling.transfer.subtitle')}
-          </p>
-        </div>
+      <Modal
+        isOpen={transferModalOpen}
+        onClose={() => setTransferModalOpen(false)}
+        className="max-w-[760px] m-4"
+      >
+        <div className="p-6">
+          <div className="mb-5">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {t('admin.groupBilling.transfer.title')}
+            </h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t('admin.groupBilling.transfer.subtitle')}
+            </p>
+          </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.groupBilling.transfer.fromLabel')}
-            </label>
-            <select
-              value={fromMerchantId}
-              onChange={(event) => setFromMerchantId(event.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.groupBilling.transfer.fromLabel')}
+              </label>
+              <select
+                value={fromMerchantId}
+                onChange={(event) => setFromMerchantId(event.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+              >
+                <option value="">{t('admin.groupBilling.transfer.selectBranchPlaceholder')}</option>
+                {allMerchants
+                  .filter((m) => m.id !== toMerchantId)
+                  .filter((m) => {
+                    if (!toMerchant) return true;
+                    if (toMerchant.currency && m.currency && m.currency !== toMerchant.currency) return false;
+                    if (toMerchant.country && m.country && m.country !== toMerchant.country) return false;
+                    return true;
+                  })
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.groupBilling.transfer.toLabel')}
+              </label>
+              <select
+                value={toMerchantId}
+                onChange={(event) => setToMerchantId(event.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+              >
+                <option value="">{t('admin.groupBilling.transfer.selectBranchPlaceholder')}</option>
+                {allMerchants
+                  .filter((m) => m.id !== fromMerchantId)
+                  .filter((m) => {
+                    if (!fromMerchant) return true;
+                    if (fromMerchant.currency && m.currency && m.currency !== fromMerchant.currency) return false;
+                    if (fromMerchant.country && m.country && m.country !== fromMerchant.country) return false;
+                    return true;
+                  })
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.groupBilling.transfer.amountLabel')}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step={decimals === 0 ? '1' : '0.01'}
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                disabled={!fromMerchantId || !toMerchantId}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500 dark:border-gray-800 dark:bg-gray-950 dark:text-white dark:disabled:bg-gray-900"
+                placeholder={!fromMerchantId || !toMerchantId ? '—' : formatBalance(0, transferCurrency)}
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('admin.groupBilling.transfer.noteLabel')}
+              </label>
+              <input
+                type="text"
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+                placeholder={t('admin.groupBilling.transfer.notePlaceholder')}
+              />
+            </div>
+          </div>
+
+          {isCurrencyMismatch && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+              {t('admin.groupBilling.transfer.validation.currencyMismatch')}
+            </div>
+          )}
+
+          {isCountryMismatch && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
+              {t('admin.groupBilling.transfer.validation.countryMismatch')}
+            </div>
+          )}
+
+          {transferError && (
+            <div className="mt-4 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-800 dark:bg-error-900/20 dark:text-error-400">
+              {transferError}
+            </div>
+          )}
+
+          <div className="mt-6 flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setTransferModalOpen(false)}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-950 dark:text-gray-200 dark:hover:bg-gray-900"
             >
-              <option value="">{t('admin.groupBilling.transfer.selectBranchPlaceholder')}</option>
-              {allMerchants.map((merchant) => (
-                <option key={merchant.id} value={merchant.id}>
-                  {merchant.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.groupBilling.transfer.toLabel')}
-            </label>
-            <select
-              value={toMerchantId}
-              onChange={(event) => setToMerchantId(event.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmitTransfer}
+              disabled={isTransferBlocked}
+              className="inline-flex h-10 items-center justify-center rounded-lg bg-brand-500 px-4 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <option value="">{t('admin.groupBilling.transfer.selectBranchPlaceholder')}</option>
-              {allMerchants.map((merchant) => (
-                <option key={merchant.id} value={merchant.id}>
-                  {merchant.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.groupBilling.transfer.amountLabel')}
-            </label>
-            <input
-              type="number"
-              min="0"
-              step={decimals === 0 ? '1' : '0.01'}
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-              placeholder={formatBalance(0, transferCurrency)}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              {t('admin.groupBilling.transfer.noteLabel')}
-            </label>
-            <input
-              type="text"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              className="h-11 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-gray-800 dark:bg-gray-950 dark:text-white"
-              placeholder={t('admin.groupBilling.transfer.notePlaceholder')}
-            />
+              {isSubmitting
+                ? t('admin.groupBilling.transfer.submitting')
+                : t('admin.groupBilling.transfer.submit')}
+            </button>
           </div>
         </div>
-
-        {isCurrencyMismatch && (
-          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700 dark:border-amber-800 dark:bg-amber-900/20 dark:text-amber-400">
-            {t('admin.groupBilling.transfer.validation.currencyMismatch')}
-          </div>
-        )}
-
-        {transferError && (
-          <div className="mt-4 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-800 dark:bg-error-900/20 dark:text-error-400">
-            {transferError}
-          </div>
-        )}
-
-        {transferSuccess && (
-          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400">
-            {transferSuccess}
-          </div>
-        )}
-
-        <div className="mt-5 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={handleSubmitTransfer}
-            disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting
-              ? t('admin.groupBilling.transfer.submitting')
-              : t('admin.groupBilling.transfer.submit')}
-          </button>
-        </div>
-      </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={confirmOpen}
@@ -375,6 +646,19 @@ export default function GroupBillingPage() {
         variant="warning"
         onConfirm={handleConfirmTransfer}
         onCancel={() => setConfirmOpen(false)}
+      />
+
+      <ConfirmDialog
+        isOpen={promoteConfirmOpen}
+        title={t('admin.groupBilling.actions.confirmSetMainTitle')}
+        message={t('admin.groupBilling.actions.confirmSetMainMessage', {
+          branch: promoteTarget?.name || '',
+        })}
+        confirmText={t('admin.groupBilling.actions.setMain')}
+        cancelText={t('common.cancel')}
+        variant="warning"
+        onConfirm={handleConfirmPromote}
+        onCancel={() => setPromoteConfirmOpen(false)}
       />
     </div>
   );
