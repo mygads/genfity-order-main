@@ -7,6 +7,8 @@ type Theme = "light" | "dark";
 
 type ThemeContextType = {
   theme: Theme;
+  isInitialized: boolean;
+  setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
 };
 
@@ -32,8 +34,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.setItem("theme", theme);
       if (theme === "dark") {
         document.documentElement.classList.add("dark");
+        document.body.classList.add("dark");
       } else {
         document.documentElement.classList.remove("dark");
+        document.body.classList.remove("dark");
       }
     }
   }, [theme, isInitialized]);
@@ -43,7 +47,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, isInitialized, setTheme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );

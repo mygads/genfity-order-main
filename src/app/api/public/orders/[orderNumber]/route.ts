@@ -161,6 +161,9 @@ export async function GET(
     delete (serialized as any).kitchenNotes;
     delete (serialized as any).editedByUserId;
 
+    // Safe flag for UI: indicates an admin edited the order.
+    (serialized as any).changedByAdmin = Boolean(order.editedAt);
+
     // If this order was created from a reservation, include reservation details
     // (safe because tokenized access is already validated above).
     if (order.reservation) {

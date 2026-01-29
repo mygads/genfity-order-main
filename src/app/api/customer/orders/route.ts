@@ -35,7 +35,7 @@ import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
  * Fetch all orders for authenticated customer
  */
 export const GET = withCustomer(async (
-  _request: NextRequest,
+  request: NextRequest,
   context: CustomerAuthContext,
 ) => {
   try {
@@ -62,9 +62,19 @@ export const GET = withCustomer(async (
       .map((r) => r.orderId)
       .filter((id): id is bigint => typeof id === 'bigint');
 
+    const rangeDaysRaw = request.nextUrl.searchParams.get('rangeDays');
+    const rangeDaysParsed = rangeDaysRaw ? Number(rangeDaysRaw) : 30;
+    const rangeDays = rangeDaysParsed === 30 || rangeDaysParsed === 60 || rangeDaysParsed === 90 || rangeDaysParsed === 365
+      ? rangeDaysParsed
+      : 30;
+    const startDate = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
+
     const orders = await prisma.order.findMany({
       where: {
         customerId: context.customerId,
+        placedAt: {
+          gte: startDate,
+        },
         ...(excludedOrderIds.length > 0
           ? {
               id: {

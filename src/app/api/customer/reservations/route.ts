@@ -14,13 +14,23 @@ import { serializeBigInt } from '@/lib/utils/serializer';
 import { createOrderTrackingToken } from '@/lib/utils/orderTrackingToken';
 
 export const GET = withCustomer(async (
-  _request: NextRequest,
+  request: NextRequest,
   context: CustomerAuthContext,
 ) => {
   try {
+    const rangeDaysRaw = request.nextUrl.searchParams.get('rangeDays');
+    const rangeDaysParsed = rangeDaysRaw ? Number(rangeDaysRaw) : 30;
+    const rangeDays = rangeDaysParsed === 30 || rangeDaysParsed === 60 || rangeDaysParsed === 90 || rangeDaysParsed === 365
+      ? rangeDaysParsed
+      : 30;
+    const startDate = new Date(Date.now() - rangeDays * 24 * 60 * 60 * 1000);
+
     const reservations = await prisma.reservation.findMany({
       where: {
         customerId: context.customerId,
+        createdAt: {
+          gte: startDate,
+        },
       },
       include: {
         merchant: {

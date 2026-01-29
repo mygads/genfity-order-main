@@ -2,6 +2,9 @@
 
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useState, ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+import { LANDING_CONTAINER, LANDING_H2, LANDING_P, LANDING_SECTION } from './landingStyles';
 
 type FAQCategory = 'general' | 'features' | 'pricing' | 'technical' | 'support';
 
@@ -74,16 +77,12 @@ export default function FAQSection() {
     };
 
     return (
-        <section id="faq" className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900/50">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="faq" className={cn(LANDING_SECTION, 'border-b border-gray-100')}>
+            <div className={cn(LANDING_CONTAINER, 'max-w-4xl')}>
                 {/* Header */}
-                <div className="text-center mb-10 space-y-3">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                        {t('landing.faq.title')}
-                    </h2>
-                    <p className="text-base text-gray-600 dark:text-gray-400">
-                        {t('landing.faq.subtitle')}
-                    </p>
+                <div className="mx-auto max-w-3xl text-center space-y-3 mb-12">
+                    <h2 className={LANDING_H2}>{t('landing.faq.title')}</h2>
+                    <p className={LANDING_P}>{t('landing.faq.subtitle')}</p>
                 </div>
 
                 {/* Category Tabs */}
@@ -92,11 +91,10 @@ export default function FAQSection() {
                         <button
                             key={cat.key}
                             onClick={() => handleCategoryChange(cat.key)}
-                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                                activeCategory === cat.key
-                                    ? 'bg-[#173C82] text-white shadow-lg shadow-blue-900/20'
-                                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
-                            }`}
+                            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${activeCategory === cat.key
+                                ? 'bg-[#173C82] text-white shadow-lg shadow-blue-900/20'
+                                : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                }`}
                         >
                             {cat.icon}
                             {t(`landing.faq.category.${cat.key}`)}
@@ -107,31 +105,32 @@ export default function FAQSection() {
                 {/* FAQ Items */}
                 <div className="space-y-2">
                     {faqData[activeCategory].map((item, index) => (
-                        <div
+                        <motion.div
                             key={`${activeCategory}-${item}`}
-                            className={`border rounded-xl transition-all duration-200 ${
-                                openIndex === index
-                                    ? 'border-[#173C82]/30 bg-blue-50/50 dark:border-blue-800/30 dark:bg-blue-900/10'
-                                    : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
-                            }`}
+                            initial={{ opacity: 0, y: 10 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: index * 0.05 }}
+                            className={`border rounded-xl transition-all duration-200 ${openIndex === index
+                                    ? 'border-[#173C82]/30 bg-blue-50/50'
+                                    : 'border-gray-200 bg-white hover:border-gray-300'
+                                }`}
                         >
                             <button
                                 onClick={() => toggleFAQ(index)}
                                 className="w-full flex items-center justify-between p-4 text-left focus:outline-none"
                             >
-                                <span className={`text-sm font-semibold pr-4 ${
-                                    openIndex === index 
-                                        ? 'text-[#173C82] dark:text-blue-400' 
-                                        : 'text-gray-900 dark:text-white'
-                                }`}>
+                                <span className={`text-sm font-semibold pr-4 ${openIndex === index
+                                        ? 'text-[#173C82]'
+                                        : 'text-gray-900'
+                                    }`}>
                                     {t(`landing.faq.${activeCategory}.q${item}`)}
                                 </span>
                                 <svg
-                                    className={`w-4 h-4 flex-shrink-0 transform transition-transform duration-200 ${
-                                        openIndex === index 
-                                            ? 'rotate-180 text-[#173C82] dark:text-blue-400' 
+                                    className={`w-4 h-4 flex-shrink-0 transform transition-transform duration-200 ${openIndex === index
+                                            ? 'rotate-180 text-[#173C82]'
                                             : 'text-gray-400'
-                                    }`}
+                                        }`}
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -140,28 +139,34 @@ export default function FAQSection() {
                                 </svg>
                             </button>
 
-                            <div
-                                className={`overflow-hidden transition-all duration-200 ease-in-out ${
-                                    openIndex === index ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-                                }`}
-                            >
-                                <div className="px-4 pb-4 text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                                    {t(`landing.faq.${activeCategory}.a${item}`)}
-                                </div>
-                            </div>
-                        </div>
+                            <AnimatePresence>
+                                {openIndex === index && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <div className="px-4 pb-4 text-sm text-gray-600 leading-relaxed">
+                                            {t(`landing.faq.${activeCategory}.a${item}`)}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </motion.div>
                     ))}
                 </div>
 
                 {/* Contact CTA */}
                 <div className="mt-10 text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                    <p className="text-sm text-gray-500 mb-3">
                         {t('landing.faq.stillHaveQuestions')}
                     </p>
                     <div className="flex flex-wrap justify-center gap-3">
                         <a
                             href="mailto:support@genfity.com"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-[#173C82] hover:text-[#173C82] dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-[#173C82] hover:text-[#173C82] transition-colors"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -170,7 +175,7 @@ export default function FAQSection() {
                         </a>
                         <a
                             href="mailto:genfity@gmail.com"
-                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 hover:border-[#173C82] hover:text-[#173C82] dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors"
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:border-[#173C82] hover:text-[#173C82] transition-colors"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -184,7 +189,7 @@ export default function FAQSection() {
                             className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl text-sm font-medium transition-colors"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
                             </svg>
                             WhatsApp
                         </a>

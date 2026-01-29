@@ -622,8 +622,8 @@ function buildFooterSection(
       const baseUrl = getPublicAppOrigin('https://order.genfity.com');
       const orderNumberEncoded = encodeURIComponent(order.orderNumber);
       const trackingUrl = order.trackingToken
-        ? `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(order.trackingToken)}`
-        : `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}`;
+        ? `${baseUrl}/merchant/${merchantCode.toUpperCase()}/track/${orderNumberEncoded}?token=${encodeURIComponent(order.trackingToken)}`
+        : `${baseUrl}/merchant/${merchantCode.toUpperCase()}/track/${orderNumberEncoded}`;
       const qrSizePx = settings.paperSize === '58mm' ? 90 : 110;
       if (trackingUrl) {
         const qrDataUri = buildQrSvgDataUri(trackingUrl, qrSizePx);

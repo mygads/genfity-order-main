@@ -310,6 +310,9 @@ const en = {
   "auth.passwordMinChars": "Minimum 6 characters",
   "auth.passwordsMatch": "✓ Passwords match",
   "auth.passwordsDontMatch": "✗ Passwords do not match",
+  "auth.invalidLinkTitle": "Invalid link",
+  "auth.invalidLinkMessage": "This link is invalid or missing required information.",
+  "auth.requestNewLink": "Request a new link",
 
   // Errors
   "auth.error.invalidCredentials": "Invalid email/phone or password",
@@ -351,6 +354,9 @@ const en = {
   "customer.notFound.merchantPageTitle": "Page not found",
   "customer.notFound.merchantPageMessage": "We couldn't find this page in {merchantCode}.\nYou can go back to the merchant main page.",
   "customer.notFound.backToMerchant": "Back to merchant",
+  "customer.notFound.customerPageTitle": "Page not found",
+  "customer.notFound.customerPageMessage": "We couldn't find this page.\nYou can go back to the merchant entry page.",
+  "customer.notFound.backToMerchantEntry": "Back to merchant entry",
 
   // Customer - Toasts & scheduled/reservation hints
   "customer.toast.modeUnavailableTitle": "Mode Unavailable",
@@ -642,6 +648,7 @@ const en = {
   "customer.orderDetail.table": "Table",
   "customer.orderDetail.paymentMethod": "Payment Method",
   "customer.orderDetail.paymentStatus": "Payment Status",
+  "customer.orderDetail.changedByAdmin": "Changed by admin",
 
   // Order Summary
   "customer.orderSummary.title": "Order Summary",
@@ -716,6 +723,11 @@ const en = {
 
   // Order History
   "customer.history.title": "Order History",
+  "customer.history.rangeLabel": "Range",
+  "customer.history.last30Days": "Last 30 days",
+  "customer.history.last2Months": "Last 2 months",
+  "customer.history.last3Months": "Last 3 months",
+  "customer.history.last1Year": "Last 1 year",
   "customer.history.allOrders": "All",
   "customer.history.activeOrders": "Active",
   "customer.history.completedOrders": "Completed",
@@ -742,6 +754,19 @@ const en = {
   "customer.reorder.success": "{count} item(s) added to cart",
   "customer.reorder.partialSuccess": "{added} item(s) added, {skipped} unavailable",
   "customer.reorder.noAvailableItems": "No items available for re-order",
+  "customer.reorder.switchMerchantTitle": "Switch merchant?",
+  "customer.reorder.switchMerchantMessage": "Your current cart is for a different merchant. Switching will replace your cart. Continue?",
+  "customer.reorder.switchMerchantConfirm": "Yes, switch",
+  "customer.reorder.previewTitle": "Re-order summary",
+  "customer.reorder.previewWillAdd": "Will add",
+  "customer.reorder.previewWillSkip": "Will skip",
+  "customer.reorder.previewSkippedReason": "Skipped items (reason)",
+  "customer.reorder.previewConfirm": "Continue",
+  "customer.reorder.reason.outOfStock": "Out of stock",
+  "customer.reorder.reason.unavailable": "Unavailable",
+  "customer.reorder.reason.deleted": "Removed",
+  "customer.reorder.reason.unknown": "Unavailable",
+  "customer.reorder.reason.addonsUnavailable": "Some addons are unavailable",
 
   // Receipt/Invoice PDF
   "customer.receipt.downloadReceipt": "Download Receipt",
@@ -757,8 +782,8 @@ const en = {
   "customer.profile.orderHistory": "Order History",
   "customer.profile.helpCenter": "Help Center",
   "customer.profile.privacyPolicy": "Privacy Policy",
-  "customer.profile.signOutConfirm": "Sign Out?",
-  "customer.profile.signOutMessage": "You will be signed out from your account",
+  "customer.profile.signOutConfirm": "Log out from your account?",
+  "customer.profile.signOutMessage": "Vouchers/promos you've applied will be automatically removed.",
   "customer.profile.profileUpdated": "Profile updated successfully!",
   "customer.profile.updateFailed": "Failed to update profile",
 
@@ -3294,6 +3319,19 @@ const en = {
   "landing.hero.badges.trial": "Free Trial 30 Days",
   "landing.hero.badges.noCard": "No Credit Card",
 
+  // Showcase
+  "landing.showcase.title": "Dashboard previews",
+  "landing.showcase.subtitle": "A quick look at the customer app and admin dashboard across devices.",
+
+  // Macbook scroll
+  "landing.macbook.title": "See it in action",
+  "landing.macbook.subtitle": "A smooth, scrollable dashboard preview inside a familiar laptop frame.",
+
+  // Landing kickers
+  "landing.kicker.features": "✨ Features",
+  "landing.kicker.pricing": "💰 Pricing",
+  "landing.kicker.testimonials": "⭐ Testimonials",
+
   // Features
   "landing.features.title": "Powerful Features for Your Growth",
   "landing.features.subtitle": "Everything you need to run your food and beverage business efficiently.",
@@ -3310,6 +3348,10 @@ const en = {
   "landing.features.kitchen.title": "Kitchen Display System",
   "landing.features.kitchen.desc": "Orders go straight to the kitchen screen. Improve accuracy and speed up service.",
 
+  // Highlights (section)
+  "landing.highlights.sectionTitle": "Built for daily operations",
+  "landing.highlights.sectionSubtitle": "From customer ordering to admin insights and kitchen flow—everything stays connected.",
+
 
   // Stats
   "landing.stats.title": "#AlwaysThere for Business Owners",
@@ -3322,6 +3364,73 @@ const en = {
   "landing.stats.years_desc": "Experience serving F&B businesses",
   "landing.stats.uptime": "Uptime",
   "landing.stats.uptime_desc": "Reliable cloud infrastructure",
+
+  // Trusted by
+  "landing.trustedBy.title": "Built for growing F&B businesses",
+  "landing.trustedBy.subtitle": "Designed for restaurants, cafes, and multi-outlet operations.",
+  "landing.trustedBy.chips.restaurant": "Restaurant",
+  "landing.trustedBy.chips.cafe": "Cafe",
+  "landing.trustedBy.chips.foodCourt": "Food Court",
+  "landing.trustedBy.chips.bar": "Bar",
+  "landing.trustedBy.chips.bakery": "Bakery",
+  "landing.trustedBy.chips.takeaway": "Takeaway",
+  "landing.trustedBy.chips.delivery": "Delivery",
+  "landing.trustedBy.chips.qrOrdering": "QR Ordering",
+  "landing.trustedBy.chips.pos": "POS",
+  "landing.trustedBy.chips.kds": "Kitchen Display",
+
+  // Comparison table
+  "landing.compare.title": "Why choose Genfity?",
+  "landing.compare.subtitle": "A feature-by-feature view to help you decide.",
+  "landing.compare.table.feature": "Feature",
+  "landing.compare.value.limited": "Limited",
+  "landing.compare.value.paid": "Paid",
+  "landing.compare.value.addon": "Add-on",
+  "landing.compare.value.varies": "Varies",
+
+  "landing.compare.group.ordering": "Ordering & Tables",
+  "landing.compare.group.pos": "POS & Checkout",
+  "landing.compare.group.kitchen": "Kitchen Operations",
+  "landing.compare.group.menu": "Menu Management",
+  "landing.compare.group.inventory": "Inventory & Stock",
+  "landing.compare.group.marketing": "Marketing & Retention",
+  "landing.compare.group.analytics": "Reports & Analytics",
+  "landing.compare.group.operations": "Admin & Operations",
+
+  "landing.compare.feature.qrOrdering": "QR code ordering (dine-in)",
+  "landing.compare.feature.noAppInstall": "No app install for customers",
+  "landing.compare.feature.posMode": "POS / cashier mode",
+  "landing.compare.feature.kds": "Kitchen display system (KDS)",
+  "landing.compare.feature.orderQueueKitchen": "Kitchen queue & order status",
+  "landing.compare.feature.realtimeUpdates": "Real-time order updates",
+  "landing.compare.feature.customerDisplay": "Customer display screen",
+  "landing.compare.feature.menuBuilder": "Menu builder",
+  "landing.compare.feature.addons": "Add-ons & modifiers",
+  "landing.compare.feature.menuCategories": "Categories & organization",
+  "landing.compare.feature.menuBooks": "Menu books / collections",
+  "landing.compare.feature.bulkUploadMenu": "Bulk upload (menu/add-ons)",
+  "landing.compare.feature.stockTracking": "Stock tracking",
+  "landing.compare.feature.dailyStockTemplate": "Daily stock template",
+  "landing.compare.feature.specialPrices": "Special prices / schedules",
+  "landing.compare.feature.vouchers": "Voucher / promo system",
+  "landing.compare.feature.voucherAnalytics": "Voucher analytics",
+  "landing.compare.feature.referralCodes": "Referral codes",
+  "landing.compare.feature.notifications": "In-app notifications",
+  "landing.compare.feature.pushNotifications": "Web push notifications",
+  "landing.compare.feature.analyticsSales": "Sales analytics",
+  "landing.compare.feature.analyticsMenuPerformance": "Menu performance analytics",
+  "landing.compare.feature.analyticsCustomers": "Customer analytics",
+  "landing.compare.feature.reports": "Reports & exports",
+  "landing.compare.feature.multiLanguage": "Multi-language UI",
+  "landing.compare.feature.staffPermissions": "Staff permissions",
+  "landing.compare.feature.multiBranch": "Multi-branch support",
+  "landing.compare.feature.deliveryZones": "Delivery zones & fees",
+  "landing.compare.feature.drivers": "Driver management",
+  "landing.compare.feature.reservations": "Reservations",
+  "landing.compare.feature.tablesQr": "QR tables management",
+  "landing.compare.feature.taxSettings": "Tax & fee settings",
+  "landing.compare.feature.receiptPdf": "Receipt (PDF/email) support",
+  "landing.compare.feature.pwaInstallable": "PWA / installable web app",
 
   // Online Ordering Section
   "landing.onlineOrder.badge": "Online Ordering System",
@@ -3603,6 +3712,12 @@ const en = {
   "landing.referral.period": "Per Month",
   "landing.referral.desc": "Invite other business owners to use GENFITY and earn recurring commission every month as long as they subscribe.",
   "landing.referral.cta": "Join Referral Program",
+  "landing.referral.steps.step1": "Step 1",
+  "landing.referral.steps.step1Desc": "Get your referral code",
+  "landing.referral.steps.step2": "Step 2",
+  "landing.referral.steps.step2Desc": "Invite merchants",
+  "landing.referral.steps.step3": "Step 3",
+  "landing.referral.steps.step3Desc": "Earn monthly commission",
 
   // Footer
   "landing.footer.links": "Links",

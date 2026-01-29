@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
 
 export default function CustomerMerchantPageNotFound() {
   const { t } = useTranslation();
   const params = useParams<{ merchantCode?: string }>();
   const merchantCode = params?.merchantCode ? String(params.merchantCode) : '';
 
-  const backHref = merchantCode ? `/${merchantCode}` : '/';
+  const backHref = merchantCode ? customerMerchantHomeUrl(merchantCode) : '/';
   const merchantLabel = useMemo(() => merchantCode || t('landing.merchantCode'), [merchantCode, t]);
 
   return (

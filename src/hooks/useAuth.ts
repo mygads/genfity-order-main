@@ -55,7 +55,7 @@ export function useAuth() {
     router.push("/admin/login");
   };
 
-  const requireAuth = (redirectTo = "/login") => {
+  const requireAuth = (redirectTo = "/admin/login") => {
     if (!loading && !user) {
       router.push(redirectTo);
     }

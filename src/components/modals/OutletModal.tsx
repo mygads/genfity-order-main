@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
 
 interface OutletModalProps {
   merchantCode: string;
@@ -49,7 +50,7 @@ export default function OutletModal({ merchantCode, merchantData }: OutletModalP
 
   const handleClose = () => {
     // Remove hash from URL
-    router.push(`/${merchantCode}`);
+    router.push(customerMerchantHomeUrl(merchantCode));
     setIsOpen(false);
   };
 

@@ -2,60 +2,73 @@
 
 import Link from 'next/link';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import BlurFade from '@/components/magicui/blur-fade';
+import { PulsatingButton } from '@/components/magicui/pulsating-button';
+import { cn } from '@/lib/utils';
+import { LANDING_CONTAINER, LANDING_H2, LANDING_P, LANDING_SECTION } from './landingStyles';
 
 export default function ReferralSection() {
     const { t } = useTranslation();
 
     return (
-        <section className="py-12 bg-white dark:bg-gray-900">
-            <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="bg-gradient-to-br from-gray-50 to-brand-50/50 dark:from-gray-800 dark:to-brand-900/10 rounded-2xl p-8 border border-gray-100 dark:border-gray-700 overflow-hidden relative">
-                    {/* Subtle accent */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-400 to-brand-600"></div>
+        <section id="referral" className={cn(LANDING_SECTION, 'border-t border-gray-100')}>
+            <div className={cn(LANDING_CONTAINER, 'max-w-4xl')}>
+                <div className="mx-auto max-w-3xl text-center space-y-3 mb-12">
+                    <h2 className={LANDING_H2}>{t('landing.referral.title')}</h2>
+                    <p className={LANDING_P}>{t('landing.referral.desc')}</p>
+                </div>
 
-                    <div className="flex flex-col lg:flex-row items-center gap-6 lg:gap-10">
-                        {/* Left: Content */}
-                        <div className="flex-1 text-center lg:text-left space-y-3">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-brand-100 dark:bg-brand-900/30 text-brand-600 dark:text-brand-400 rounded-full text-xs font-bold uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 animate-pulse"></span>
-                                Partnership
+                <BlurFade delay={0.1} inView>
+                    <div className="bg-white rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm border border-gray-200">
+
+                        {/* Content */}
+                        <div className="flex-1 text-center md:text-left space-y-2">
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-4 max-w-md mx-auto md:mx-0">
+                                <div className="rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2">
+                                    <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                                        {t('landing.referral.steps.step1')}
+                                    </div>
+                                    <div className="text-xs font-semibold text-gray-800">
+                                        {t('landing.referral.steps.step1Desc')}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2">
+                                    <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                                        {t('landing.referral.steps.step2')}
+                                    </div>
+                                    <div className="text-xs font-semibold text-gray-800">
+                                        {t('landing.referral.steps.step2Desc')}
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2">
+                                    <div className="text-[10px] uppercase tracking-wider text-gray-500">
+                                        {t('landing.referral.steps.step3')}
+                                    </div>
+                                    <div className="text-xs font-semibold text-gray-800">
+                                        {t('landing.referral.steps.step3Desc')}
+                                    </div>
+                                </div>
                             </div>
 
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                                {t('landing.referral.title')}
-                            </h2>
-
-                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                {t('landing.referral.desc')}
-                            </p>
+                            <div className="flex items-center justify-center md:justify-start gap-4 pt-1">
+                                <div className="text-center md:text-left">
+                                    <div className="text-xl font-bold text-[#173C82]">{t('landing.referral.commission')}</div>
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-wider">{t('landing.referral.period')}</div>
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Right: Stats & CTA */}
-                        <div className="flex flex-col items-center lg:items-end gap-4">
-                            <div className="flex items-center gap-6">
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-brand-600">{t('landing.referral.commission')}</div>
-                                    <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Recurring</div>
-                                </div>
-                                <div className="w-px h-10 bg-gray-200 dark:bg-gray-700"></div>
-                                <div className="text-center">
-                                    <div className="text-2xl font-bold text-[#173C82] dark:text-blue-400">Lifetime</div>
-                                    <div className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Earning</div>
-                                </div>
-                            </div>
-
-                            <Link
-                                href="/influencer/register"
-                                className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#173C82] hover:bg-[#122c60] text-white font-semibold rounded-lg transition-all text-sm"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                                </svg>
-                                {t('landing.referral.cta')}
+                        {/* CTA */}
+                        <div className="flex-shrink-0">
+                            <Link href="/influencer/register">
+                                <PulsatingButton pulseColor="#3b82f6" className="text-sm px-6 py-2">
+                                    {t('landing.referral.cta')}
+                                </PulsatingButton>
                             </Link>
                         </div>
                     </div>
-                </div>
+                </BlurFade>
             </div>
         </section>
     );

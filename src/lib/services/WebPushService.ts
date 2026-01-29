@@ -565,7 +565,7 @@ class WebPushService {
                 orderNumber,
                 status,
                 merchantCode,
-                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+                orderUrl: `/merchant/${merchantCode.toUpperCase()}/order-status/${orderNumber}`,
             },
             actions: [
                 {
@@ -647,7 +647,7 @@ class WebPushService {
                 orderNumber,
                 status,
                 merchantCode,
-                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+                orderUrl: `/merchant/${merchantCode.toUpperCase()}/order-status/${orderNumber}`,
             },
             actions: [
                 {
@@ -681,7 +681,7 @@ class WebPushService {
                 type: 'DELIVERY_PICKED_UP',
                 orderNumber,
                 merchantCode,
-                orderUrl: `/${merchantCode}/order-status/${orderNumber}`,
+                orderUrl: `/merchant/${merchantCode.toUpperCase()}/order-status/${orderNumber}`,
             },
             actions: [
                 {

@@ -6,6 +6,7 @@ import type { CartItem } from '@/context/CartContext';
 import { formatCurrency } from '@/lib/utils/format';
 import { isFavorite, toggleFavorite } from '@/lib/utils/localStorage';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+import { customerOrderUrl } from '@/lib/utils/customerRoutes';
 import { FaHeart, FaRegHeart, FaTimes } from 'react-icons/fa';
 import Image from 'next/image';
 
@@ -139,7 +140,7 @@ export default function MenuDetailModal({
   // Generate shareable menu item URL
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/${merchantCode}/order?mode=${mode}&menu=${menu.id}`;
+    return `${window.location.origin}${customerOrderUrl(merchantCode, { mode, menu: menu.id })}`;
   };
 
   // Handle share menu item

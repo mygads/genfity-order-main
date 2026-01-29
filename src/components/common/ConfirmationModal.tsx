@@ -15,7 +15,7 @@ interface ConfirmationModalProps {
   onClose: () => void;
   onConfirm: () => void;
   title: string;
-  message: string;
+  message: React.ReactNode;
   confirmText?: string;
   cancelText?: string;
   variant?: 'warning' | 'danger' | 'info';
@@ -59,7 +59,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -89,9 +89,9 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </h3>
 
           {/* Message */}
-          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+          <div className="text-sm text-gray-600 dark:text-gray-400 mb-6">
             {message}
-          </p>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-3">

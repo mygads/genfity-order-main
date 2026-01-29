@@ -42,6 +42,7 @@ import { useStockStream } from '@/hooks/useStockStream';
 import type { OrderMode } from '@/lib/types/customer';
 import { normalizeOrderMode } from '@/lib/utils/orderMode';
 import { useToast } from '@/context/ToastContext';
+import { customerGroupOrderSummaryUrl, customerMerchantHomeUrl, customerOrderUrl, customerSearchUrl, customerViewOrderUrl } from '@/lib/utils/customerRoutes';
 
 interface MenuItem {
   id: string; // ✅ String from API (BigInt serialized)
@@ -431,13 +432,13 @@ export default function OrderClientPage({
       else params.delete('flow');
       if (isScheduledFlow) params.set('scheduled', '1');
       else params.delete('scheduled');
-      router.replace(`/${merchantCode}/order?${params.toString()}`);
+      router.replace(`/merchant/${merchantCode}/order?${params.toString()}`);
     }
   };
 
   const handleModeModalGoBack = () => {
     setShowModeUnavailableModal(false);
-    router.replace(`/${merchantCode}`);
+    router.replace(customerMerchantHomeUrl(merchantCode));
   };
 
   // ========================================
@@ -471,7 +472,7 @@ export default function OrderClientPage({
 
       // Remove tableno from URL without reload
       params.delete('tableno');
-      const newUrl = `/${merchantCode}/order?${params.toString()}`;
+      const newUrl = `/merchant/${merchantCode}/order?${params.toString()}`;
       router.replace(newUrl);
 
       // Don't show modal since table is auto-filled
@@ -519,7 +520,7 @@ export default function OrderClientPage({
       const params = new URLSearchParams(window.location.search);
       params.delete('group');
       const newSearch = params.toString();
-      const newUrl = `/${merchantCode}/order${newSearch ? `?${newSearch}` : `?mode=${normalizedMode}`}`;
+      const newUrl = `/merchant/${merchantCode}/order${newSearch ? `?${newSearch}` : `?mode=${normalizedMode}`}`;
       window.history.replaceState({}, '', newUrl);
     }
   }, [groupCodeFromUrl, merchantCode, normalizedMode, isInGroupOrder]);
@@ -866,10 +867,11 @@ export default function OrderClientPage({
         showTableBadge={showTableBadge}
         onBackClick={() => {
           localStorage.removeItem(`mode_${merchantCode}`);
-          router.push(`/${merchantCode}`);
+          router.push(customerMerchantHomeUrl(merchantCode));
         }}
         onSearchClick={() => {
-          router.push(`/${merchantCode}/search?mode=${normalizedMode}&ref=${encodeURIComponent(`/${merchantCode}/order?mode=${normalizedMode}`)}`);
+          const refUrl = customerOrderUrl(merchantCode, { mode: normalizedMode });
+          router.push(customerSearchUrl(merchantCode, { mode: normalizedMode, ref: refUrl }));
         }}
         onGroupOrderClick={() => {
           if (isInGroupOrder) {
@@ -1428,15 +1430,19 @@ export default function OrderClientPage({
         onSubmitOrder={() => {
           setShowGroupDashboard(false);
           // Navigate to checkout page with group order items
-          router.push(`/${merchantCode}/view-order?mode=${normalizedMode}&groupOrder=true`);
+          router.push(customerViewOrderUrl(merchantCode, { mode: normalizedMode, groupOrder: true }));
         }}
         merchantCode={merchantCode}
         currency={merchantInfo?.currency || 'AUD'}
         onModeChange={(newMode) => {
           // Update URL with new mode since mode is a prop from URL
-          const flowParam = isReservationFlow ? '&flow=reservation' : '';
-          const scheduledParam = isScheduledFlow ? '&scheduled=1' : '';
-          router.replace(`/${merchantCode}/order?mode=${newMode}${flowParam}${scheduledParam}`);
+          router.replace(
+            customerOrderUrl(merchantCode, {
+              mode: newMode,
+              ...(isReservationFlow ? { flow: 'reservation' } : {}),
+              ...(isScheduledFlow ? { scheduled: 1 } : {}),
+            })
+          );
         }}
       />
 
@@ -1459,7 +1465,7 @@ export default function OrderClientPage({
         onClose={() => setShowGroupSubmitModal(false)}
         onSuccess={(orderNumber) => {
           setShowGroupSubmitModal(false);
-          router.push(`/${merchantCode}/group-order-summary?orderNumber=${orderNumber}`);
+          router.push(customerGroupOrderSummaryUrl(merchantCode, { orderNumber }));
         }}
         merchantCode={merchantCode}
       />

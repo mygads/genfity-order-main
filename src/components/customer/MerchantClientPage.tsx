@@ -12,6 +12,7 @@ import { useStoreStatus } from '@/hooks/useStoreStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
+import { customerOrderUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
 import { Menu, User } from 'lucide-react';
 import { FaCalendarAlt, FaCheck, FaCheckCircle } from 'react-icons/fa';
 
@@ -78,7 +79,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
 
     const refQuery = searchParams.toString();
     const refPath = `${pathname}${refQuery ? `?${refQuery}` : ''}`;
-    const profileHref = `/${merchantCode}/profile?ref=${encodeURIComponent(refPath)}`;
+    const profileHref = customerProfileUrl(merchantCode, { ref: refPath });
 
     const handleOpenProfile = () => {
         router.push(profileHref);
@@ -137,7 +138,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
         localStorage.setItem(`mode_${merchantCode}`, selectedMode);
 
         // Always redirect to order page (it will handle closed/unavailable state)
-        router.replace(`/${merchantCode}/order?mode=${selectedMode}`);
+        router.replace(customerOrderUrl(merchantCode, { mode: selectedMode }));
 
         // Show toast if mode is unavailable
         if (selectedMode === 'dinein' && !isDineInAvailable) {
@@ -175,7 +176,7 @@ export default function MerchantClientPage({ merchant, merchantCode }: MerchantC
             return;
         }
         // Use the same Order UI flow, with a required reservation-details bottom sheet.
-        router.replace(`/${merchantCode}/order?mode=dinein&flow=reservation`);
+        router.replace(customerOrderUrl(merchantCode, { mode: 'dinein', flow: 'reservation' }));
         if (!storeOpen) {
             showToast({
                 variant: 'info',

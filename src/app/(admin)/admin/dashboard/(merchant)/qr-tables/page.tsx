@@ -108,7 +108,8 @@ export default function QRTablesPage() {
 
   const generateQRUrl = (tableNumber: number) => {
     const baseUrl = getBaseUrl();
-    return `${baseUrl}/${merchant?.code}/order?mode=dinein&tableno=${tableNumber}`;
+    const code = (merchant?.code || '').toUpperCase();
+    return `${baseUrl}/merchant/${code}/order?mode=dinein&tableno=${tableNumber}`;
   };
 
   const downloadQRCode = (tableNumber: number): Promise<void> => {

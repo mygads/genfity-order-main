@@ -20,6 +20,20 @@ import type { NextRequest } from 'next/server';
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const setLastMerchantCookie = (response: NextResponse, merchantCode: string) => {
+    try {
+      response.cookies.set('last_merchant_code', merchantCode, {
+        path: '/',
+        httpOnly: false,
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30, // 30 days
+      });
+    } catch {
+      // Ignore cookie failures
+    }
+    return response;
+  };
+
   // Skip middleware for public routes
   if (
     pathname.startsWith('/_next') ||
@@ -36,7 +50,8 @@ export async function proxy(request: NextRequest) {
     if (
       pathname === '/admin/login' ||
       pathname === '/admin/forgot-password' ||
-      pathname === '/admin/reset-password'
+      pathname === '/admin/reset-password' ||
+      pathname === '/admin/register'
     ) {
       // If already logged in, redirect to dashboard (except forgot/reset password)
       const token = request.cookies.get('auth_token')?.value;
@@ -96,57 +111,61 @@ export async function proxy(request: NextRequest) {
   }
 
   // ========================================
-  // Case-insensitive merchant code handling
-  // Redirects lowercase merchant codes to uppercase
-  // Example: /well/order → /WELL/order
+  // Legacy Customer Route Redirects
+  // Redirect /login, /profile etc to /customer/...
   // ========================================
+  const legacyCustomerRoutes = ['/login', '/profile', '/history', '/forgot-password', '/reset-password', '/verify-code'];
+  if (legacyCustomerRoutes.includes(pathname)) {
+    const lastMerchant = request.cookies.get('last_merchant_code')?.value;
 
-  // Extract first path segment (potential merchant code)
-  const segments = pathname.split('/').filter(Boolean);
-  if (segments.length > 0) {
-    const merchantCode = segments[0];
-
-    // Skip known routes that are not merchant codes
-    const knownRoutes = [
-      'merchant', 'influencer', 'auth', 'error', 'privacy-policy', 'terms', 'contact',
-      // Driver routes
-      'driver',
-      // Customer auth routes (lowercase)
-      'login', 'register', 'forgot-password', 'reset-password', 'verify-email', 'verify-code',
-      // Other system routes
-      'api', 'admin', '_next', 'static', 'images', 'fonts', 'favicon.ico',
-      // Static pages
-      'about', 'terms-of-service'
-    ];
-
-    const lowercaseMerchantCode = merchantCode.toLowerCase();
-
-    // Check if this is a known route (should be lowercase)
-    if (knownRoutes.includes(lowercaseMerchantCode)) {
-      // If the path has uppercase letters, redirect to lowercase
-      if (merchantCode !== lowercaseMerchantCode) {
-        const restOfPath = pathname.slice(merchantCode.length + 1);
-        const newPathname = '/' + lowercaseMerchantCode + restOfPath;
-        const url = request.nextUrl.clone();
-        url.pathname = newPathname;
-        // 301 = permanent redirect
-        return NextResponse.redirect(url, { status: 301 });
-      }
-      // Already lowercase, continue
-      return NextResponse.next();
+    // Prefer merchant-scoped pages when we have context.
+    if (lastMerchant && (pathname === '/profile' || pathname === '/history')) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/merchant/${lastMerchant}${pathname}`;
+      return NextResponse.redirect(url);
     }
 
-    // Not a known route - treat as merchant code (uppercase it)
-    const uppercaseMerchantCode = merchantCode.toUpperCase();
+    const url = request.nextUrl.clone();
+    url.pathname = `/customer${pathname}`;
+    return NextResponse.redirect(url);
+  }
 
-    // If merchant code contains lowercase letters, redirect to uppercase version
-    if (merchantCode !== uppercaseMerchantCode) {
-      const newPathname = '/' + uppercaseMerchantCode + pathname.slice(merchantCode.length + 1);
-      const url = request.nextUrl.clone();
-      url.pathname = newPathname;
+  // ========================================
+  // Case-insensitive merchant code handling
+  // Redirects lowercase merchant codes to uppercase
+  // Example: /merchant/well/order → /merchant/WELL/order
+  // ========================================
 
-      // 301 = permanent redirect for SEO
-      return NextResponse.redirect(url, { status: 301 });
+  if (pathname.startsWith('/merchant/')) {
+    const segments = pathname.split('/').filter(Boolean);
+    // segments[0] is 'merchant'
+    if (segments.length >= 2) {
+      const merchantCode = segments[1];
+      const linkSegment = 'merchant';
+
+      // Skip if it's the register page or other static pages under /merchant if any
+      if (merchantCode.toLowerCase() === 'register') {
+        return NextResponse.next();
+      }
+
+      const uppercaseMerchantCode = merchantCode.toUpperCase();
+
+      // If merchant code contains lowercase letters, redirect to uppercase version
+      if (merchantCode !== uppercaseMerchantCode) {
+        // Reconstruct path: /merchant/CODE/...
+        const restOfPath = segments.slice(2).join('/');
+        const newPathname = `/${linkSegment}/${uppercaseMerchantCode}${restOfPath ? '/' + restOfPath : ''}${request.nextUrl.search}`;
+        
+        const url = request.nextUrl.clone();
+        url.href = url.origin + newPathname;
+
+        // 301 = permanent redirect for SEO
+        return NextResponse.redirect(url, { status: 301 });
+      }
+
+      // Merchant code looks good - remember it for later /profile, /history, etc.
+      const res = NextResponse.next();
+      return setLastMerchantCookie(res, uppercaseMerchantCode);
     }
   }
 

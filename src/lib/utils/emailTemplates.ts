@@ -16,7 +16,8 @@ const _getLogoUrl = () => {
   return `${origin}/images/logo/logo.png`;
 };
 
-const DEFAULT_SUPPORT_EMAILS = 'support@genfity.com, genfity@gmail.com';
+const PRIMARY_SUPPORT_EMAIL = 'genfity@gmail.com';
+const DEFAULT_SUPPORT_EMAILS = PRIMARY_SUPPORT_EMAIL;
 
 function _t(locale: Locale) {
   const lang = locale === 'id' ? 'id' : 'en';
@@ -36,14 +37,20 @@ function _t(locale: Locale) {
 function formatSupportLinks(emailList: string, locale: Locale): string {
   const emails = emailList
     .split(',')
-    .map(email => email.trim())
+    .map((email) => email.trim())
     .filter(Boolean);
 
-  if (emails.length === 0) return '';
+  // Requirement: footer support links should always point to Genfity support inbox.
+  const normalized = [PRIMARY_SUPPORT_EMAIL];
+
+  if (normalized.length === 0) return '';
 
   const joiner = locale === 'id' ? ' atau ' : ' or ';
-  return emails
-    .map(email => `<a href="mailto:${email}" style="color: #171717; text-decoration: underline;">${email}</a>`)
+  return normalized
+    .map(
+      (email) =>
+        `<a href="mailto:${email}" style="color: #171717; text-decoration: underline;">${email}</a>`
+    )
     .join(joiner);
 }
 

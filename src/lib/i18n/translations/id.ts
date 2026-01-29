@@ -304,6 +304,9 @@ const id = {
   "auth.passwordMinChars": "Minimal 6 karakter",
   "auth.passwordsMatch": "✓ Kata sandi cocok",
   "auth.passwordsDontMatch": "✗ Kata sandi tidak cocok",
+    "auth.invalidLinkTitle": "Tautan tidak valid",
+    "auth.invalidLinkMessage": "Tautan ini tidak valid atau informasi yang diperlukan tidak ada.",
+    "auth.requestNewLink": "Minta tautan baru",
 
   // Errors
   "auth.error.invalidCredentials": "Email/telepon atau kata sandi salah",
@@ -346,6 +349,9 @@ const id = {
   "customer.notFound.merchantPageTitle": "Halaman tidak ditemukan",
   "customer.notFound.merchantPageMessage": "Kami tidak dapat menemukan halaman ini di {merchantCode}.\nAnda bisa kembali ke halaman utama merchant.",
   "customer.notFound.backToMerchant": "Kembali ke merchant",
+  "customer.notFound.customerPageTitle": "Halaman tidak ditemukan",
+  "customer.notFound.customerPageMessage": "Kami tidak dapat menemukan halaman ini.\nAnda bisa kembali ke halaman masuk merchant.",
+  "customer.notFound.backToMerchantEntry": "Kembali ke halaman masuk merchant",
 
   // Customer - Toasts & scheduled/reservation hints
   "customer.toast.modeUnavailableTitle": "Mode Tidak Tersedia",
@@ -637,6 +643,7 @@ const id = {
   "customer.orderDetail.table": "Meja",
   "customer.orderDetail.paymentMethod": "Metode pembayaran",
   "customer.orderDetail.paymentStatus": "Status pembayaran",
+  "customer.orderDetail.changedByAdmin": "Diubah oleh admin",
 
   // Order Summary
   "customer.orderSummary.title": "Ringkasan Pesanan",
@@ -711,6 +718,11 @@ const id = {
 
   // Order History
   "customer.history.title": "Riwayat Pesanan",
+  "customer.history.rangeLabel": "Rentang",
+  "customer.history.last30Days": "30 hari terakhir",
+  "customer.history.last2Months": "2 bulan terakhir",
+  "customer.history.last3Months": "3 bulan terakhir",
+  "customer.history.last1Year": "1 tahun terakhir",
   "customer.history.allOrders": "Semua",
   "customer.history.activeOrders": "Aktif",
   "customer.history.completedOrders": "Selesai",
@@ -737,6 +749,19 @@ const id = {
   "customer.reorder.success": "{count} item ditambahkan ke keranjang",
   "customer.reorder.partialSuccess": "{added} item ditambahkan, {skipped} tidak tersedia",
   "customer.reorder.noAvailableItems": "Tidak ada item yang tersedia untuk dipesan ulang",
+  "customer.reorder.switchMerchantTitle": "Ganti merchant?",
+  "customer.reorder.switchMerchantMessage": "Keranjang Anda saat ini untuk merchant lain. Mengganti merchant akan mengganti keranjang Anda. Lanjutkan?",
+  "customer.reorder.switchMerchantConfirm": "Ya, ganti",
+  "customer.reorder.previewTitle": "Ringkasan pesan lagi",
+  "customer.reorder.previewWillAdd": "Akan ditambahkan",
+  "customer.reorder.previewWillSkip": "Akan dilewati",
+  "customer.reorder.previewSkippedReason": "Item yang dilewati (alasan)",
+  "customer.reorder.previewConfirm": "Lanjutkan",
+  "customer.reorder.reason.outOfStock": "Stok habis",
+  "customer.reorder.reason.unavailable": "Tidak tersedia",
+  "customer.reorder.reason.deleted": "Dihapus",
+  "customer.reorder.reason.unknown": "Tidak tersedia",
+  "customer.reorder.reason.addonsUnavailable": "Beberapa addon tidak tersedia",
 
   // Receipt/Invoice PDF
   "customer.receipt.downloadReceipt": "Unduh Struk",
@@ -752,8 +777,8 @@ const id = {
   "customer.profile.orderHistory": "Riwayat Pesanan",
   "customer.profile.helpCenter": "Pusat Bantuan",
   "customer.profile.privacyPolicy": "Kebijakan Privasi",
-  "customer.profile.signOutConfirm": "Keluar?",
-  "customer.profile.signOutMessage": "Anda akan keluar dari akun",
+  "customer.profile.signOutConfirm": "Keluar dari akun Anda?",
+  "customer.profile.signOutMessage": "Voucher/promo yang Anda gunakan akan otomatis dihapus.",
   "customer.profile.profileUpdated": "Profil berhasil diperbarui!",
   "customer.profile.updateFailed": "Gagal memperbarui profil",
 
@@ -3290,6 +3315,19 @@ const id = {
   "landing.hero.badges.trial": "Free Trial 30 Hari",
   "landing.hero.badges.noCard": "Tanpa Kartu Kredit",
 
+  // Showcase
+  "landing.showcase.title": "Preview dashboard",
+  "landing.showcase.subtitle": "Sekilas tampilan aplikasi customer dan dashboard admin di berbagai perangkat.",
+
+  // Macbook scroll
+  "landing.macbook.title": "Lihat langsung cara kerjanya",
+  "landing.macbook.subtitle": "Preview dashboard yang bisa di-scroll di dalam frame laptop yang familiar.",
+
+  // Landing kickers
+  "landing.kicker.features": "✨ Fitur",
+  "landing.kicker.pricing": "💰 Harga",
+  "landing.kicker.testimonials": "⭐ Testimoni",
+
   // Features
   "landing.features.title": "Fitur Canggih untuk Pertumbuhan Bisnis",
   "landing.features.subtitle": "Semua yang Anda butuhkan untuk menjalankan bisnis kuliner dengan efisien.",
@@ -3306,6 +3344,10 @@ const id = {
   "landing.features.kitchen.title": "Sistem Layar Dapur",
   "landing.features.kitchen.desc": "Pesanan langsung masuk ke layar dapur. Tingkatkan akurasi dan kecepatan layanan.",
 
+  // Highlights (section)
+  "landing.highlights.sectionTitle": "Dibuat untuk operasional harian",
+  "landing.highlights.sectionSubtitle": "Dari pemesanan customer sampai insight admin dan alur dapur—semuanya terhubung.",
+
 
   // Stats
   "landing.stats.title": "#SelaluAda Bersama Pelaku Usaha",
@@ -3318,6 +3360,73 @@ const id = {
   "landing.stats.years_desc": "Pengalaman melayani bisnis F&B",
   "landing.stats.uptime": "Uptime",
   "landing.stats.uptime_desc": "Infrastruktur cloud yang andal",
+
+  // Trusted by
+  "landing.trustedBy.title": "Dibuat untuk bisnis F&B yang bertumbuh",
+  "landing.trustedBy.subtitle": "Cocok untuk restoran, cafe, hingga multi-outlet.",
+  "landing.trustedBy.chips.restaurant": "Restoran",
+  "landing.trustedBy.chips.cafe": "Cafe",
+  "landing.trustedBy.chips.foodCourt": "Food Court",
+  "landing.trustedBy.chips.bar": "Bar",
+  "landing.trustedBy.chips.bakery": "Bakery",
+  "landing.trustedBy.chips.takeaway": "Takeaway",
+  "landing.trustedBy.chips.delivery": "Delivery",
+  "landing.trustedBy.chips.qrOrdering": "QR Ordering",
+  "landing.trustedBy.chips.pos": "POS",
+  "landing.trustedBy.chips.kds": "Layar Dapur",
+
+  // Comparison table
+  "landing.compare.title": "Kenapa pilih Genfity?",
+  "landing.compare.subtitle": "Perbandingan fitur agar Anda lebih yakin.",
+  "landing.compare.table.feature": "Fitur",
+  "landing.compare.value.limited": "Terbatas",
+  "landing.compare.value.paid": "Berbayar",
+  "landing.compare.value.addon": "Add-on",
+  "landing.compare.value.varies": "Bervariasi",
+
+  "landing.compare.group.ordering": "Pemesanan & Meja",
+  "landing.compare.group.pos": "POS & Pembayaran",
+  "landing.compare.group.kitchen": "Operasional Dapur",
+  "landing.compare.group.menu": "Manajemen Menu",
+  "landing.compare.group.inventory": "Inventaris & Stok",
+  "landing.compare.group.marketing": "Marketing & Retensi",
+  "landing.compare.group.analytics": "Laporan & Analitik",
+  "landing.compare.group.operations": "Admin & Operasional",
+
+  "landing.compare.feature.qrOrdering": "Pemesanan QR code (dine-in)",
+  "landing.compare.feature.noAppInstall": "Tanpa instal aplikasi untuk pelanggan",
+  "landing.compare.feature.posMode": "Mode POS / kasir",
+  "landing.compare.feature.kds": "Kitchen display system (KDS)",
+  "landing.compare.feature.orderQueueKitchen": "Antrian dapur & status pesanan",
+  "landing.compare.feature.realtimeUpdates": "Update status pesanan real-time",
+  "landing.compare.feature.customerDisplay": "Layar customer display",
+  "landing.compare.feature.menuBuilder": "Menu builder",
+  "landing.compare.feature.addons": "Add-on & modifier",
+  "landing.compare.feature.menuCategories": "Kategori & pengelompokan",
+  "landing.compare.feature.menuBooks": "Menu book / koleksi",
+  "landing.compare.feature.bulkUploadMenu": "Bulk upload (menu/add-on)",
+  "landing.compare.feature.stockTracking": "Tracking stok",
+  "landing.compare.feature.dailyStockTemplate": "Template stok harian",
+  "landing.compare.feature.specialPrices": "Harga khusus / jadwal",
+  "landing.compare.feature.vouchers": "Voucher / promo",
+  "landing.compare.feature.voucherAnalytics": "Analitik voucher",
+  "landing.compare.feature.referralCodes": "Kode referral",
+  "landing.compare.feature.notifications": "Notifikasi di aplikasi",
+  "landing.compare.feature.pushNotifications": "Notifikasi push web",
+  "landing.compare.feature.analyticsSales": "Analitik penjualan",
+  "landing.compare.feature.analyticsMenuPerformance": "Analitik performa menu",
+  "landing.compare.feature.analyticsCustomers": "Analitik pelanggan",
+  "landing.compare.feature.reports": "Laporan & ekspor",
+  "landing.compare.feature.multiLanguage": "UI multi-bahasa",
+  "landing.compare.feature.staffPermissions": "Hak akses staff",
+  "landing.compare.feature.multiBranch": "Multi cabang",
+  "landing.compare.feature.deliveryZones": "Zona & biaya delivery",
+  "landing.compare.feature.drivers": "Manajemen driver",
+  "landing.compare.feature.reservations": "Reservasi",
+  "landing.compare.feature.tablesQr": "Manajemen QR meja",
+  "landing.compare.feature.taxSettings": "Pengaturan pajak & biaya",
+  "landing.compare.feature.receiptPdf": "Struk (PDF/email)",
+  "landing.compare.feature.pwaInstallable": "PWA / bisa di-install",
 
   // Online Ordering Section
   "landing.onlineOrder.badge": "Sistem Pemesanan Online",
@@ -3599,6 +3708,12 @@ const id = {
   "landing.referral.period": "Per Bulan",
   "landing.referral.desc": "Ajak pemilik bisnis lain menggunakan GENFITY dan dapatkan komisi berulang setiap bulan selama mereka berlangganan.",
   "landing.referral.cta": "Gabung Program Referral",
+  "landing.referral.steps.step1": "Langkah 1",
+  "landing.referral.steps.step1Desc": "Dapatkan kode referral",
+  "landing.referral.steps.step2": "Langkah 2",
+  "landing.referral.steps.step2Desc": "Ajak merchant daftar",
+  "landing.referral.steps.step3": "Langkah 3",
+  "landing.referral.steps.step3Desc": "Dapatkan komisi bulanan",
 
   // Footer
   "landing.footer.links": "Tautan",

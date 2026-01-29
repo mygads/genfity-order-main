@@ -5,6 +5,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/context/ToastContext";
 import { HiLink, HiShare } from "react-icons/hi2";
+import { customerOrderUrl } from "@/lib/utils/customerRoutes";
 
 /**
  * Share Code Card - Clean QR Code Display
@@ -30,8 +31,8 @@ export default function ShareCodeCard({
 
     // Auto-join URL
     const joinUrl = typeof window !== "undefined"
-        ? `${window.location.origin}/${merchantCode}/order?group=${sessionCode}`
-        : `/${merchantCode}/order?group=${sessionCode}`;
+        ? `${window.location.origin}${customerOrderUrl(merchantCode, { group: sessionCode })}`
+        : customerOrderUrl(merchantCode, { group: sessionCode });
 
     const expiresDate = new Date(expiresAt);
     const now = new Date();

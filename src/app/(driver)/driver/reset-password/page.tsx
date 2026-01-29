@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { EyeIcon, EyeCloseIcon } from '@/icons';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { LanguageToggle } from '@/components/common/LanguageSelector';
+import InvalidLinkCard from '@/components/auth/InvalidLinkCard';
 
 function DriverResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -88,25 +89,12 @@ function DriverResetPasswordForm() {
           <LanguageToggle className="bg-white/80 backdrop-blur border border-gray-200" />
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl shadow-gray-200/50 dark:shadow-none p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-            {t('driver.resetPassword.invalidTokenTitle')}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
-            {t('driver.resetPassword.invalidTokenMessage')}
-          </p>
-          <Link
-            href="/driver/forgot-password"
-            className="inline-flex items-center justify-center px-6 py-3 bg-[#173C82] hover:bg-[#122c60] text-white font-semibold rounded-lg transition-all"
-          >
-            {t('driver.resetPassword.requestNewLink')}
-          </Link>
-        </div>
+        <InvalidLinkCard
+          title={t('driver.resetPassword.invalidTokenTitle')}
+          message={t('driver.resetPassword.invalidTokenMessage')}
+          actionHref="/driver/forgot-password"
+          actionLabel={t('driver.resetPassword.requestNewLink')}
+        />
       </div>
     );
   }

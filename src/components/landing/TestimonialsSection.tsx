@@ -1,91 +1,89 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import BlurFade from '@/components/magicui/blur-fade';
+import Marquee from '@/components/magicui/marquee';
+import { FaStar } from 'react-icons/fa';
+import { cn } from '@/lib/utils';
+import { LANDING_CONTAINER, LANDING_H2, LANDING_P, LANDING_SECTION } from './landingStyles';
 
 export default function TestimonialsSection() {
     const { t } = useTranslation();
-    const [activeIndex, setActiveIndex] = useState(0);
 
-    const testimonials = [1, 2, 3, 4, 5];
+    const baseTestimonials = [
+        { id: 1, avatar: '👨‍🍳' },
+        { id: 2, avatar: '👩‍💼' },
+        { id: 3, avatar: '👨‍💻' },
+        { id: 4, avatar: '👩‍🔧' },
+        { id: 5, avatar: '👨‍🏫' },
+    ];
 
-    // Auto-advance
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setActiveIndex((current) => (current + 1) % testimonials.length);
-        }, 5000);
-        return () => clearInterval(interval);
-    }, [testimonials.length]);
+    const testimonials = Array.from({ length: 24 }, (_, idx) => {
+        const item = baseTestimonials[idx % baseTestimonials.length];
+        return { ...item, key: `${idx}-${item.id}` };
+    });
 
-    return (
-        <section className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-800/50 relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="text-center max-w-2xl mx-auto mb-10 space-y-3">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                        {t('landing.testimonials.title')}
-                    </h2>
-                    <p className="text-base text-gray-600 dark:text-gray-400">
-                        {t('landing.testimonials.subtitle')}
+    const TestimonialCard = ({ item }: { item: { id: number; avatar: string } }) => (
+        <div className={cn(
+            "relative w-72 cursor-pointer overflow-hidden rounded-xl border p-4 mx-2",
+            "border-gray-200 bg-white/80 backdrop-blur hover:bg-white hover:border-gray-300",
+            "transition-all duration-300 hover:shadow-md"
+        )}>
+            <div className="flex items-center gap-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-lg">
+                    {item.avatar}
+                </div>
+                <div>
+                    <p className="text-xs font-semibold text-gray-900">
+                        {t(`landing.testimonials.${item.id}.author`)}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                        {t(`landing.testimonials.${item.id}.role`)}
                     </p>
                 </div>
+                <div className="flex gap-0.5 ml-auto">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                        <FaStar key={star} className="h-3 w-3 text-yellow-400" />
+                    ))}
+                </div>
+            </div>
+            <blockquote className="text-xs text-gray-600 leading-relaxed line-clamp-3">
+                &quot;{t(`landing.testimonials.${item.id}.quote`)}&quot;
+            </blockquote>
+        </div>
+    );
 
-                <div className="max-w-2xl mx-auto relative">
-                    <div className="overflow-hidden bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 min-h-[180px] flex items-center">
-                        <div
-                            className="flex transition-transform duration-500 ease-out w-full"
-                            style={{ transform: `translateX(-${activeIndex * 100}%)` }}
-                        >
-                            {testimonials.map((item) => (
-                                <div key={item} className="w-full flex-shrink-0 p-6 flex flex-col sm:flex-row items-center gap-5">
-                                    <div className="flex-shrink-0 relative">
-                                        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-gray-100 dark:border-gray-700 relative bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
-                                            <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    <div className="text-center sm:text-left flex-1 space-y-2">
-                                        <div className="flex gap-0.5 justify-center sm:justify-start">
-                                            {[...Array(5)].map((_, i) => (
-                                                <svg key={i} className="w-3.5 h-3.5 text-brand-400 fill-current" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                </svg>
-                                            ))}
-                                        </div>
-
-                                        <blockquote className="text-sm text-gray-700 dark:text-gray-200 italic leading-relaxed">
-                                            &ldquo;{t(`landing.testimonials.${item}.quote`)}&rdquo;
-                                        </blockquote>
-
-                                        <div>
-                                            <div className="font-semibold text-gray-900 dark:text-white text-sm">
-                                                {t(`landing.testimonials.${item}.author`)}
-                                            </div>
-                                            <div className="text-xs text-[#173C82] dark:text-blue-400 font-medium">
-                                                {t(`landing.testimonials.${item}.role`)}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+    return (
+        <section className={cn(LANDING_SECTION, 'border-b border-gray-100 overflow-hidden')}>
+            <div className={cn(LANDING_CONTAINER, 'relative z-10')}>
+                <BlurFade delay={0.1} inView>
+                    <div className="mx-auto max-w-2xl text-center mb-12 space-y-3">
+                        <h2 className={LANDING_H2}>
+                            {t('landing.testimonials.title')}
+                        </h2>
+                        <p className={LANDING_P}>
+                            {t('landing.testimonials.subtitle')}
+                        </p>
                     </div>
+                </BlurFade>
 
-                    {/* Navigation Dots */}
-                    <div className="flex justify-center gap-1.5 mt-5">
-                        {testimonials.map((_, index) => (
-                            <button
-                                key={index}
-                                onClick={() => setActiveIndex(index)}
-                                className={`w-2 h-2 rounded-full transition-all duration-300 ${index === activeIndex
-                                    ? 'bg-[#173C82] dark:bg-blue-400 w-5'
-                                    : 'bg-gray-300 dark:bg-gray-600 hover:bg-gray-400'
-                                    }`}
-                                aria-label={`Go to slide ${index + 1}`}
-                            />
+                {/* Two-row Marquee */}
+                <div className="relative">
+                    <Marquee pauseOnHover className="[--duration:18s]">
+                        {testimonials.slice(0, 12).map((item) => (
+                            <TestimonialCard key={item.key} item={item} />
                         ))}
-                    </div>
+                    </Marquee>
+
+                    <Marquee pauseOnHover reverse className="[--duration:22s] mt-4">
+                        {testimonials.slice(12).map((item) => (
+                            <TestimonialCard key={item.key} item={item} />
+                        ))}
+                    </Marquee>
+
+                    {/* Gradient overlays */}
+                    <div className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white/80"></div>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white/80"></div>
                 </div>
             </div>
         </section>

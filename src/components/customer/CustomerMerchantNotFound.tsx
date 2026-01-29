@@ -17,6 +17,12 @@ function extractMerchantCode(rawValue: string): string | null {
     if (merchantFromQuery) return merchantFromQuery.trim();
 
     const segments = url.pathname.split('/').filter(Boolean);
+    
+    // Handle /merchant/CODE format
+    if (segments.length >= 2 && segments[0].toLowerCase() === 'merchant') {
+      return segments[1];
+    }
+
     if (segments.length > 0) return segments[0];
   } catch {
     // Not a URL, fall back to regex below.
@@ -83,7 +89,7 @@ export default function CustomerMerchantNotFound() {
     e.preventDefault();
     const trimmed = merchantCode.trim();
     if (!trimmed) return;
-    router.push(`/${trimmed.toUpperCase()}`);
+    router.push(`/merchant/${trimmed.toUpperCase()}`);
   };
 
   const beginScanLoop = () => {
@@ -129,7 +135,7 @@ export default function CustomerMerchantNotFound() {
             if (extracted) {
               setMerchantCode(extracted.toUpperCase());
               stopScanner();
-              router.push(`/${extracted.toUpperCase()}`);
+              router.push(`/merchant/${extracted.toUpperCase()}`);
               return;
             }
 

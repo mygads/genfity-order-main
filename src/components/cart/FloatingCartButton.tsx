@@ -6,6 +6,7 @@ import { useCart } from '@/context/CartContext';
 import { useGroupOrder } from '@/context/GroupOrderContext';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useCustomerData } from '@/context/CustomerDataContext';
+import { customerViewOrderUrl } from '@/lib/utils/customerRoutes';
 import { FaInfoCircle, FaShoppingCart } from 'react-icons/fa';
 
 interface FloatingCartButtonProps {
@@ -118,14 +119,19 @@ export default function FloatingCartButton({ merchantCode, mode, flow, scheduled
   }
 
   const handleClick = () => {
-    const flowParam = flow ? `&flow=${flow}` : '';
-    const scheduledParam = scheduled ? `&scheduled=1` : '';
     if (isInGroupOrder) {
       if (isHost) {
         // Host: Go to view-order with group order flag
         const sessionOrderType = (session as unknown as { orderType?: string } | null)?.orderType;
         const modeParam = mode || (sessionOrderType === 'DINE_IN' ? 'dinein' : sessionOrderType === 'DELIVERY' ? 'delivery' : 'takeaway');
-        router.push(`/${merchantCode}/view-order?mode=${modeParam}&groupOrder=true${flowParam}${scheduledParam}`);
+        router.push(
+          customerViewOrderUrl(merchantCode, {
+            mode: modeParam,
+            groupOrder: true,
+            ...(flow ? { flow } : {}),
+            ...(scheduled ? { scheduled: 1 } : {}),
+          })
+        );
       } else {
         // Non-host: Show modal
         setShowNonHostModal(true);
@@ -133,7 +139,13 @@ export default function FloatingCartButton({ merchantCode, mode, flow, scheduled
     } else {
       // Normal checkout
       const modeParam = mode || cart?.mode || 'takeaway';
-      router.push(`/${merchantCode}/view-order?mode=${modeParam}${flowParam}${scheduledParam}`);
+      router.push(
+        customerViewOrderUrl(merchantCode, {
+          mode: modeParam,
+          ...(flow ? { flow } : {}),
+          ...(scheduled ? { scheduled: 1 } : {}),
+        })
+      );
     }
   };
 

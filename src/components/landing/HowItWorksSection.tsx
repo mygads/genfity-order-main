@@ -1,68 +1,49 @@
 'use client';
 
 import { useTranslation } from '@/lib/i18n/useTranslation';
-import Image from 'next/image';
+import BlurFade from '@/components/magicui/blur-fade';
+import { cn } from '@/lib/utils';
+import { LANDING_CONTAINER, LANDING_H2, LANDING_P, LANDING_SECTION } from './landingStyles';
 
 export default function HowItWorksSection() {
     const { t } = useTranslation();
 
     const steps = [
-        {
-            num: 1,
-            image: '/images/landing/illustration_register.png',
-            color: 'bg-[#173C82]'
-        },
-        {
-            num: 2,
-            image: '/images/landing/illustration_setup.png',
-            color: 'bg-brand-500'
-        },
-        {
-            num: 3,
-            image: '/images/landing/illustration_golive.png',
-            color: 'bg-emerald-500'
-        }
+        { num: 1, color: 'bg-[#173C82]' },
+        { num: 2, color: 'bg-brand-500' },
+        { num: 3, color: 'bg-emerald-500' }
     ];
 
     return (
-        <section id="how-it-works" className="py-16 lg:py-20 bg-gray-50 dark:bg-gray-900/50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center max-w-3xl mx-auto mb-12 space-y-3">
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                        {t('landing.howItWorks.title')}
-                    </h2>
-                    <p className="text-base text-gray-600 dark:text-gray-400">
-                        {t('landing.howItWorks.subtitle')}
-                    </p>
-                </div>
+        <section id="how-it-works" className={cn(LANDING_SECTION, 'overflow-hidden')}>
 
-                <div className="relative">
-                    {/* Connecting Line (Desktop) */}
-                    <div className="hidden lg:block absolute top-20 left-[20%] right-[20%] h-0.5 bg-gradient-to-r from-[#173C82] via-brand-500 to-emerald-500 opacity-30"></div>
+            {/* Connecting line for desktop */}
+            <div className="hidden md:block absolute top-[55%] left-[15%] right-[15%] h-0.5 bg-gray-100 -z-0"></div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 relative z-10">
-                        {steps.map((step) => (
-                            <div key={step.num} className="flex flex-col items-center text-center group">
-                                <div className="relative w-40 h-40 mb-5 transition-transform group-hover:scale-105 duration-300">
-                                    <Image
-                                        src={step.image}
-                                        alt={`Step ${step.num}`}
-                                        fill
-                                        className="object-contain drop-shadow-md"
-                                    />
-                                    <div className={`absolute -top-1 -right-1 w-7 h-7 ${step.color} text-white rounded-full flex items-center justify-center font-bold text-xs shadow-md border-2 border-white dark:border-gray-900`}>
-                                        {step.num}
-                                    </div>
+            <div className={cn(LANDING_CONTAINER, 'max-w-5xl relative z-10')}>
+                <BlurFade delay={0.1} inView>
+                    <div className="mx-auto max-w-3xl text-center space-y-3 mb-12">
+                        <h2 className={LANDING_H2}>{t('landing.howItWorks.title')}</h2>
+                        <p className={LANDING_P}>{t('landing.howItWorks.subtitle')}</p>
+                    </div>
+                </BlurFade>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-4">
+                    {steps.map((step, i) => (
+                        <BlurFade key={step.num} delay={0.2 + (i * 0.1)} inView>
+                            <div className="relative bg-white md:bg-transparent p-6 md:p-0 rounded-xl border md:border-none border-gray-100 text-center group">
+                                <div className={`w-12 h-12 mx-auto mb-4 rounded-xl ${step.color} text-white flex items-center justify-center font-bold text-lg shadow-lg group-hover:scale-110 transition-transform duration-300 relative z-10`}>
+                                    {step.num}
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                                <h3 className="text-lg font-bold text-gray-900 mb-2">
                                     {t(`landing.howItWorks.step${step.num}.title`)}
                                 </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-w-xs">
+                                <p className="text-sm text-gray-500 max-w-xs mx-auto">
                                     {t(`landing.howItWorks.step${step.num}.desc`)}
                                 </p>
                             </div>
-                        ))}
-                    </div>
+                        </BlurFade>
+                    ))}
                 </div>
             </div>
         </section>

@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { CustomerLanguageProvider } from '@/context/LanguageContext';
 import { CartProvider } from '@/context/CartContext';
 import { ToastProvider } from '@/context/ToastContext';
+import { useTheme } from '@/context/ThemeContext';
 
 /**
  * Customer Layout Wrapper
@@ -27,22 +28,28 @@ interface CustomerLayoutProps {
 }
 
 export default function CustomerLayout({ children }: CustomerLayoutProps) {
-    // Force light mode for customer pages - override any dark mode setting
+    const { theme, setTheme, isInitialized } = useTheme();
+    const previousThemeRef = useRef<'light' | 'dark' | null>(null);
+    const hasCapturedRef = useRef(false);
+
+    // Force light mode for customer pages - coordinate via ThemeContext to avoid DOM/theme desync.
     useEffect(() => {
-        // Store original dark class state to restore when leaving customer pages
-        const hadDarkClass = document.documentElement.classList.contains('dark');
-        
-        // Remove dark class for customer pages
-        document.documentElement.classList.remove('dark');
-        
-        // Cleanup: restore dark class if it was present when unmounting
+        if (!isInitialized) return;
+
+        if (!hasCapturedRef.current) {
+            previousThemeRef.current = theme;
+            hasCapturedRef.current = true;
+        }
+
+        if (theme !== 'light') setTheme('light');
+    }, [isInitialized, setTheme, theme]);
+
+    useEffect(() => {
         return () => {
-            const savedTheme = localStorage.getItem('theme');
-            if (savedTheme === 'dark' || hadDarkClass) {
-                document.documentElement.classList.add('dark');
-            }
+            const previousTheme = previousThemeRef.current;
+            if (previousTheme && isInitialized) setTheme(previousTheme);
         };
-    }, []);
+    }, [isInitialized, setTheme]);
 
     return (
         <CustomerLanguageProvider>
@@ -50,7 +57,7 @@ export default function CustomerLayout({ children }: CustomerLayoutProps) {
                 <ToastProvider>
                     <div className="min-h-screen bg-white" data-theme="light">
                         {/* Centered container - mobile-first layout like Burjo reference */}
-                        <div className="customer-page-container flex flex-col min-h-screen max-w-[500px] mx-auto bg-white scrollbar-hide">
+                        <div className="customer-page-container flex flex-col min-h-screen max-w-125 mx-auto bg-white scrollbar-hide">
                             {children}
                         </div>
                     </div>

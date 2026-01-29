@@ -1,93 +1,144 @@
 'use client';
 
 import Image from 'next/image';
+import * as React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { cn } from '@/lib/utils';
+import { LANDING_CONTAINER, LANDING_H2, LANDING_P, LANDING_SECTION } from './landingStyles';
 
 export default function FeatureHighlightSection() {
     const { t } = useTranslation();
+
+    const [activeIndex, setActiveIndex] = React.useState(0);
+    const itemRefs = React.useRef<Array<HTMLDivElement | null>>([]);
 
     const highlights = [
         {
             key: 'smartMenu',
             image: '/images/landing/mobile_mockup_iphone.png',
-            reverse: false,
             iconColor: 'bg-brand-500 text-white',
         },
         {
             key: 'powerfulDashboard',
             image: '/images/landing/desktop_mockup_macbook.png',
-            reverse: true,
             iconColor: 'bg-[#173C82] text-white',
         },
         {
             key: 'kitchenDisplay',
             image: '/images/landing/tablet_mockup_ipad.png',
-            reverse: false,
             iconColor: 'bg-emerald-500 text-white',
         }
     ];
 
+    React.useEffect(() => {
+        const elements = itemRefs.current.filter(Boolean) as HTMLDivElement[];
+        if (elements.length === 0) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const visible = entries
+                    .filter((e) => e.isIntersecting)
+                    .sort((a, b) => (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0));
+
+                if (visible[0]?.target) {
+                    const idx = elements.findIndex((el) => el === visible[0].target);
+                    if (idx >= 0) setActiveIndex(idx);
+                }
+            },
+            {
+                root: null,
+                threshold: [0.35, 0.5, 0.65],
+                rootMargin: '-20% 0px -55% 0px',
+            }
+        );
+
+        elements.forEach((el) => observer.observe(el));
+        return () => observer.disconnect();
+    }, []);
+
     return (
-        <section className="py-16 lg:py-20 overflow-hidden bg-white dark:bg-gray-900">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16 lg:space-y-24">
+        <section className={LANDING_SECTION}>
+            <div className={cn(LANDING_CONTAINER, 'space-y-12 lg:space-y-16')}>
 
-                {highlights.map((feature, index) => (
-                    <div
-                        key={feature.key}
-                        className={`flex flex-col lg:flex-row items-center gap-8 lg:gap-12 ${feature.reverse ? 'lg:flex-row-reverse' : ''}`}
-                    >
-                        {/* Image Side */}
-                        <div className="w-full lg:w-1/2 relative group">
-                            {/* Subtle background blur */}
-                            <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[80%] rounded-full blur-[80px] opacity-20 -z-10 ${index % 2 === 0 ? 'bg-brand-300 dark:bg-brand-900' : 'bg-blue-300 dark:bg-blue-900'
-                                }`}></div>
+                <div className="mx-auto max-w-3xl text-center space-y-3">
+                    <h2 className={LANDING_H2}>{t('landing.highlights.sectionTitle')}</h2>
+                    <p className={LANDING_P}>{t('landing.highlights.sectionSubtitle')}</p>
+                </div>
 
-                            <div className="relative w-full aspect-[4/3] transform transition-transform duration-500 hover:scale-[1.02] max-w-md mx-auto">
-                                <Image
-                                    src={feature.image}
-                                    alt={t(`landing.highlights.${feature.key}.title`)}
-                                    fill
-                                    className="object-contain drop-shadow-lg"
-                                    sizes="(max-width: 1024px) 100vw, 50vw"
-                                />
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+                    {/* Left: scrollable narrative */}
+                    <div className="space-y-6">
+                        {highlights.map((feature, index) => (
+                            <div
+                                key={feature.key}
+                                ref={(el) => {
+                                    itemRefs.current[index] = el;
+                                }}
+                                className={cn(
+                                    'rounded-2xl border border-gray-200 bg-white/60 backdrop-blur p-6 shadow-sm',
+                                    'min-h-[52vh] flex flex-col justify-center',
+                                    activeIndex === index ? 'ring-2 ring-[#173C82]/15' : 'ring-0'
+                                )}
+                            >
+                                <div className="flex items-start gap-4">
+                                    <div className={cn('h-10 w-10 rounded-lg flex items-center justify-center shadow-sm', feature.iconColor)}>
+                                        <span className="text-sm font-extrabold">{index + 1}</span>
+                                    </div>
+
+                                    <div className="space-y-3">
+                                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
+                                            {t(`landing.highlights.${feature.key}.title`)}
+                                        </h3>
+                                        <p className="text-sm text-gray-600 leading-relaxed">
+                                            {t(`landing.highlights.${feature.key}.desc`)}
+                                        </p>
+
+                                        <ul className="space-y-2 pt-1">
+                                            {[1, 2, 3].map((item) => (
+                                                <li key={item} className="flex items-start gap-2">
+                                                    <span className="mt-0.5 h-4 w-4 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center">
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                                    </span>
+                                                    <span className="text-sm text-gray-700">
+                                                        {t(`landing.highlights.${feature.key}.point${item}`)}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
+                        ))}
+                    </div>
 
-                        {/* Text Side */}
-                        <div className="w-full lg:w-1/2 space-y-4 max-w-lg mx-auto lg:mx-0">
-                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center shadow-md ${feature.iconColor}`}>
-                                {feature.key === 'smartMenu' && (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
-                                )}
-                                {feature.key === 'powerfulDashboard' && (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                                )}
-                                {feature.key === 'kitchenDisplay' && (
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
-                                )}
+                    {/* Right: sticky preview (changes on scroll) */}
+                    <div className="lg:sticky lg:top-24">
+                        <div className="relative rounded-2xl border border-gray-200 bg-white/60 backdrop-blur p-6 shadow-sm">
+                            <div className="absolute inset-0 rounded-2xl bg-[radial-gradient(600px_circle_at_50%_20%,rgba(23,60,130,0.12),transparent_60%)]" />
+                            <div className="relative mx-auto w-full max-w-md aspect-[4/3]">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={highlights[activeIndex]?.key}
+                                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: -10, scale: 0.98 }}
+                                        transition={{ duration: 0.25 }}
+                                        className="absolute inset-0"
+                                    >
+                                        <Image
+                                            src={highlights[activeIndex]?.image}
+                                            alt={t(`landing.highlights.${highlights[activeIndex]?.key}.title`)}
+                                            fill
+                                            className="object-contain drop-shadow-lg"
+                                            sizes="(max-width: 1024px) 100vw, 50vw"
+                                        />
+                                    </motion.div>
+                                </AnimatePresence>
                             </div>
-
-                            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-tight">
-                                {t(`landing.highlights.${feature.key}.title`)}
-                            </h2>
-
-                            <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                                {t(`landing.highlights.${feature.key}.desc`)}
-                            </p>
-
-                            <ul className="space-y-2 pt-1">
-                                {[1, 2, 3].map((item) => (
-                                    <li key={item} className="flex items-start gap-2">
-                                        <svg className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                        <span className="text-sm text-gray-700 dark:text-gray-300">
-                                            {t(`landing.highlights.${feature.key}.point${item}`)}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
                         </div>
                     </div>
-                ))}
+                </div>
 
             </div>
         </section>

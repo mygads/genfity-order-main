@@ -28,6 +28,25 @@ const eslintConfig = [
     },
   },
   {
+    files: ['src/**/*.{ts,tsx,js,jsx}'],
+    ignores: ['src/lib/utils/customerRoutes.ts', 'src/proxy.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value=/^\\/customer\\//]",
+          message:
+            "Do not hardcode '/customer/...' routes. Use helpers from '@/lib/utils/customerRoutes' instead.",
+        },
+        {
+          selector: "TemplateElement[value.raw=/^\\/customer\\//]",
+          message:
+            "Do not hardcode '/customer/...' routes. Use helpers from '@/lib/utils/customerRoutes' instead.",
+        },
+      ],
+    },
+  },
+  {
     files: ['src/app/api/**/route.ts'],
     rules: {
       'no-restricted-syntax': [

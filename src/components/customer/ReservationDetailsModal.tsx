@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { saveReservationDetails, getReservationDetails } from '@/lib/utils/localStorage';
+import { customerMerchantHomeUrl } from '@/lib/utils/customerRoutes';
 import { FaTimes } from 'react-icons/fa';
 
 export type ReservationDetails = {
@@ -128,7 +129,7 @@ export default function ReservationDetailsModal({
         return;
       }
 
-      router.replace(`/${merchantCode}`);
+      router.replace(customerMerchantHomeUrl(merchantCode));
     }, 250);
   };
 

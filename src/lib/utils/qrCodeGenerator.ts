@@ -48,6 +48,7 @@ export async function generateOrderQRCode(
   if (!options.trackingToken) {
     throw new Error('trackingToken is required to generate a tracking QR code');
   }
-  const trackingUrl = `${baseUrl}/${merchantCode}/track/${orderNumberEncoded}?token=${encodeURIComponent(options.trackingToken)}`;
+  const code = merchantCode.toUpperCase();
+  const trackingUrl = `${baseUrl}/merchant/${code}/track/${orderNumberEncoded}?token=${encodeURIComponent(options.trackingToken)}`;
   return generateQRCode(trackingUrl);
 }

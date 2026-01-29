@@ -6,6 +6,7 @@ import { FaUsers } from 'react-icons/fa';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { getCustomerAuth } from '@/lib/utils/localStorage';
 import { useState, useEffect } from 'react';
+import { customerOrderUrl, customerProfileUrl } from '@/lib/utils/customerRoutes';
 
 type ReservationSummary = {
   partySize: number;
@@ -71,7 +72,8 @@ export default function OrderPageHeader({
   const topInfoKind: 'table' | 'reservation' | null = tableNumber ? 'table' : reservationSummary ? 'reservation' : null;
 
   const handleProfileClick = () => {
-    router.push(`/${merchantCode}/profile?ref=${encodeURIComponent(`/${merchantCode}/order?mode=${currentMode}`)}`);
+    const refUrl = customerOrderUrl(merchantCode, { mode: currentMode });
+    router.push(customerProfileUrl(merchantCode, { mode: currentMode, ref: refUrl }));
   };
 
   const handleSearchClick = () => {
