@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useToast } from "@/context/ToastContext";
 import { clearAdminAuth } from "@/lib/utils/adminAuth";
 import { clearDriverAuth } from "@/lib/utils/driverAuth";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
 /**
@@ -45,13 +46,13 @@ export default function MerchantInactiveAlert() {
         return;
       }
 
-      const response = await fetch('/api/merchant/staff/leave', {
+      const response = await fetchMerchantApi('/api/merchant/staff/leave', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ merchantId: merchant.id }),
+        token,
       });
 
       if (!response.ok) {

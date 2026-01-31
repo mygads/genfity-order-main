@@ -11,6 +11,7 @@ import { RevenuePageSkeleton } from "@/components/common/SkeletonLoaders";
 import { useMerchant } from "@/context/MerchantContext";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface RevenueAnalytics {
   dateRange: {
@@ -98,7 +99,7 @@ export default function MerchantRevenuePage() {
         endDate,
       });
 
-      const response = await fetch(`/api/merchant/revenue?${params}`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/revenue?${params}`), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

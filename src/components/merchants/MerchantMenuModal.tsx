@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import MerchantQRCodeModal from "@/components/merchants/MerchantQRCodeModal";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MerchantData {
   id: string;
@@ -70,10 +71,8 @@ const MerchantMenuModal: React.FC<MerchantMenuModalProps> = ({ isOpen, onClose }
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi("/api/merchant/profile", {
+        token,
       });
 
       if (response.ok) {
@@ -81,10 +80,8 @@ const MerchantMenuModal: React.FC<MerchantMenuModalProps> = ({ isOpen, onClose }
         const merchantData = data.data?.merchant || data.data;
         
         // Fetch users associated with this merchant
-        const usersResponse = await fetch(`/api/merchant/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const usersResponse = await fetchMerchantApi(`/api/merchant/users`, {
+          token,
         });
 
         let owners: Array<{id: string; name: string; email: string}> = [];

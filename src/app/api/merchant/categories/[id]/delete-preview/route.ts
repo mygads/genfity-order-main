@@ -88,6 +88,10 @@ async function handleGet(
           id: serializeBigInt(category.id),
           name: category.name,
         },
+        addonCategory: {
+          id: serializeBigInt(category.id),
+          name: category.name,
+        },
         // Legacy field names for frontend compatibility
         menuItemsCount: uniqueMenus.length,
         menuNames: uniqueMenus.slice(0, 10).map(m => m.name),
@@ -95,6 +99,9 @@ async function handleGet(
         affectedMenusCount: uniqueMenus.length,
         affectedMenus: serializeBigInt(uniqueMenus.slice(0, 10)), // Limit to 10 for preview
         hasMoreMenus: uniqueMenus.length > 10,
+        addonItemsCount: 0,
+        addonItems: [],
+        hasMoreItems: false,
         message: uniqueMenus.length > 0
           ? `This category is assigned to ${uniqueMenus.length} menu item(s). Deleting will remove the category from these menus.`
           : 'This category is not assigned to any menu items. It can be safely deleted.',

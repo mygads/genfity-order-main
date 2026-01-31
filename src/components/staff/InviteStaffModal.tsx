@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface InviteStaffModalProps {
   show: boolean;
@@ -45,7 +46,7 @@ export default function InviteStaffModal({
         return;
       }
 
-      const response = await fetch("/api/merchant/staff/invite", {
+      const response = await fetch(buildOrderApiUrl("/api/merchant/staff/invite"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -52,6 +52,7 @@ import type { MerchantFormData, OpeningHour } from "@/components/merchants/merch
 import { hasMerchantUnsavedChanges } from "@/components/merchants/merchant-edit/utils/unsavedChanges";
 import type { PerDayModeScheduleHandle } from "@/components/merchants/PerDayModeSchedule";
 import type { MerchantPaymentAccount, MerchantPaymentSettings } from "@/lib/types/paymentSettings";
+import { buildMerchantApiUrl, fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 type UploadStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'error';
@@ -267,10 +268,8 @@ export default function EditMerchantPage() {
       }
       setAuthToken(token);
 
-      const response = await fetch("/api/merchant/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi("/api/merchant/profile", {
+        token,
       });
 
       const data = await response.json();
@@ -299,10 +298,8 @@ export default function EditMerchantPage() {
 
       // POS settings hydration via dedicated endpoint (avoids relying on profile payload shape)
       try {
-        const posSettingsResponse = await fetch("/api/merchant/pos-settings", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const posSettingsResponse = await fetchMerchantApi("/api/merchant/pos-settings", {
+          token,
         });
 
         const posSettingsData = await posSettingsResponse.json();
@@ -342,10 +339,8 @@ export default function EditMerchantPage() {
 
       // Payment settings hydration via dedicated endpoint
       try {
-        const paymentSettingsResponse = await fetch('/api/merchant/payment-settings', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const paymentSettingsResponse = await fetchMerchantApi('/api/merchant/payment-settings', {
+          token,
         });
 
         const paymentSettingsData = await paymentSettingsResponse.json();
@@ -493,10 +488,8 @@ export default function EditMerchantPage() {
 
       // Discount/voucher feature flags
       try {
-        const settingsRes = await fetch('/api/merchant/order-vouchers/settings', {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const settingsRes = await fetchMerchantApi('/api/merchant/order-vouchers/settings', {
+          token,
         });
 
         const settingsJson = await settingsRes.json();
@@ -584,10 +577,8 @@ export default function EditMerchantPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi("/api/merchant/profile", {
+        token,
       });
 
       const data = await response.json();
@@ -766,7 +757,7 @@ export default function EditMerchantPage() {
         xhr.addEventListener('error', () => reject(new Error('Network error')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('POST', '/api/merchant/upload/merchant-image');
+        xhr.open('POST', buildMerchantApiUrl('/api/merchant/upload/merchant-image'));
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         xhr.send(body);
       });
@@ -851,7 +842,7 @@ export default function EditMerchantPage() {
         xhr.addEventListener('error', () => reject(new Error('Network error')));
         xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-        xhr.open('POST', '/api/merchant/upload/merchant-image');
+        xhr.open('POST', buildMerchantApiUrl('/api/merchant/upload/merchant-image'));
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
         xhr.send(body);
       });
@@ -958,7 +949,7 @@ export default function EditMerchantPage() {
             xhr.addEventListener('error', () => reject(new Error('Network error')));
             xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
 
-            xhr.open('POST', '/api/merchant/upload/promo-banner');
+            xhr.open('POST', buildMerchantApiUrl('/api/merchant/upload/promo-banner'));
             xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(body);
           });
@@ -1080,13 +1071,13 @@ export default function EditMerchantPage() {
         promoBannerUrls: formData.promoBannerUrls,
       };
 
-      const merchantResponse = await fetch("/api/merchant/profile", {
+      const merchantResponse = await fetchMerchantApi("/api/merchant/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(merchantPayload),
+        token,
       });
 
       const merchantData = await merchantResponse.json();
@@ -1095,11 +1086,10 @@ export default function EditMerchantPage() {
         throw new Error(merchantData.message || "Failed to update merchant");
       }
 
-      const posSettingsResponse = await fetch("/api/merchant/pos-settings", {
+      const posSettingsResponse = await fetchMerchantApi("/api/merchant/pos-settings", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           customItems: {
@@ -1115,6 +1105,7 @@ export default function EditMerchantPage() {
             enabled: posEditOrdersEnabled,
           },
         }),
+        token,
       });
 
       const posSettingsData = await posSettingsResponse.json();
@@ -1122,16 +1113,16 @@ export default function EditMerchantPage() {
         throw new Error(posSettingsData.message || "Failed to update POS settings");
       }
 
-      const paymentSettingsResponse = await fetch('/api/merchant/payment-settings', {
+      const paymentSettingsResponse = await fetchMerchantApi('/api/merchant/payment-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           settings: paymentSettings,
           accounts: paymentAccounts,
         }),
+        token,
       });
 
       const paymentSettingsData = await paymentSettingsResponse.json();
@@ -1140,13 +1131,13 @@ export default function EditMerchantPage() {
       }
 
       // Update opening hours
-      const hoursResponse = await fetch("/api/merchant/opening-hours", {
+      const hoursResponse = await fetchMerchantApi("/api/merchant/opening-hours", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ openingHours }),
+        token,
       });
 
       const hoursData = await hoursResponse.json();
@@ -1161,16 +1152,16 @@ export default function EditMerchantPage() {
       }
 
       // Update discount/voucher feature settings
-      const discountVoucherResponse = await fetch('/api/merchant/order-vouchers/settings', {
+      const discountVoucherResponse = await fetchMerchantApi('/api/merchant/order-vouchers/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           posDiscountsEnabled,
           customerVouchersEnabled,
         }),
+        token,
       });
 
       const discountVoucherData = await discountVoucherResponse.json();
@@ -1244,13 +1235,13 @@ export default function EditMerchantPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/delete-pin", {
+      const response = await fetchMerchantApi("/api/merchant/delete-pin", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ pin: deletePin }),
+        token,
       });
 
       const data = await response.json();
@@ -1278,11 +1269,9 @@ export default function EditMerchantPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/delete-pin", {
+      const response = await fetchMerchantApi("/api/merchant/delete-pin", {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       const data = await response.json();

@@ -9,6 +9,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { FaArrowLeft, FaMagic } from "react-icons/fa";
 import { getCurrencyConfig } from "@/lib/constants/location";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuBook {
     id: string;
@@ -164,8 +165,8 @@ export default function CreateSpecialPricePage() {
                 return;
             }
 
-            const response = await fetch("/api/merchant/menu-books", {
-                headers: { Authorization: `Bearer ${token}` },
+            const response = await fetchMerchantApi("/api/merchant/menu-books", {
+                token,
             });
 
             const data = await response.json();
@@ -243,11 +244,10 @@ export default function CreateSpecialPricePage() {
             setError(null);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch("/api/merchant/special-prices", {
+            const response = await fetchMerchantApi("/api/merchant/special-prices", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     name: name.trim(),
@@ -263,6 +263,7 @@ export default function CreateSpecialPricePage() {
                         promoPrice: item.promoPrice,
                     })),
                 }),
+                token,
             });
 
             const data = await response.json();

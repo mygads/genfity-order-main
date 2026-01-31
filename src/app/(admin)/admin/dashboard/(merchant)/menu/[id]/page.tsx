@@ -9,6 +9,7 @@ import ImagePopupModal from "@/components/common/ImagePopupModal";
 import ViewMenuAddonCategoriesModal from "@/components/menu/ViewMenuAddonCategoriesModal";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -95,12 +96,8 @@ export default function MenuDetailPage() {
       }
 
       const [menuResponse, merchantResponse] = await Promise.all([
-        fetch(`/api/merchant/menu/${menuId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetchMerchantApi(`/api/merchant/menu/${menuId}`, { token }),
+        fetchMerchantApi("/api/merchant/profile", { token }),
       ]);
 
       if (!menuResponse.ok) {

@@ -19,6 +19,7 @@
  */
 
 import { getAdminToken, clearAdminAuth, refreshAdminSession } from './adminAuth';
+import { buildOrderApiUrl } from './orderApiBase';
 
 interface FetchOptions extends RequestInit {
   skipAuth?: boolean; // Skip adding Authorization header
@@ -34,6 +35,8 @@ export async function fetchWithAuth(
   options: FetchOptions = {}
 ): Promise<Response> {
   const { skipAuth, skipRedirect, headers, ...fetchOptions } = options;
+  const shouldRouteToGo = url.startsWith('/api/public') || url.startsWith('/api/merchant');
+  const requestUrl = shouldRouteToGo ? buildOrderApiUrl(url) : url;
 
   // Prepare headers
   const requestHeaders: Record<string, string> = {
@@ -58,7 +61,7 @@ export async function fetchWithAuth(
   }
 
   // Make request
-  const response = await fetch(url, {
+  const response = await fetch(requestUrl, {
     ...fetchOptions,
     headers: requestHeaders,
   });
@@ -72,7 +75,7 @@ export async function fetchWithAuth(
         const retryHeaders: Record<string, string> = { ...requestHeaders };
         retryHeaders['Authorization'] = `Bearer ${refreshed.accessToken}`;
 
-        const retryResponse = await fetch(url, {
+        const retryResponse = await fetch(requestUrl, {
           ...fetchOptions,
           headers: retryHeaders,
         });

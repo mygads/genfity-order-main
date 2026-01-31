@@ -11,6 +11,7 @@ import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import { validateTimeRangeInput } from '@/lib/utils/validators';
 
 /**
  * GET /api/merchant/special-prices/[id]
@@ -31,7 +32,12 @@ async function handleGet(
         const merchantId = context.merchantId;
         if (!merchantId) {
             return NextResponse.json(
-                { success: false, message: 'Merchant ID is required' },
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -43,7 +49,12 @@ async function handleGet(
 
         if (!merchant) {
             return NextResponse.json(
-                { success: false, message: 'Merchant not found' },
+                {
+                    success: false,
+                    error: 'MERCHANT_NOT_FOUND',
+                    message: 'Merchant not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -69,7 +80,12 @@ async function handleGet(
 
         if (!specialPrice) {
             return NextResponse.json(
-                { success: false, message: 'Special price not found' },
+                {
+                    success: false,
+                    error: 'NOT_FOUND',
+                    message: 'Special price not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -81,7 +97,12 @@ async function handleGet(
     } catch (error) {
         console.error('Error getting special price:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to get special price' },
+            {
+                success: false,
+                error: 'INTERNAL_ERROR',
+                message: 'Failed to get special price',
+                statusCode: 500,
+            },
             { status: 500 }
         );
     }
@@ -106,7 +127,12 @@ async function handlePut(
         const merchantId = context.merchantId;
         if (!merchantId) {
             return NextResponse.json(
-                { success: false, message: 'Merchant ID is required' },
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -118,7 +144,12 @@ async function handlePut(
 
         if (!merchant) {
             return NextResponse.json(
-                { success: false, message: 'Merchant not found' },
+                {
+                    success: false,
+                    error: 'MERCHANT_NOT_FOUND',
+                    message: 'Merchant not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -132,7 +163,12 @@ async function handlePut(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, message: 'Special price not found' },
+                {
+                    success: false,
+                    error: 'NOT_FOUND',
+                    message: 'Special price not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -142,6 +178,19 @@ async function handlePut(
             name, menuBookId, startDate, endDate,
             applicableDays, isAllDay, startTime, endTime, isActive, priceItems
         } = body;
+
+        const timeValidationError = validateTimeRangeInput({ isAllDay, startTime, endTime });
+        if (timeValidationError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'VALIDATION_ERROR',
+                    message: timeValidationError,
+                    statusCode: 400,
+                },
+                { status: 400 }
+            );
+        }
 
         const updated = await prisma.$transaction(async (tx) => {
             const _specialPrice = await tx.specialPrice.update({
@@ -194,7 +243,12 @@ async function handlePut(
     } catch (error) {
         console.error('Error updating special price:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to update special price' },
+            {
+                success: false,
+                error: 'INTERNAL_ERROR',
+                message: 'Failed to update special price',
+                statusCode: 500,
+            },
             { status: 500 }
         );
     }
@@ -219,7 +273,12 @@ async function handleDelete(
         const merchantId = context.merchantId;
         if (!merchantId) {
             return NextResponse.json(
-                { success: false, message: 'Merchant ID is required' },
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -231,7 +290,12 @@ async function handleDelete(
 
         if (!merchant) {
             return NextResponse.json(
-                { success: false, message: 'Merchant not found' },
+                {
+                    success: false,
+                    error: 'MERCHANT_NOT_FOUND',
+                    message: 'Merchant not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -245,7 +309,12 @@ async function handleDelete(
 
         if (!existing) {
             return NextResponse.json(
-                { success: false, message: 'Special price not found' },
+                {
+                    success: false,
+                    error: 'NOT_FOUND',
+                    message: 'Special price not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -261,7 +330,12 @@ async function handleDelete(
     } catch (error) {
         console.error('Error deleting special price:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to delete special price' },
+            {
+                success: false,
+                error: 'INTERNAL_ERROR',
+                message: 'Failed to delete special price',
+                statusCode: 500,
+            },
             { status: 500 }
         );
     }

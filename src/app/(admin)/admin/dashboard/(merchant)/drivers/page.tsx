@@ -12,6 +12,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { StatusToggle } from "@/components/common/StatusToggle";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface Driver {
   id: string;
@@ -78,7 +79,7 @@ export default function DriversManagementPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/drivers/${driver.id}`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/drivers/${driver.id}`), {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,

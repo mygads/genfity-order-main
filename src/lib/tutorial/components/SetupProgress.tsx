@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import {
   FaCheck,
   FaTimes,
@@ -168,7 +169,7 @@ export function SetupProgress({ compact = false, onComplete }: SetupProgressProp
         return;
       }
 
-      const res = await fetch('/api/merchant/setup-progress', {
+      const res = await fetch(buildOrderApiUrl('/api/merchant/setup-progress'), {
         headers: { Authorization: `Bearer ${token}` },
       });
 

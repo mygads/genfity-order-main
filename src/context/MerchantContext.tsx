@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { ReceiptSettings } from '@/lib/types/receiptSettings';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 /**
  * Merchant Context
@@ -80,7 +81,7 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await fetch('/api/merchant/profile', {
+      const response = await fetch(buildOrderApiUrl('/api/merchant/profile'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -103,7 +104,7 @@ export function MerchantProvider({ children }: { children: ReactNode }) {
         let customerVouchersEnabled: boolean | undefined;
 
         try {
-          const settingsRes = await fetch('/api/merchant/order-vouchers/settings', {
+          const settingsRes = await fetch(buildOrderApiUrl('/api/merchant/order-vouchers/settings'), {
             headers: {
               Authorization: `Bearer ${token}`,
             },

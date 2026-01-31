@@ -8,6 +8,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaArrowLeft } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface Menu {
     id: string;
@@ -46,12 +47,8 @@ export default function EditMenuBookPage() {
             }
 
             const [bookRes, menusRes] = await Promise.all([
-                fetch(`/api/merchant/menu-books/${bookId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
-                fetch("/api/merchant/menu", {
-                    headers: { Authorization: `Bearer ${token}` },
-                }),
+                fetchMerchantApi(`/api/merchant/menu-books/${bookId}`, { token }),
+                fetchMerchantApi("/api/merchant/menu", { token }),
             ]);
 
             const bookData = await bookRes.json();
@@ -144,11 +141,10 @@ export default function EditMenuBookPage() {
             setError(null);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/menu-books/${bookId}`, {
+            const response = await fetchMerchantApi(`/api/merchant/menu-books/${bookId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     name: name.trim(),
@@ -156,6 +152,7 @@ export default function EditMenuBookPage() {
                     isActive,
                     menuIds: selectedMenuIds,
                 }),
+                token,
             });
 
             const data = await response.json();

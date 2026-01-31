@@ -24,14 +24,24 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     // Validate request
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'INVALID_IDS', message: 'Please provide an array of menu IDs' },
+        {
+          success: false,
+          error: 'INVALID_IDS',
+          message: 'Please provide an array of menu IDs',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
 
     if (ids.length > 100) {
       return NextResponse.json(
-        { success: false, error: 'TOO_MANY_ITEMS', message: 'Cannot restore more than 100 items at once' },
+        {
+          success: false,
+          error: 'TOO_MANY_ITEMS',
+          message: 'Cannot restore more than 100 items at once',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -57,6 +67,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
         success: false,
         error: 'BULK_RESTORE_FAILED',
         message: error instanceof Error ? error.message : 'Failed to bulk restore menus',
+        statusCode: 500,
       },
       { status: 500 }
     );

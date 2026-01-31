@@ -19,6 +19,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
 import PageBreadcrumb from '@/components/common/PageBreadCrumb';
 import { StatusToggle } from '@/components/common/StatusToggle';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 interface MenuItem {
   id: string;
@@ -78,11 +79,9 @@ export default function BulkOperationsPage() {
         return;
       }
 
-      const headers = { Authorization: `Bearer ${token}` };
-
       const [menusRes, categoriesRes] = await Promise.all([
-        fetch('/api/merchant/menu', { headers }),
-        fetch('/api/merchant/categories', { headers }),
+        fetchMerchantApi('/api/merchant/menu', { token }),
+        fetchMerchantApi('/api/merchant/categories', { token }),
       ]);
 
       if (menusRes.ok) {
@@ -190,11 +189,10 @@ export default function BulkOperationsPage() {
           break;
       }
 
-      const response = await fetch('/api/merchant/bulk/menu', {
+      const response = await fetchMerchantApi('/api/merchant/bulk/menu', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           operation,
@@ -202,6 +200,7 @@ export default function BulkOperationsPage() {
           value,
           options,
         }),
+        token,
       });
 
       const data = await response.json();

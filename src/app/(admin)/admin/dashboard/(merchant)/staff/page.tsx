@@ -21,6 +21,7 @@ import Switch from "@/components/ui/Switch";
 import { ConfirmationModal } from "@/components/common/ConfirmationModal";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEye, FaTrash, FaUserShield, FaEdit } from "react-icons/fa";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface Staff {
   id: string;
@@ -200,7 +201,7 @@ export default function StaffManagementPage() {
 
       await mutateStaff(
         async (current) => {
-          const response = await fetch(`/api/merchant/staff?userId=${staffMember.userId}`, {
+          const response = await fetch(buildOrderApiUrl(`/api/merchant/staff?userId=${staffMember.userId}`), {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
           });
@@ -267,7 +268,7 @@ export default function StaffManagementPage() {
       }
 
       // Use userId instead of id - the API expects the user ID, not the merchantUser ID
-      const response = await fetch(`/api/merchant/staff/${selectedStaff.userId}/permissions`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/staff/${selectedStaff.userId}/permissions`), {
         method: "PUT",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -320,7 +321,7 @@ export default function StaffManagementPage() {
 
       await mutateStaff(
         async (current) => {
-          const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
+          const response = await fetch(buildOrderApiUrl(`/api/merchant/staff/${staffMember.userId}/permissions`), {
             method: "PATCH",
             headers: {
               "Authorization": `Bearer ${token}`,
@@ -390,7 +391,7 @@ export default function StaffManagementPage() {
 
       await mutateStaff(
         async (currentResp) => {
-          const response = await fetch(`/api/merchant/staff/${staffMember.userId}/permissions`, {
+          const response = await fetch(buildOrderApiUrl(`/api/merchant/staff/${staffMember.userId}/permissions`), {
             method: 'PUT',
             headers: {
               Authorization: `Bearer ${token}`,
@@ -446,7 +447,7 @@ export default function StaffManagementPage() {
 
       await mutateStaff(
         async (current) => {
-          const response = await fetch(`/api/merchant/staff/${editStaff.userId}`, {
+          const response = await fetch(buildOrderApiUrl(`/api/merchant/staff/${editStaff.userId}`), {
             method: 'PUT',
             headers: {
               Authorization: `Bearer ${token}`,

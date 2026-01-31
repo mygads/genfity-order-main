@@ -10,6 +10,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaChevronDown, FaChevronUp, FaExclamationCircle, FaUpload, FaExclamationTriangle } from "react-icons/fa";
 import * as XLSX from "xlsx";
 import { useMerchant } from "@/context/MerchantContext";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuUploadItem {
   rowIndex: number;
@@ -238,9 +239,7 @@ export default function MenuBulkUploadPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/categories", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/categories", { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -261,9 +260,7 @@ export default function MenuBulkUploadPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/menu?limit=1000", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/menu?limit=1000", { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -311,9 +308,7 @@ export default function MenuBulkUploadPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/menu?limit=1000", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/menu?limit=1000", { token });
 
       if (!response.ok) {
         throw new Error("Failed to fetch menu items");
@@ -835,13 +830,13 @@ export default function MenuBulkUploadPage() {
         };
       });
 
-      const response = await fetch("/api/merchant/menu/bulk-upload", {
+      const response = await fetchMerchantApi("/api/merchant/menu/bulk-upload", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ items: itemsWithCategoryIds, upsertByName: true }),
+        token,
       });
 
       const data = await response.json();

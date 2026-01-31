@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface MenuCategory {
   id: string;
@@ -101,7 +102,7 @@ export default function ManageMenuCategoriesModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/categories", {
+      const response = await fetch(buildOrderApiUrl("/api/merchant/categories"), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -145,7 +146,7 @@ export default function ManageMenuCategoriesModal({
       if (!token) return;
 
       // Update menu categories via API
-      const response = await fetch(`/api/merchant/menu/${menuId}/categories`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/menu/${menuId}/categories`), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

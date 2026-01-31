@@ -10,6 +10,7 @@ import { useMerchant } from "@/context/MerchantContext";
 import { useToast } from "@/context/ToastContext";
 import { clearAdminAuth } from "@/lib/utils/adminAuth";
 import { clearDriverAuth } from "@/lib/utils/driverAuth";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
 
 interface SuspendedAlertProps {
@@ -53,7 +54,7 @@ export default function SuspendedAlert({ reason, type, graceDaysRemaining }: Sus
                 return;
             }
 
-            const response = await fetch('/api/merchant/staff/leave', {
+            const response = await fetch(buildOrderApiUrl('/api/merchant/staff/leave'), {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

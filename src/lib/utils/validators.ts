@@ -210,3 +210,41 @@ export function validateMerchantCode(code: string): void {
     );
   }
 }
+
+/**
+ * Validate time string in HH:MM 24h format
+ * @param value - Time string to validate
+ * @returns True if valid
+ */
+export function isValidTimeHHMM(value: string): boolean {
+  return /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.trim());
+}
+
+/**
+ * Validate time range payload (for isAllDay + startTime + endTime)
+ * @param params - Time range params
+ * @returns Error message when invalid, otherwise null
+ */
+export function validateTimeRangeInput(params: {
+  isAllDay?: boolean;
+  startTime?: string | null;
+  endTime?: string | null;
+}): string | null {
+  const { isAllDay, startTime, endTime } = params;
+  const isAllDayValue = isAllDay !== false;
+
+  if (!isAllDayValue) {
+    if (!startTime || !endTime) {
+      return 'startTime and endTime are required when isAllDay is false';
+    }
+  }
+
+  if (startTime && !isValidTimeHHMM(startTime)) {
+    return 'Invalid time format. Expected HH:MM';
+  }
+  if (endTime && !isValidTimeHHMM(endTime)) {
+    return 'Invalid time format. Expected HH:MM';
+  }
+
+  return null;
+}

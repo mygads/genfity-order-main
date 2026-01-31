@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 import { getCurrencyConfig } from "@/lib/constants/location";
 import { getCurrencySymbol } from "@/lib/utils/format";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaCalendarAlt, FaCashRegister, FaCoins, FaLayerGroup, FaShoppingCart, FaTag, FaTasks, FaUser } from "react-icons/fa";
 
@@ -323,8 +324,8 @@ export function OrderVoucherTemplateFormModal({
         if (!token) return;
 
         const [menusRes, categoriesRes] = await Promise.all([
-          fetch("/api/merchant/menu", { headers: { Authorization: `Bearer ${token}` } }),
-          fetch("/api/merchant/categories", { headers: { Authorization: `Bearer ${token}` } }),
+          fetchMerchantApi("/api/merchant/menu", { token }),
+          fetchMerchantApi("/api/merchant/categories", { token }),
         ]);
 
         const menusJson = (await menusRes.json()) as ApiResponse<any[]>;
@@ -484,13 +485,13 @@ export function OrderVoucherTemplateFormModal({
           ? "/api/merchant/order-vouchers/templates"
           : `/api/merchant/order-vouchers/templates/${initial?.id}`;
 
-      const res = await fetch(url, {
+      const res = await fetchMerchantApi(url, {
         method: mode === "create" ? "POST" : "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<TemplateDetail>;

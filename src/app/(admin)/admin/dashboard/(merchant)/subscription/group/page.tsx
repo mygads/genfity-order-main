@@ -9,6 +9,7 @@ import { getCurrencyConfig } from '@/lib/constants/location';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import { useMerchant } from '@/context/MerchantContext';
 import { Modal } from '@/components/ui/modal';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 interface ApiResponse<T> {
   success: boolean;
@@ -139,13 +140,13 @@ export default function GroupBillingPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchant/branches/set-main', {
+      const response = await fetchMerchantApi('/api/merchant/branches/set-main', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ merchantId: promoteTarget.id }),
+        token,
       });
 
       const result = await response.json();
@@ -200,11 +201,10 @@ export default function GroupBillingPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchant/balance/transfer', {
+      const response = await fetchMerchantApi('/api/merchant/balance/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           fromMerchantId,
@@ -212,6 +212,7 @@ export default function GroupBillingPage() {
           amount: amountNumber,
           note: note.trim() || undefined,
         }),
+        token,
       });
 
       const result = await response.json();

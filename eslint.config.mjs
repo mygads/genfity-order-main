@@ -43,6 +43,26 @@ const eslintConfig = [
           message:
             "Do not hardcode '/customer/...' routes. Use helpers from '@/lib/utils/customerRoutes' instead.",
         },
+        {
+          selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/api\\/merchant/]",
+          message:
+            "Do not call fetch('/api/merchant/...'). Use fetchMerchantApi or fetchMerchantApiJson from '@/lib/utils/orderApiClient' instead.",
+        },
+        {
+          selector: "CallExpression[callee.name='fetch'] > TemplateLiteral > TemplateElement[value.raw=/^\\/api\\/merchant/]",
+          message:
+            "Do not call fetch('/api/merchant/...'). Use fetchMerchantApi or fetchMerchantApiJson from '@/lib/utils/orderApiClient' instead.",
+        },
+        {
+          selector: "CallExpression[callee.name='fetch'] > Literal[value=/^\\/api\\/public/]",
+          message:
+            "Do not call fetch('/api/public/...'). Use fetchPublicApi or fetchPublicApiJson from '@/lib/utils/orderApiClient' instead.",
+        },
+        {
+          selector: "CallExpression[callee.name='fetch'] > TemplateLiteral > TemplateElement[value.raw=/^\\/api\\/public/]",
+          message:
+            "Do not call fetch('/api/public/...'). Use fetchPublicApi or fetchPublicApiJson from '@/lib/utils/orderApiClient' instead.",
+        },
       ],
     },
   },

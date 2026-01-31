@@ -59,9 +59,14 @@ async function handleGet(req: NextRequest, context: AuthContext) {
       );
     }
 
+    const serialized = serializeBigInt(order);
+
     return NextResponse.json({
       success: true,
-      data: serializeBigInt(order),
+      data: {
+        ...serialized,
+        orderNumber: order.order.orderNumber,
+      },
       message: 'Order verified successfully',
     });
   } catch (error) {

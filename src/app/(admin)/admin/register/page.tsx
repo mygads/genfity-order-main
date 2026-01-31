@@ -10,6 +10,7 @@ import { TranslationKeys } from "@/lib/i18n";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { FaArrowRight, FaCheckCircle, FaSignInAlt } from "react-icons/fa";
 import { TurnstileWidget } from "@/components/auth/TurnstileWidget";
+import { fetchPublicApiJson } from "@/lib/utils/orderApiClient";
 
 interface FormData {
     merchantName: string;
@@ -377,7 +378,7 @@ function MerchantRegisterContent() {
         setError(null);
 
         try {
-            const response = await fetch("/api/public/merchant/register", {
+            const result = await fetchPublicApiJson("/api/public/merchant/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -386,25 +387,12 @@ function MerchantRegisterContent() {
                 }),
             });
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                resetTurnstile();
-                const message = result?.message || "Registration failed";
-
-                // Treat known email/role conflicts as field validation (requested: register page validation)
-                if (result?.error === 'FORBIDDEN' || result?.error === 'EMAIL_ALREADY_EXISTS') {
-                    setFormErrors(prev => ({
-                        ...prev,
-                        ownerEmail: message,
-                    }));
-                    setStep(3);
-                    setError(null);
-                    setIsSubmitting(false);
-                    return;
+            if (result && typeof result === 'object' && 'success' in result) {
+                const payload = result as { success?: boolean; message?: string };
+                if (payload.success === false) {
+                    const message = typeof payload.message === 'string' ? payload.message : "Registration failed";
+                    throw new Error(message);
                 }
-
-                throw new Error(message);
             }
 
             setSuccess(true);
@@ -412,8 +400,24 @@ function MerchantRegisterContent() {
                 router.push("/admin/login?registered=true");
             }, 3000);
         } catch (err) {
-            setError(err instanceof Error ? err.message : "An error occurred");
+            const error = err as Error & { info?: { error?: string; message?: string } };
             resetTurnstile();
+
+            const message = error.message || "Registration failed";
+
+            // Treat known email/role conflicts as field validation (requested: register page validation)
+            if (error.info?.error === 'FORBIDDEN' || error.info?.error === 'EMAIL_ALREADY_EXISTS') {
+                setFormErrors(prev => ({
+                    ...prev,
+                    ownerEmail: message,
+                }));
+                setStep(3);
+                setError(null);
+                setIsSubmitting(false);
+                return;
+            }
+
+            setError(message || "An error occurred");
         } finally {
             setIsSubmitting(false);
         }

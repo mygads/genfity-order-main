@@ -17,7 +17,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     // Validation
     if (!Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { success: false, message: "Menu item IDs are required" },
+        { success: false, error: 'INVALID_IDS', message: "Menu item IDs are required", statusCode: 400 },
         { status: 400 }
       );
     }
@@ -36,7 +36,12 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
 
     if (menus.length !== menuIds.length) {
       return NextResponse.json(
-        { success: false, message: "Some menu items not found or already deleted" },
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: "Some menu items not found or already deleted",
+          statusCode: 404,
+        },
         { status: 404 }
       );
     }
@@ -63,8 +68,10 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     console.error("Bulk delete menu error:", error);
     return NextResponse.json(
       { 
-        success: false, 
-        message: error instanceof Error ? error.message : "Failed to delete menu items" 
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: error instanceof Error ? error.message : "Failed to delete menu items",
+        statusCode: 500,
       },
       { status: 500 }
     );

@@ -49,6 +49,7 @@ import OrderTotalsBreakdown from '@/components/orders/OrderTotalsBreakdown';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { STAFF_PERMISSIONS } from '@/lib/constants/permissions';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 import type {
   CustomerDisplayPayload,
   CustomerDisplayOrderPayload,
@@ -198,12 +199,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingTableNumber(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${apiOrderId}`, {
+      const res = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({ tableNumber: value }),
       });
 
@@ -229,9 +230,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     try {
       setDriversLoading(true);
       const token = localStorage.getItem('accessToken');
-      const res = await fetch('/api/merchant/drivers', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetchMerchantApi('/api/merchant/drivers', { token });
 
       const json = await res.json();
       if (!res.ok || !json?.success) {
@@ -254,12 +253,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setAssigningDriver(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${apiOrderId}/delivery/assign`, {
+      const res = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}/delivery/assign`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           driverUserId: selectedDriverUserId ? selectedDriverUserId : null,
         }),
@@ -285,12 +284,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     try {
       const token = localStorage.getItem('accessToken');
       const [orderResponse, merchantResponse] = await Promise.all([
-        fetch(`/api/merchant/orders/${apiOrderId}`, {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }),
-        fetch('/api/merchant/profile', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        }),
+        fetchMerchantApi(`/api/merchant/orders/${apiOrderId}`, { token }),
+        fetchMerchantApi('/api/merchant/profile', { token }),
       ]);
 
       const orderData = await orderResponse.json();
@@ -320,9 +315,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
     const fetchPosSettings = async () => {
       try {
-        const response = await fetch('/api/merchant/pos-settings', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetchMerchantApi('/api/merchant/pos-settings', { token });
         const data = await response.json();
         if (!response.ok || !data?.success) return;
         if (cancelled) return;
@@ -351,9 +344,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         // Still fetch merchant currency if not provided
         if (!currency) {
           const token = localStorage.getItem('accessToken');
-          fetch('/api/merchant/profile', {
-            headers: { 'Authorization': `Bearer ${token}` },
-          })
+          fetchMerchantApi('/api/merchant/profile', { token })
             .then(res => res.json())
             .then(data => {
               if (data.success && data.data?.currency) {
@@ -383,12 +374,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setSavingAdminNote(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/orders/${apiOrderId}/admin-note`, {
+      const res = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}/admin-note`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           adminNote: adminNoteDraft,
         }),
@@ -433,12 +424,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     setUpdating(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`/api/merchant/orders/${apiOrderId}/status`, {
+      const response = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -486,12 +477,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
         requestBody,
       });
 
-      const response = await fetch(`/api/merchant/orders/${apiOrderId}/payment`, {
+      const response = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}/payment`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify(requestBody),
       });
 
@@ -542,12 +533,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/orders/${apiOrderId}/cod/confirm`, {
+      const response = await fetchMerchantApi(`/api/merchant/orders/${apiOrderId}/cod/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({}),
       });
 
@@ -665,12 +656,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    const response = await fetch('/api/merchant/customer-display/state', {
+    const response = await fetchMerchantApi('/api/merchant/customer-display/state', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
+      token,
       body: JSON.stringify({
         mode,
         payload,

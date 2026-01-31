@@ -12,6 +12,7 @@ import { useContextualHint, CONTEXTUAL_HINTS } from "@/lib/tutorial/components/C
 import { useToast } from "@/context/ToastContext";
 import { FaWallet, FaCalendarAlt, FaClock, FaExchangeAlt, FaArrowRight, FaCheckCircle, FaExclamationTriangle, FaHistory, FaCreditCard, FaInfoCircle, FaTicketAlt } from "react-icons/fa";
 import type { ReceiptSettings } from "@/lib/types/receiptSettings";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface SubscriptionData {
     subscription: {
@@ -241,13 +242,13 @@ export default function SubscriptionPage() {
 
         try {
             const token = localStorage.getItem('accessToken');
-            const res = await fetch('/api/merchant/vouchers/redeem', {
+            const res = await fetchMerchantApi('/api/merchant/vouchers/redeem', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({ code: voucherCode.trim() }),
+                token,
             });
             const data = await res.json();
 
@@ -288,13 +289,13 @@ export default function SubscriptionPage() {
         setSwitching(true);
         try {
             const token = localStorage.getItem('accessToken');
-            const res = await fetch('/api/merchant/subscription/switch-type', {
+            const res = await fetchMerchantApi('/api/merchant/subscription/switch-type', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify({ newType: pendingSwitchType }),
+                token,
             });
             const data = await res.json();
             if (data.success) {

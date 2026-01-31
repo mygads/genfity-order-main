@@ -8,6 +8,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/middleware/auth';
 import { ValidationError } from '@/lib/constants/errors';
+import { isValidTimeHHMM } from '@/lib/utils/validators';
 
 interface OpeningHourInput {
   dayOfWeek: number;
@@ -76,6 +77,9 @@ async function handlePut(req: NextRequest, authContext: AuthContext) {
       if (!hour.isClosed) {
         if (!hour.openTime || !hour.closeTime) {
           throw new ValidationError('Open time and close time are required when not closed');
+        }
+        if (!isValidTimeHHMM(hour.openTime) || !isValidTimeHHMM(hour.closeTime)) {
+          throw new ValidationError('Invalid time format. Expected HH:MM');
         }
       }
     }

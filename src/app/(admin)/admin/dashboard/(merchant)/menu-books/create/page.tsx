@@ -8,6 +8,7 @@ import { StatusToggle } from "@/components/common/StatusToggle";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useMerchant } from "@/context/MerchantContext";
 import { FaArrowLeft } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface Menu {
     id: string;
@@ -41,9 +42,7 @@ export default function CreateMenuBookPage() {
                 return;
             }
 
-            const response = await fetch("/api/merchant/menu", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await fetchMerchantApi("/api/merchant/menu", { token });
 
             const data = await response.json();
             if (data.success) {
@@ -124,17 +123,17 @@ export default function CreateMenuBookPage() {
             setError(null);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch("/api/merchant/menu-books", {
+            const response = await fetchMerchantApi("/api/merchant/menu-books", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     name: name.trim(),
                     description: description.trim() || null,
                     menuIds: selectedMenuIds,
                 }),
+                token,
             });
 
             const data = await response.json();

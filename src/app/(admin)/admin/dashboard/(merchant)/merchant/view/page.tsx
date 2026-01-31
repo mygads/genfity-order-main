@@ -18,6 +18,7 @@ import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
 import StoreStatusChip from "@/components/merchants/StoreStatusChip";
 import { Modal } from "@/components/ui/modal";
 import { FaQuestionCircle } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 // Dynamically import map component
 const MapContent = dynamic(() => import("@/components/maps/MapContent"), { ssr: false });
@@ -184,10 +185,8 @@ export default function ViewMerchantPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi("/api/merchant/profile", {
+        token,
       });
 
       if (response.ok) {
@@ -262,15 +261,15 @@ export default function ViewMerchantPage() {
 
       // If currently in manual mode, switch to auto
       if (merchant.isManualOverride) {
-        const response = await fetch("/api/merchant/toggle-open", {
+        const response = await fetchMerchantApi("/api/merchant/toggle-open", {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             isManualOverride: false,
           }),
+          token,
         });
 
         if (response.ok) {
@@ -283,16 +282,16 @@ export default function ViewMerchantPage() {
         }
       } else {
         // Auto mode - toggle to manual with opposite of effective status
-        const response = await fetch("/api/merchant/toggle-open", {
+        const response = await fetchMerchantApi("/api/merchant/toggle-open", {
           method: "PUT",
           headers: {
-            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             isOpen: !effectivelyOpen,
             isManualOverride: true,
           }),
+          token,
         });
 
         if (response.ok) {

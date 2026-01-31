@@ -1,0 +1,1665 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/customers parity (Next vs Go) > merchant analytics customers go 1`] = `
+{
+  "data": {
+    "customerGrowth": "array",
+    "customerRetention": "array",
+    "orderFrequency": "array",
+    "segmentation": {
+      "casual": "number:>=0",
+      "new": "number:>=0",
+      "regular": "number:>=0",
+      "vip": "number:>=0",
+    },
+    "summary": {
+      "averageLifetimeValue": "number:>=0",
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "retentionRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "topCustomers": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/customers parity (Next vs Go) > merchant analytics customers next 1`] = `
+{
+  "data": {
+    "customerGrowth": "array",
+    "customerRetention": "array",
+    "orderFrequency": "array",
+    "segmentation": {
+      "casual": "number:>=0",
+      "new": "number:>=0",
+      "regular": "number:>=0",
+      "vip": "number:>=0",
+    },
+    "summary": {
+      "averageLifetimeValue": "number:>=0",
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "retentionRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "topCustomers": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/menu-performance parity (Next vs Go) > merchant analytics menu performance go 1`] = `
+{
+  "data": {
+    "addonPerformance": "array",
+    "categoryPerformance": "array",
+    "lowPerformers": "array",
+    "neverOrdered": "array",
+    "salesTrendByItem": "array",
+    "summary": {
+      "activeItems": "number:>=0",
+      "averageItemRevenue": "number:>=0",
+      "totalItemsSold": "number:>=0",
+      "totalMenuItems": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topPerformers": "array",
+  },
+  "meta": {
+    "daysInPeriod": "number",
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/menu-performance parity (Next vs Go) > merchant analytics menu performance next 1`] = `
+{
+  "data": {
+    "addonPerformance": "array",
+    "categoryPerformance": "array",
+    "lowPerformers": "array",
+    "neverOrdered": "array",
+    "salesTrendByItem": "array",
+    "summary": {
+      "activeItems": "number:>=0",
+      "averageItemRevenue": "number:>=0",
+      "totalItemsSold": "number:>=0",
+      "totalMenuItems": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topPerformers": "array",
+  },
+  "meta": {
+    "daysInPeriod": "number",
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/sales parity (Next vs Go) > merchant analytics sales go 1`] = `
+{
+  "data": {
+    "categoryMix": "array",
+    "cohortRetention": "array",
+    "customerMetrics": {
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "repeatPurchaseRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "orderTypes": "array",
+    "ordersByStatus": "array",
+    "paymentMethods": "array",
+    "peakHours": "array",
+    "revenueTrend": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "cancelledOrders": "number:>=0",
+      "completedOrders": "number:>=0",
+      "completionRate": "number:0-100",
+      "totalOrders": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topSellingItems": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "scope": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/analytics/sales parity (Next vs Go) > merchant analytics sales next 1`] = `
+{
+  "data": {
+    "categoryMix": "array",
+    "cohortRetention": "array",
+    "customerMetrics": {
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "repeatPurchaseRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "orderTypes": "array",
+    "ordersByStatus": "array",
+    "paymentMethods": "array",
+    "peakHours": "array",
+    "revenueTrend": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "cancelledOrders": "number:>=0",
+      "completedOrders": "number:>=0",
+      "completionRate": "number:0-100",
+      "totalOrders": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topSellingItems": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "scope": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/revenue parity (Next vs Go) > merchant analytics revenue go 1`] = `
+{
+  "data": {
+    "dailyRevenue": "array",
+    "dateRange": {
+      "endDate": "string",
+      "startDate": "string",
+    },
+    "hourlyDistribution": "array",
+    "merchant": {
+      "currency": "string",
+    },
+    "orderStatusBreakdown": "array",
+    "orderTypeBreakdown": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "grandTotal": "number:>=0",
+      "totalOrders": "number:>=0",
+      "totalPackagingFee": "number:>=0",
+      "totalRevenue": "number:>=0",
+      "totalServiceCharge": "number:>=0",
+      "totalTax": "number:>=0",
+    },
+    "topMenuItems": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant analytics > GET /api/merchant/revenue parity (Next vs Go) > merchant analytics revenue next 1`] = `
+{
+  "data": {
+    "dailyRevenue": "array",
+    "dateRange": {
+      "endDate": "string",
+      "startDate": "string",
+    },
+    "hourlyDistribution": "array",
+    "merchant": {
+      "currency": "string",
+    },
+    "orderStatusBreakdown": "array",
+    "orderTypeBreakdown": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "grandTotal": "number:>=0",
+      "totalOrders": "number:>=0",
+      "totalPackagingFee": "number:>=0",
+      "totalRevenue": "number:>=0",
+      "totalServiceCharge": "number:>=0",
+      "totalTax": "number:>=0",
+    },
+    "topMenuItems": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant feedback > GET /api/merchant/feedback parity (Next vs Go) > merchant feedback list go 1`] = `
+{
+  "dataType": "array",
+  "meta": {
+    "limit": "number",
+    "page": "number",
+    "totalCount": "number",
+    "totalPages": "number",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant feedback > GET /api/merchant/feedback parity (Next vs Go) > merchant feedback list next 1`] = `
+{
+  "dataType": "array",
+  "meta": {
+    "limit": "number",
+    "page": "number",
+    "totalCount": "number",
+    "totalPages": "number",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant feedback > GET /api/merchant/feedback/analytics parity (Next vs Go) > merchant feedback analytics go 1`] = `
+{
+  "data": {
+    "ratingDistribution": "array",
+    "recentTrends": "array",
+    "sentimentDistribution": "array",
+    "summary": {
+      "averageCompletionTime": "number:>=0|null",
+      "averageFoodRating": "number:0-5|null",
+      "averageOverallRating": "number:0-5",
+      "averageServiceRating": "number:0-5|null",
+      "totalFeedback": "number:>=0",
+    },
+    "topTags": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant feedback > GET /api/merchant/feedback/analytics parity (Next vs Go) > merchant feedback analytics next 1`] = `
+{
+  "data": {
+    "ratingDistribution": "array",
+    "recentTrends": "array",
+    "sentimentDistribution": "array",
+    "summary": {
+      "averageCompletionTime": "number:>=0|null",
+      "averageFoodRating": "number:0-5|null",
+      "averageOverallRating": "number:0-5",
+      "averageServiceRating": "number:0-5|null",
+      "totalFeedback": "number:>=0",
+    },
+    "topTags": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant legacy bulk > POST /api/merchant/bulk/addon-items parity (Next vs Go) > merchant legacy bulk addon items go 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant legacy bulk > POST /api/merchant/bulk/addon-items parity (Next vs Go) > merchant legacy bulk addon items next 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant legacy bulk > POST /api/merchant/bulk/menu parity (Next vs Go) > merchant legacy bulk menu go 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant legacy bulk > POST /api/merchant/bulk/menu parity (Next vs Go) > merchant legacy bulk menu next 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > DELETE /api/merchant/menu/{id}/addon-categories/{categoryId} parity (Next vs Go) > merchant menu addon category delete go 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > DELETE /api/merchant/menu/{id}/addon-categories/{categoryId} parity (Next vs Go) > merchant menu addon category delete next 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > POST /api/merchant/menu/{id}/addon-categories parity (Next vs Go) > merchant menu addon category add go 1`] = `
+{
+  "data": {
+    "addonCategoryId": "string",
+    "displayOrder": "number:>=0",
+    "isRequired": "boolean",
+    "menuId": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > POST /api/merchant/menu/{id}/addon-categories parity (Next vs Go) > merchant menu addon category add next 1`] = `
+{
+  "data": {
+    "addonCategoryId": "string",
+    "displayOrder": "number:>=0",
+    "isRequired": "boolean",
+    "menuId": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > POST /api/merchant/menu/{id}/duplicate parity (Next vs Go) > merchant menu duplicate go 1`] = `
+{
+  "dataType": "object",
+  "menuId": "undefined",
+  "nameType": "undefined",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > POST /api/merchant/menu/{id}/duplicate parity (Next vs Go) > merchant menu duplicate next 1`] = `
+{
+  "dataType": "object",
+  "menuId": "string",
+  "nameType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > PUT /api/merchant/menu/{id}/categories parity (Next vs Go) > merchant menu categories update go 1`] = `
+{
+  "categoriesType": "array",
+  "dataType": "object",
+  "menuId": "number",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant orders + reservations > PUT /api/merchant/menu/{id}/categories parity (Next vs Go) > merchant menu categories update next 1`] = `
+{
+  "categoriesType": "array",
+  "dataType": "object",
+  "menuId": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > GET/POST /api/merchant/special-prices parity (Next vs Go) > merchant special prices create go 1`] = `
+{
+  "data": {
+    "applicableDays": "array",
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "priceItemsType": "array",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > GET/POST /api/merchant/special-prices parity (Next vs Go) > merchant special prices create next 1`] = `
+{
+  "data": {
+    "applicableDays": "array",
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "priceItemsType": "array",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > GET/POST /api/merchant/special-prices parity (Next vs Go) > merchant special prices list go 1`] = `
+{
+  "dataType": "array",
+  "sample": {
+    "applicableDays": "array",
+    "count": {
+      "priceItems": "number",
+    },
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > GET/POST /api/merchant/special-prices parity (Next vs Go) > merchant special prices list next 1`] = `
+{
+  "dataType": "array",
+  "sample": {
+    "applicableDays": "array",
+    "count": {
+      "priceItems": "number",
+    },
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > POST /api/merchant/vouchers/redeem parity (Next vs Go) > merchant voucher redeem go 1`] = `
+{
+  "data": {
+    "autoSwitchTriggered": "boolean",
+    "balance": "number:>=0",
+    "newSubType": "string|null",
+    "previousSubType": "string|null",
+    "subscriptionType": "object|null",
+    "valueApplied": "number:>=0",
+    "voucherType": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > POST /api/merchant/vouchers/redeem parity (Next vs Go) > merchant voucher redeem next 1`] = `
+{
+  "data": {
+    "autoSwitchTriggered": "boolean",
+    "balance": "number:>=0",
+    "newSubType": "string|null",
+    "previousSubType": "string|null",
+    "subscriptionType": "object|null",
+    "valueApplied": "number:>=0",
+    "voucherType": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > PUT/DELETE /api/merchant/special-prices/{id} parity (Next vs Go) > merchant special prices delete go 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "undefined",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > PUT/DELETE /api/merchant/special-prices/{id} parity (Next vs Go) > merchant special prices delete next 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "undefined",
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > PUT/DELETE /api/merchant/special-prices/{id} parity (Next vs Go) > merchant special prices update go 1`] = `
+{
+  "data": {
+    "applicableDays": "array",
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "priceItemsType": "array",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant reports + vouchers + utilities > PUT/DELETE /api/merchant/special-prices/{id} parity (Next vs Go) > merchant special prices update next 1`] = `
+{
+  "data": {
+    "applicableDays": "array",
+    "createdAt": "string",
+    "endDate": "string",
+    "endTime": "string",
+    "id": "string",
+    "isActive": "boolean",
+    "isAllDay": "boolean",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "menuBookId": "string",
+    "merchantId": "string",
+    "name": "string",
+    "priceItemsType": "array",
+    "startDate": "string",
+    "startTime": "string",
+    "updatedAt": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/payment-settings parity (Next vs Go) > merchant payment settings get go 1`] = `
+{
+  "data": {
+    "accountSample": "empty",
+    "accountsType": "array",
+    "settings": {
+      "manualTransferEnabled": "boolean",
+      "payAtCashierEnabled": "boolean",
+      "qrisEnabled": "boolean",
+      "qrisImageMeta": "null",
+      "qrisImageUploadedAt": "null",
+      "qrisImageUrl": "null",
+      "requirePaymentProof": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/payment-settings parity (Next vs Go) > merchant payment settings get next 1`] = `
+{
+  "data": {
+    "accountSample": "empty",
+    "accountsType": "array",
+    "settings": {
+      "manualTransferEnabled": "boolean",
+      "payAtCashierEnabled": "boolean",
+      "qrisEnabled": "boolean",
+      "qrisImageMeta": "null",
+      "qrisImageUploadedAt": "null",
+      "qrisImageUrl": "null",
+      "requirePaymentProof": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/pos-settings parity (Next vs Go) > merchant pos settings get go 1`] = `
+{
+  "data": {
+    "customItems": {
+      "enabled": "boolean",
+      "maxNameLength": "number:10-200|null",
+      "maxPrice": "number:>=0|null",
+    },
+    "editOrder": {
+      "enabled": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/pos-settings parity (Next vs Go) > merchant pos settings get next 1`] = `
+{
+  "data": {
+    "customItems": {
+      "enabled": "boolean",
+      "maxNameLength": "number:10-200|null",
+      "maxPrice": "number:>=0|null",
+    },
+    "editOrder": {
+      "enabled": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/setup-progress parity (Next vs Go) > merchant setup progress go 1`] = `
+{
+  "data": {
+    "completedRequired": "number:0-4",
+    "isComplete": "boolean",
+    "progressPercent": "number:0-100",
+    "steps": {
+      "addons": "boolean",
+      "categories": "boolean",
+      "menu_items": "boolean",
+      "merchant_info": "boolean",
+      "opening_hours": "boolean",
+    },
+    "templateMarkers": {
+      "AUD": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+      "IDR": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+    },
+    "totalRequired": "number:0-4",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > GET /api/merchant/setup-progress parity (Next vs Go) > merchant setup progress next 1`] = `
+{
+  "data": {
+    "completedRequired": "number:0-4",
+    "isComplete": "boolean",
+    "progressPercent": "number:0-100",
+    "steps": {
+      "addons": "boolean",
+      "categories": "boolean",
+      "menu_items": "boolean",
+      "merchant_info": "boolean",
+      "opening_hours": "boolean",
+    },
+    "templateMarkers": {
+      "AUD": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+      "IDR": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+    },
+    "totalRequired": "number:0-4",
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > PUT /api/merchant/payment-settings parity (Next vs Go) > merchant payment settings put go 1`] = `
+{
+  "data": {
+    "accountSample": "empty",
+    "accountsType": "array",
+    "settings": {
+      "manualTransferEnabled": "boolean",
+      "payAtCashierEnabled": "boolean",
+      "qrisEnabled": "boolean",
+      "qrisImageMeta": "null",
+      "qrisImageUploadedAt": "null",
+      "qrisImageUrl": "null",
+      "requirePaymentProof": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > PUT /api/merchant/payment-settings parity (Next vs Go) > merchant payment settings put next 1`] = `
+{
+  "data": {
+    "accountSample": "empty",
+    "accountsType": "array",
+    "settings": {
+      "manualTransferEnabled": "boolean",
+      "payAtCashierEnabled": "boolean",
+      "qrisEnabled": "boolean",
+      "qrisImageMeta": "null",
+      "qrisImageUploadedAt": "null",
+      "qrisImageUrl": "null",
+      "requirePaymentProof": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > PUT /api/merchant/pos-settings parity (Next vs Go) > merchant pos settings put go 1`] = `
+{
+  "data": {
+    "customItems": {
+      "enabled": "boolean",
+      "maxNameLength": "number:10-200|null",
+      "maxPrice": "number:>=0|null",
+    },
+    "editOrder": {
+      "enabled": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`Contract parity: merchant settings > PUT /api/merchant/pos-settings parity (Next vs Go) > merchant pos settings put next 1`] = `
+{
+  "data": {
+    "customItems": {
+      "enabled": "boolean",
+      "maxNameLength": "number:10-200|null",
+      "maxPrice": "number:>=0|null",
+    },
+    "editOrder": {
+      "enabled": "boolean",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics customers go 1`] = `
+{
+  "data": {
+    "customerGrowth": "array",
+    "customerRetention": "array",
+    "orderFrequency": "array",
+    "segmentation": {
+      "casual": "number:>=0",
+      "new": "number:>=0",
+      "regular": "number:>=0",
+      "vip": "number:>=0",
+    },
+    "summary": {
+      "averageLifetimeValue": "number:>=0",
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "retentionRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "topCustomers": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics customers next 1`] = `
+{
+  "data": {
+    "customerGrowth": "array",
+    "customerRetention": "array",
+    "orderFrequency": "array",
+    "segmentation": {
+      "casual": "number:>=0",
+      "new": "number:>=0",
+      "regular": "number:>=0",
+      "vip": "number:>=0",
+    },
+    "summary": {
+      "averageLifetimeValue": "number:>=0",
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "retentionRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "topCustomers": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics menu performance go 1`] = `
+{
+  "data": {
+    "addonPerformance": "array",
+    "categoryPerformance": "array",
+    "lowPerformers": "array",
+    "neverOrdered": "array",
+    "salesTrendByItem": "array",
+    "summary": {
+      "activeItems": "number:>=0",
+      "averageItemRevenue": "number:>=0",
+      "totalItemsSold": "number:>=0",
+      "totalMenuItems": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topPerformers": "array",
+  },
+  "meta": {
+    "daysInPeriod": "number",
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics menu performance next 1`] = `
+{
+  "data": {
+    "addonPerformance": "array",
+    "categoryPerformance": "array",
+    "lowPerformers": "array",
+    "neverOrdered": "array",
+    "salesTrendByItem": "array",
+    "summary": {
+      "activeItems": "number:>=0",
+      "averageItemRevenue": "number:>=0",
+      "totalItemsSold": "number:>=0",
+      "totalMenuItems": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topPerformers": "array",
+  },
+  "meta": {
+    "daysInPeriod": "number",
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics revenue go 1`] = `
+{
+  "data": {
+    "dailyRevenue": "array",
+    "dateRange": {
+      "endDate": "string",
+      "startDate": "string",
+    },
+    "hourlyDistribution": "array",
+    "merchant": {
+      "currency": "string",
+    },
+    "orderStatusBreakdown": "array",
+    "orderTypeBreakdown": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "grandTotal": "number:>=0",
+      "totalOrders": "number:>=0",
+      "totalPackagingFee": "number:>=0",
+      "totalRevenue": "number:>=0",
+      "totalServiceCharge": "number:>=0",
+      "totalTax": "number:>=0",
+    },
+    "topMenuItems": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics revenue next 1`] = `
+{
+  "data": {
+    "dailyRevenue": "array",
+    "dateRange": {
+      "endDate": "string",
+      "startDate": "string",
+    },
+    "hourlyDistribution": "array",
+    "merchant": {
+      "currency": "string",
+    },
+    "orderStatusBreakdown": "array",
+    "orderTypeBreakdown": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "grandTotal": "number:>=0",
+      "totalOrders": "number:>=0",
+      "totalPackagingFee": "number:>=0",
+      "totalRevenue": "number:>=0",
+      "totalServiceCharge": "number:>=0",
+      "totalTax": "number:>=0",
+    },
+    "topMenuItems": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics sales go 1`] = `
+{
+  "data": {
+    "categoryMix": "array",
+    "cohortRetention": "array",
+    "customerMetrics": {
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "repeatPurchaseRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "ordersByStatus": "array",
+    "orderTypes": "array",
+    "paymentMethods": "array",
+    "peakHours": "array",
+    "revenueTrend": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "cancelledOrders": "number:>=0",
+      "completedOrders": "number:>=0",
+      "completionRate": "number:0-100",
+      "totalOrders": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topSellingItems": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "scope": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant analytics sales next 1`] = `
+{
+  "data": {
+    "categoryMix": "array",
+    "cohortRetention": "array",
+    "customerMetrics": {
+      "averageOrdersPerCustomer": "number:>=0",
+      "newCustomers": "number:>=0",
+      "repeatPurchaseRate": "number:0-100",
+      "returningCustomers": "number:>=0",
+      "totalCustomers": "number:>=0",
+    },
+    "ordersByStatus": "array",
+    "orderTypes": "array",
+    "paymentMethods": "array",
+    "peakHours": "array",
+    "revenueTrend": "array",
+    "summary": {
+      "averageOrderValue": "number:>=0",
+      "cancelledOrders": "number:>=0",
+      "completedOrders": "number:>=0",
+      "completionRate": "number:0-100",
+      "totalOrders": "number:>=0",
+      "totalRevenue": "number:>=0",
+    },
+    "topSellingItems": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "scope": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant feedback analytics go 1`] = `
+{
+  "data": {
+    "recentTrends": "array",
+    "ratingDistribution": "array",
+    "sentimentDistribution": "array",
+    "summary": {
+      "averageCompletionTime": "number:>=0|null",
+      "averageFoodRating": "number:0-5|null",
+      "averageOverallRating": "number:0-5",
+      "averageServiceRating": "number:0-5|null",
+      "totalFeedback": "number:>=0",
+    },
+    "topTags": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant feedback analytics next 1`] = `
+{
+  "data": {
+    "recentTrends": "array",
+    "ratingDistribution": "array",
+    "sentimentDistribution": "array",
+    "summary": {
+      "averageCompletionTime": "number:>=0|null",
+      "averageFoodRating": "number:0-5|null",
+      "averageOverallRating": "number:0-5",
+      "averageServiceRating": "number:0-5|null",
+      "totalFeedback": "number:>=0",
+    },
+    "topTags": "array",
+  },
+  "meta": {
+    "endDate": "string",
+    "period": "string",
+    "startDate": "string",
+    "timezone": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant feedback list go 1`] = `
+{
+  "dataType": "array",
+  "meta": {
+    "limit": "number",
+    "page": "number",
+    "totalCount": "number",
+    "totalPages": "number",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant feedback list next 1`] = `
+{
+  "dataType": "array",
+  "meta": {
+    "limit": "number",
+    "page": "number",
+    "totalCount": "number",
+    "totalPages": "number",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant legacy bulk addon items go 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant legacy bulk addon items next 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant legacy bulk menu go 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant legacy bulk menu next 1`] = `
+{
+  "data": {
+    "affected": "number:>=0",
+    "idsLength": 1,
+    "idsType": "array",
+    "operation": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant menu addon category add go 1`] = `
+{
+  "data": {
+    "addonCategoryId": "string",
+    "displayOrder": "number:>=0",
+    "isRequired": "boolean",
+    "menuId": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant menu addon category add next 1`] = `
+{
+  "data": {
+    "addonCategoryId": "string",
+    "displayOrder": "number:>=0",
+    "isRequired": "boolean",
+    "menuId": "string",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant menu addon category delete go 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`merchant menu addon category delete next 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`merchant menu categories update go 1`] = `
+{
+  "categoriesType": "array",
+  "dataType": "object",
+  "menuId": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant menu categories update next 1`] = `
+{
+  "categoriesType": "array",
+  "dataType": "object",
+  "menuId": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant menu duplicate go 1`] = `
+{
+  "dataType": "object",
+  "menuId": "string",
+  "nameType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant menu duplicate next 1`] = `
+{
+  "dataType": "object",
+  "menuId": "string",
+  "nameType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant setup progress go 1`] = `
+{
+  "data": {
+    "completedRequired": "number:0-4",
+    "isComplete": "boolean",
+    "progressPercent": "number:0-100",
+    "steps": {
+      "addons": "boolean",
+      "categories": "boolean",
+      "menu_items": "boolean",
+      "merchant_info": "boolean",
+      "opening_hours": "boolean",
+    },
+    "templateMarkers": {
+      "AUD": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+      "IDR": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+    },
+    "totalRequired": "number:0-4",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant setup progress next 1`] = `
+{
+  "data": {
+    "completedRequired": "number:0-4",
+    "isComplete": "boolean",
+    "progressPercent": "number:0-100",
+    "steps": {
+      "addons": "boolean",
+      "categories": "boolean",
+      "menu_items": "boolean",
+      "merchant_info": "boolean",
+      "opening_hours": "boolean",
+    },
+    "templateMarkers": {
+      "AUD": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+      "IDR": {
+        "ADDON_CATEGORY_DESC": "string",
+        "ADDON_CATEGORY_NAME": "string",
+        "ADDON_ITEM_1_NAME": "string",
+        "ADDON_ITEM_2_NAME": "string",
+        "CATEGORY_DRINK_DESC": "string",
+        "CATEGORY_DRINK_NAME": "string",
+        "CATEGORY_FOOD_DESC": "string",
+        "CATEGORY_FOOD_NAME": "string",
+        "MENU_DRINK_DESC": "string",
+        "MENU_DRINK_NAME": "string",
+        "MENU_FOOD_DESC": "string",
+        "MENU_FOOD_NAME": "string",
+      },
+    },
+    "totalRequired": "number:0-4",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices create go 1`] = `
+{
+  "data": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "priceItemsType": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices create next 1`] = `
+{
+  "data": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "priceItemsType": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices delete go 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`merchant special prices delete next 1`] = `
+{
+  "messageType": "string",
+  "statusCode": "number",
+  "success": true,
+}
+`;
+
+exports[`merchant special prices list go 1`] = `
+{
+  "dataType": "array",
+  "sample": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "count": {
+      "priceItems": "number",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices list next 1`] = `
+{
+  "dataType": "array",
+  "sample": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "count": {
+      "priceItems": "number",
+    },
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices update go 1`] = `
+{
+  "data": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "priceItemsType": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant special prices update next 1`] = `
+{
+  "data": {
+    "id": "string",
+    "merchantId": "string",
+    "menuBookId": "string",
+    "name": "string",
+    "startDate": "string",
+    "endDate": "string",
+    "applicableDays": "array",
+    "isAllDay": "boolean",
+    "startTime": "string",
+    "endTime": "string",
+    "isActive": "boolean",
+    "createdAt": "string",
+    "updatedAt": "string",
+    "menuBook": {
+      "id": "string",
+      "name": "string",
+    },
+    "priceItemsType": "array",
+  },
+  "success": true,
+}
+`;
+
+exports[`merchant voucher redeem go 1`] = `
+{
+  "data": {
+    "autoSwitchTriggered": "boolean",
+    "balance": "number:>=0",
+    "newSubType": "string|null",
+    "previousSubType": "string|null",
+    "subscriptionType": "object|null",
+    "valueApplied": "number:>=0",
+    "voucherType": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;
+
+exports[`merchant voucher redeem next 1`] = `
+{
+  "data": {
+    "autoSwitchTriggered": "boolean",
+    "balance": "number:>=0",
+    "newSubType": "string|null",
+    "previousSubType": "string|null",
+    "subscriptionType": "object|null",
+    "valueApplied": "number:>=0",
+    "voucherType": "string",
+  },
+  "messageType": "string",
+  "success": true,
+}
+`;

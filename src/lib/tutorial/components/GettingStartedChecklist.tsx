@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import {
   FaCheck, 
   FaArrowRight, 
@@ -111,7 +112,7 @@ export function GettingStartedChecklist() {
     
     try {
       // Check merchant info (logo, opening hours) from profile
-      const merchantRes = await fetch('/api/merchant/profile', {
+      const merchantRes = await fetch(buildOrderApiUrl('/api/merchant/profile'), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (merchantRes.ok) {
@@ -123,7 +124,7 @@ export function GettingStartedChecklist() {
       }
 
       // Check categories count
-      const categoriesRes = await fetch('/api/merchant/categories', {
+      const categoriesRes = await fetch(buildOrderApiUrl('/api/merchant/categories'), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (categoriesRes.ok) {
@@ -133,7 +134,7 @@ export function GettingStartedChecklist() {
       }
 
       // Check menu items count
-      const menuRes = await fetch('/api/merchant/menu', {
+      const menuRes = await fetch(buildOrderApiUrl('/api/merchant/menu'), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (menuRes.ok) {
@@ -143,7 +144,7 @@ export function GettingStartedChecklist() {
       }
 
       // Check addons (optional - always considered "done" if user has looked at it)
-      const addonsRes = await fetch('/api/merchant/addon-categories', {
+      const addonsRes = await fetch(buildOrderApiUrl('/api/merchant/addon-categories'), {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       if (addonsRes.ok) {

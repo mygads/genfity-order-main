@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/context/ToastContext";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface MenuRelationship {
   id: string;
@@ -56,8 +57,7 @@ export default function MenuRelationshipModal({
         return;
       }
 
-      const response = await fetch(
-        `/api/merchant/addon-categories/${categoryId}/relationships`,
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/addon-categories/${categoryId}/relationships`),
         {
           headers: { Authorization: `Bearer ${token}` },
         }

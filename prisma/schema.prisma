@@ -1250,6 +1250,8 @@ model OrderFeedback {
   merchant               Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   
   @@index([merchantId])
+  @@index([merchantId, createdAt])
+  @@index([merchantId, overallRating])
   @@index([createdAt])
   @@index([overallRating])
   @@map("order_feedbacks")

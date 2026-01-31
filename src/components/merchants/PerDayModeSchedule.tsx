@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/useToast";
 import { FaCopy, FaMagic } from "react-icons/fa";
 import Switch from "@/components/ui/Switch";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface ModeSchedule {
   id?: string;
@@ -100,8 +101,8 @@ const PerDayModeSchedule = forwardRef<PerDayModeScheduleHandle, PerDayModeSchedu
   // Fetch existing schedules
   const fetchSchedules = useCallback(async () => {
     try {
-      const response = await fetch('/api/merchant/mode-schedules', {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetchMerchantApi('/api/merchant/mode-schedules', {
+        token,
       });
       const data = await response.json();
       const payload = (data?.success ? data.data : null) as ModeScheduleApiResponse | null;
@@ -329,13 +330,13 @@ const PerDayModeSchedule = forwardRef<PerDayModeScheduleHandle, PerDayModeSchedu
       // Persist the enabled flag explicitly; do not mutate schedules on disable.
       const schedulesToSave = schedules;
 
-      const response = await fetch('/api/merchant/mode-schedules', {
+      const response = await fetchMerchantApi('/api/merchant/mode-schedules', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ enabled: enablePerDaySchedule, schedules: schedulesToSave }),
+        token,
       });
       const data = await response.json();
       if (data.success) {

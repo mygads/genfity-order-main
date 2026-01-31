@@ -19,6 +19,7 @@ import {
   RECEIPT_SETTINGS_GROUPS
 } from '@/lib/types/receiptSettings';
 import { formatCurrency } from '@/lib/utils/format';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 // ============================================
 // TYPES
@@ -153,13 +154,13 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
           throw new Error('Missing access token');
         }
 
-        const res = await fetch('/api/merchant/receipt/preview-html', {
+        const res = await fetchMerchantApi('/api/merchant/receipt/preview-html', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: previewRequestBody,
+          token,
         });
 
         if (!res.ok) {
@@ -196,13 +197,13 @@ export const ReceiptTemplateTab: React.FC<ReceiptTemplateTabProps> = ({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const res = await fetch('/api/merchant/receipt/preview-html', {
+      const res = await fetchMerchantApi('/api/merchant/receipt/preview-html', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: previewRequestBody,
+        token,
       });
 
       if (!res.ok) {

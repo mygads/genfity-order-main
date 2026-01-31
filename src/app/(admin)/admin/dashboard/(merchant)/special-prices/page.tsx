@@ -10,6 +10,7 @@ import { TableActionButton } from "@/components/common/TableActionButton";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface SpecialPrice {
     id: string;
@@ -67,11 +68,11 @@ export default function SpecialPricesPage() {
             }
 
             const [pricesRes, menuBooksRes] = await Promise.all([
-                fetch("/api/merchant/special-prices", {
-                    headers: { Authorization: `Bearer ${token}` },
+                fetchMerchantApi("/api/merchant/special-prices", {
+                    token,
                 }),
-                fetch("/api/merchant/menu-books", {
-                    headers: { Authorization: `Bearer ${token}` },
+                fetchMerchantApi("/api/merchant/menu-books", {
+                    token,
                 }),
             ]);
 
@@ -113,9 +114,9 @@ export default function SpecialPricesPage() {
             setDeleting(true);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/special-prices/${id}`, {
+            const response = await fetchMerchantApi(`/api/merchant/special-prices/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
+                token,
             });
 
             const data = await response.json();
@@ -137,13 +138,13 @@ export default function SpecialPricesPage() {
         try {
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/special-prices/${id}`, {
+            const response = await fetchMerchantApi(`/api/merchant/special-prices/${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ isActive: !currentStatus }),
+                token,
             });
 
             const data = await response.json();

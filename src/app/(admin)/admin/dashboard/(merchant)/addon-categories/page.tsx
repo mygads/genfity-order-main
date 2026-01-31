@@ -18,6 +18,7 @@ import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEye, FaLink, FaPencilAlt, FaTrash } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddonCategory {
   id: string;
@@ -295,13 +296,13 @@ function AddonCategoriesPageContent() {
         maxSelection: formData.maxSelection === "" ? null : Number(formData.maxSelection),
       };
 
-      const response = await fetch(url, {
+      const response = await fetchMerchantApi(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const data = await response.json();
@@ -349,9 +350,7 @@ function AddonCategoriesPageContent() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-categories/${category.id}/items`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi(`/api/merchant/addon-categories/${category.id}/items`, { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -385,11 +384,9 @@ function AddonCategoriesPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/addon-categories/${id}/toggle-active`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-categories/${id}/toggle-active`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -429,15 +426,15 @@ function AddonCategoriesPageContent() {
         router.push("/admin/login");
         return;
       }
-      const response = await fetch("/api/merchant/addon-categories/bulk-delete", {
+      const response = await fetchMerchantApi("/api/merchant/addon-categories/bulk-delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ids,
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -468,9 +465,7 @@ function AddonCategoriesPageContent() {
       // Check relationships for all selected categories
       const relationshipChecks = await Promise.all(
         selectedCategories.map(async (id) => {
-          const response = await fetch(`/api/merchant/addon-categories/${id}/relationships`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
+          const response = await fetchMerchantApi(`/api/merchant/addon-categories/${id}/relationships`, { token });
           if (response.ok) {
             const data = await response.json();
             return { id, menuCount: data.data?.length || 0 };
@@ -511,9 +506,7 @@ function AddonCategoriesPageContent() {
       setDeleteConfirm({ show: true, id, name, menuCount: 0, menuList: "", addonItemsCount: 0, loading: true });
 
       // Fetch delete preview
-      const previewResponse = await fetch(`/api/merchant/addon-categories/${id}/delete-preview`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const previewResponse = await fetchMerchantApi(`/api/merchant/addon-categories/${id}/delete-preview`, { token });
 
       if (previewResponse.ok) {
         const previewData = await previewResponse.json();
@@ -557,11 +550,9 @@ function AddonCategoriesPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/addon-categories/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-categories/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {

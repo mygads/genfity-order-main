@@ -451,7 +451,7 @@ const AppSidebar: React.FC = () => {
           const token = localStorage.getItem("accessToken");
           if (!token) return;
 
-          const response = await fetch("/api/merchant/profile", {
+          const response = await fetch(buildOrderApiUrl("/api/merchant/profile"), {
             headers: { Authorization: `Bearer ${token}` },
           });
 

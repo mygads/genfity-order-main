@@ -17,6 +17,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   uploadMenuImageViaApi,
 } from "@/lib/utils/menuImage";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface Merchant {
   id: string;
@@ -150,15 +151,9 @@ export default function CreateMenuPage() {
 
         // Fetch merchant, categories, and addon categories in parallel
         const [merchantRes, categoriesRes, addonCategoriesRes] = await Promise.all([
-          fetch("/api/merchant/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/merchant/categories", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/merchant/addon-categories", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetchMerchantApi("/api/merchant/profile", { token }),
+          fetchMerchantApi("/api/merchant/categories", { token }),
+          fetchMerchantApi("/api/merchant/addon-categories", { token }),
         ]);
 
         if (!merchantRes.ok) {
@@ -205,12 +200,12 @@ export default function CreateMenuPage() {
       const token = localStorage.getItem('accessToken');
       if (!token || !imageUrl) return;
 
-      await fetch('/api/merchant/upload/delete-image', {
+      await fetchMerchantApi('/api/merchant/upload/delete-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           imageUrl,
           imageThumbUrl: imageThumbUrl || undefined,
@@ -355,12 +350,12 @@ export default function CreateMenuPage() {
         autoResetStock: formData.autoResetStock,
       };
 
-      const response = await fetch("/api/merchant/menu", {
+      const response = await fetchMerchantApi("/api/merchant/menu", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify(payload),
       });
 
@@ -374,12 +369,12 @@ export default function CreateMenuPage() {
 
       // Assign categories if any selected
       if (menuId && selectedCategoryIds.length > 0) {
-        await fetch(`/api/merchant/menu/${menuId}/categories`, {
+        await fetchMerchantApi(`/api/merchant/menu/${menuId}/categories`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
+          token,
           body: JSON.stringify({ categoryIds: selectedCategoryIds }),
         });
       }
@@ -387,12 +382,12 @@ export default function CreateMenuPage() {
       // Assign addon categories if any selected
       if (menuId && selectedAddonCategoryIds.length > 0) {
         const addonPromises = selectedAddonCategoryIds.map((cat, index) =>
-          fetch(`/api/merchant/menu/${menuId}/addon-categories`, {
+          fetchMerchantApi(`/api/merchant/menu/${menuId}/addon-categories`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
             },
+            token,
             body: JSON.stringify({
               addonCategoryId: cat.id,
               isRequired: cat.isRequired,

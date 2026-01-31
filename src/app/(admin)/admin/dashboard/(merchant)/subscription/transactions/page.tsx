@@ -7,6 +7,7 @@ import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import AlertDialog from "@/components/modals/AlertDialog";
 import { FaDownload, FaSearch, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface TransactionData {
     id: string;
@@ -167,7 +168,7 @@ export default function TransactionsPage() {
                 params.set('endDate', endDate);
             }
 
-            const response = await fetch(`/api/merchant/balance/transactions/export?${params.toString()}`, {
+            const response = await fetch(buildOrderApiUrl(`/api/merchant/balance/transactions/export?${params.toString()}`), {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                 },

@@ -6,6 +6,7 @@ import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
 import { FaArrowLeft, FaSyncAlt } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 type ApiResponse<T> = { success: boolean; data?: T; message?: string };
 
@@ -96,14 +97,14 @@ export default function VoucherTemplateUsagePage() {
     }
 
     const [templateRes, profileRes, codesRes] = await Promise.all([
-      fetch(`/api/merchant/order-vouchers/templates/${templateId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetchMerchantApi(`/api/merchant/order-vouchers/templates/${templateId}`, {
+        token,
       }),
-      fetch("/api/merchant/profile", {
-        headers: { Authorization: `Bearer ${token}` },
+      fetchMerchantApi("/api/merchant/profile", {
+        token,
       }),
-      fetch(`/api/merchant/order-vouchers/templates/${templateId}/codes?take=500`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetchMerchantApi(`/api/merchant/order-vouchers/templates/${templateId}/codes?take=500`, {
+        token,
       }),
     ]);
 
@@ -132,13 +133,13 @@ export default function VoucherTemplateUsagePage() {
     }
   }, [router, templateId]);
 
-  const buildUsageUrl = useCallback(
+  const buildUsagePath = useCallback(
     (cursor?: string | null) => {
       if (!templateId) {
         throw new Error("Missing voucher template id");
       }
 
-      const url = new URL(`/api/merchant/order-vouchers/templates/${templateId}/usage`, window.location.origin);
+      const url = new URL(`/api/merchant/order-vouchers/templates/${templateId}/usage`, "http://localhost");
       url.searchParams.set("take", "50");
 
       const trimmedCode = selectedCode.trim();
@@ -149,7 +150,7 @@ export default function VoucherTemplateUsagePage() {
 
       if (cursor) url.searchParams.set("cursor", cursor);
 
-      return url.toString();
+      return `${url.pathname}${url.search}`;
     },
     [endDate, selectedCode, startDate, templateId]
   );
@@ -166,8 +167,8 @@ export default function VoucherTemplateUsagePage() {
       return;
     }
 
-    const res = await fetch(buildUsageUrl(null), {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetchMerchantApi(buildUsagePath(null), {
+      token,
     });
 
     const json = (await res.json()) as ApiResponse<UsageResponse>;
@@ -177,7 +178,7 @@ export default function VoucherTemplateUsagePage() {
 
     setItems(Array.isArray(json.data?.items) ? json.data!.items : []);
     setNextCursor(typeof json.data?.nextCursor === "string" ? json.data.nextCursor : null);
-  }, [buildUsageUrl, router]);
+  }, [buildUsagePath, router]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMore) return;
@@ -190,8 +191,8 @@ export default function VoucherTemplateUsagePage() {
         return;
       }
 
-      const res = await fetch(buildUsageUrl(nextCursor), {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetchMerchantApi(buildUsagePath(nextCursor), {
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<UsageResponse>;
@@ -207,7 +208,7 @@ export default function VoucherTemplateUsagePage() {
     } finally {
       setLoadingMore(false);
     }
-  }, [buildUsageUrl, loadingMore, nextCursor, router]);
+  }, [buildUsagePath, loadingMore, nextCursor, router]);
 
   const refresh = useCallback(async () => {
     try {

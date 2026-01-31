@@ -10,6 +10,23 @@ import { FaArrowLeft } from 'react-icons/fa';
 import { customerForgotPasswordUrl, customerLoginUrl, customerResetPasswordUrl } from '@/lib/utils/customerRoutes';
 import { useCustomerBackTarget } from '@/hooks/useCustomerBackTarget';
 import InvalidLinkCard from '@/components/auth/InvalidLinkCard';
+import { fetchPublicApiJson } from '@/lib/utils/orderApiClient';
+
+interface ForgotPasswordResponse {
+    success: boolean;
+    data?: {
+        lastSentAt?: string | number;
+    };
+    message?: string;
+}
+
+interface VerifyResetCodeResponse {
+    success: boolean;
+    data: {
+        token: string;
+    };
+    message?: string;
+}
 
 /**
  * Verify Code Page
@@ -121,23 +138,11 @@ function VerifyCodeForm() {
         const storageKey = `resend_cooldown_${email}`;
 
         try {
-            const response = await fetch('/api/public/auth/forgot-password', {
+            const data = await fetchPublicApiJson<ForgotPasswordResponse>('/api/public/auth/forgot-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                // Handle rate limit - use remaining time from API
-                if (response.status === 429 && data.data?.retryAfterSeconds) {
-                    setResendTimer(data.data.retryAfterSeconds);
-                    setCanResend(false);
-                    return;
-                }
-                throw new Error(data.message || 'Failed to resend code');
-            }
 
             // ✅ Save timestamp on successful resend
             if (data.data?.lastSentAt) {
@@ -146,7 +151,13 @@ function VerifyCodeForm() {
                 localStorage.setItem(storageKey, Date.now().toString());
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to resend code');
+            const error = err as Error & { status?: number; info?: { data?: { retryAfterSeconds?: number } } };
+            if (error.status === 429 && error.info?.data?.retryAfterSeconds) {
+                setResendTimer(error.info.data.retryAfterSeconds);
+                setCanResend(false);
+                return;
+            }
+            setError(error.message || 'Failed to resend code');
             setCanResend(true);
         }
     };
@@ -165,7 +176,7 @@ function VerifyCodeForm() {
 
         try {
             // Verify the code
-            const response = await fetch('/api/public/auth/verify-reset-code', {
+            const data = await fetchPublicApiJson<VerifyResetCodeResponse>('/api/public/auth/verify-reset-code', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -173,12 +184,6 @@ function VerifyCodeForm() {
                     code: verificationCode,
                 }),
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Invalid verification code');
-            }
 
             // Navigate to reset password page with token
             router.push(customerResetPasswordUrl({ email, token: data.data.token, ref }));

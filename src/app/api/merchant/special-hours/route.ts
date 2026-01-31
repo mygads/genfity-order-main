@@ -10,6 +10,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { isValidTimeHHMM } from '@/lib/utils/validators';
+
+const isValidOptionalTime = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return true;
+  }
+  return typeof value === 'string' && isValidTimeHHMM(value);
+};
 
 /**
  * GET /api/merchant/special-hours
@@ -70,6 +78,22 @@ export const POST = withMerchant(async (
     if (!body.date) {
       return NextResponse.json(
         { success: false, error: 'VALIDATION_ERROR', message: 'Date is required' },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !isValidOptionalTime(body.openTime) ||
+      !isValidOptionalTime(body.closeTime) ||
+      !isValidOptionalTime(body.dineInStartTime) ||
+      !isValidOptionalTime(body.dineInEndTime) ||
+      !isValidOptionalTime(body.takeawayStartTime) ||
+      !isValidOptionalTime(body.takeawayEndTime) ||
+      !isValidOptionalTime(body.deliveryStartTime) ||
+      !isValidOptionalTime(body.deliveryEndTime)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'VALIDATION_ERROR', message: 'Invalid time format. Expected HH:MM' },
         { status: 400 }
       );
     }

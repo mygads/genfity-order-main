@@ -21,14 +21,14 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     if (!code) {
         return NextResponse.json(
-            { success: false, error: 'VALIDATION_ERROR', message: 'Voucher code is required' },
+            { success: false, error: 'VALIDATION_ERROR', message: 'Voucher code is required', statusCode: 400 },
             { status: 400 }
         );
     }
 
     if (!context.merchantId) {
         return NextResponse.json(
-            { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required' },
+            { success: false, error: 'MERCHANT_ID_REQUIRED', message: 'Merchant ID is required', statusCode: 400 },
             { status: 400 }
         );
     }
@@ -43,7 +43,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     if (!merchant) {
         return NextResponse.json(
-            { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found' },
+            { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found', statusCode: 404 },
             { status: 404 }
         );
     }
@@ -58,7 +58,7 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     if (!voucher) {
         return NextResponse.json(
-            { success: false, error: 'VOUCHER_NOT_FOUND', message: 'Voucher code not found' },
+            { success: false, error: 'VOUCHER_NOT_FOUND', message: 'Voucher code not found', statusCode: 404 },
             { status: 404 }
         );
     }
@@ -66,7 +66,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // Check if voucher is active
     if (!voucher.isActive) {
         return NextResponse.json(
-            { success: false, error: 'VOUCHER_INACTIVE', message: 'This voucher is no longer active' },
+            {
+                success: false,
+                error: 'VOUCHER_INACTIVE',
+                message: 'This voucher is no longer active',
+                statusCode: 400,
+            },
             { status: 400 }
         );
     }
@@ -77,7 +82,8 @@ async function handlePost(req: NextRequest, context: AuthContext) {
             { 
                 success: false, 
                 error: 'CURRENCY_MISMATCH', 
-                message: `This voucher is only valid for ${voucher.currency} merchants` 
+                message: `This voucher is only valid for ${voucher.currency} merchants`,
+                statusCode: 400,
             },
             { status: 400 }
         );
@@ -87,14 +93,24 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     const now = new Date();
     if (voucher.validFrom && now < voucher.validFrom) {
         return NextResponse.json(
-            { success: false, error: 'VOUCHER_NOT_STARTED', message: 'This voucher is not yet valid' },
+            {
+                success: false,
+                error: 'VOUCHER_NOT_STARTED',
+                message: 'This voucher is not yet valid',
+                statusCode: 400,
+            },
             { status: 400 }
         );
     }
 
     if (voucher.validUntil && now > voucher.validUntil) {
         return NextResponse.json(
-            { success: false, error: 'VOUCHER_EXPIRED', message: 'This voucher has expired' },
+            {
+                success: false,
+                error: 'VOUCHER_EXPIRED',
+                message: 'This voucher has expired',
+                statusCode: 400,
+            },
             { status: 400 }
         );
     }
@@ -102,7 +118,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     // Check usage limit
     if (voucher.maxUsage !== null && voucher.currentUsage >= voucher.maxUsage) {
         return NextResponse.json(
-            { success: false, error: 'VOUCHER_LIMIT_REACHED', message: 'This voucher has reached its usage limit' },
+            {
+                success: false,
+                error: 'VOUCHER_LIMIT_REACHED',
+                message: 'This voucher has reached its usage limit',
+                statusCode: 400,
+            },
             { status: 400 }
         );
     }
@@ -117,7 +138,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
     if (existingRedemption) {
         return NextResponse.json(
-            { success: false, error: 'ALREADY_REDEEMED', message: 'You have already used this voucher' },
+            {
+                success: false,
+                error: 'ALREADY_REDEEMED',
+                message: 'You have already used this voucher',
+                statusCode: 400,
+            },
             { status: 400 }
         );
     }

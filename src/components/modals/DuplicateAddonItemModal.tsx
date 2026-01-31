@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { FaTimes, FaSearch, FaCopy } from "react-icons/fa";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddonItem {
   id: string;
@@ -80,8 +81,8 @@ export default function DuplicateAddonItemModal({
     if (!token) return;
     setLoading(true);
     try {
-      const response = await fetch("/api/merchant/addon-items", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetchMerchantApi("/api/merchant/addon-items", {
+        token,
       });
 
       if (response.ok) {

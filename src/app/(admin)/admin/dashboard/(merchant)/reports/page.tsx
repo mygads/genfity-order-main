@@ -18,6 +18,7 @@ import { ApexOptions } from 'apexcharts';
 import { formatCurrency } from '@/lib/utils/format';
 import { FaChartBar, FaFileCsv, FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import IconToggle from '@/components/ui/IconToggle';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiClient';
 
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
   ssr: false,
@@ -155,7 +156,7 @@ export default function ReportsPage() {
       params.append('anomalyStdDev', String(anomalyStdDev));
       params.append('anomalyMinDropPct', String(anomalyMinDropPct));
 
-      const response = await fetch(`/api/merchant/reports?${params}`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/reports?${params}`), {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

@@ -18,6 +18,7 @@ import { FaCalendar, FaPlus, FaFileImport, FaFileExport, FaChevronLeft, FaChevro
 import Switch from "@/components/ui/Switch";
 import * as XLSX from "xlsx";
 import ConfirmDialog from "@/components/modals/ConfirmDialog";
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 interface SpecialHour {
   id?: string;
@@ -94,9 +95,9 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
       const oneYearLater = new Date();
       oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
 
-      const response = await fetch(
+      const response = await fetchMerchantApi(
         `/api/merchant/special-hours?from=${today.toISOString().split('T')[0]}&to=${oneYearLater.toISOString().split('T')[0]}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { token }
       );
       const data = await response.json();
       if (data.success) {
@@ -169,13 +170,13 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
         ? `/api/merchant/special-hours/${editingHour.id}`
         : '/api/merchant/special-hours';
 
-      const response = await fetch(url, {
+      const response = await fetchMerchantApi(url, {
         method: editingHour?.id ? 'PUT' : 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
+        token,
       });
 
       const data = await response.json();
@@ -219,11 +220,10 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
 
     setSaving(true);
     try {
-      const response = await fetch('/api/merchant/special-hours', {
+      const response = await fetchMerchantApi('/api/merchant/special-hours', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           date: dateStr,
@@ -233,6 +233,7 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
           openTime: '10:00',
           closeTime: '22:00',
         }),
+        token,
       });
 
       const data = await response.json();
@@ -252,9 +253,9 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
   // Delete special hour
   const performDeleteSpecialHour = async (id: string) => {
     try {
-      const response = await fetch(`/api/merchant/special-hours/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/special-hours/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        token,
       });
       const data = await response.json();
       if (data.success) {
@@ -289,17 +290,17 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
 
     setSaving(true);
     try {
-      const response = await fetch('/api/merchant/special-hours', {
+      const response = await fetchMerchantApi('/api/merchant/special-hours', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ...hour,
           id: undefined,
           date: nextDateStr,
         }),
+        token,
       });
 
       const data = await response.json();
@@ -353,11 +354,10 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
         // Check if already exists
         if (specialHours.some(h => h.date === dateStr)) continue;
 
-        const response = await fetch('/api/merchant/special-hours', {
+        const response = await fetchMerchantApi('/api/merchant/special-hours', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             date: dateStr,
@@ -367,6 +367,7 @@ export default function SpecialHoursManager({ token, embedded = false }: Special
             closeTime: row['Close Time'] || '22:00',
             isRecurring: row['Recurring Annual']?.toLowerCase() === 'yes',
           }),
+          token,
         });
 
         if ((await response.json()).success) imported++;

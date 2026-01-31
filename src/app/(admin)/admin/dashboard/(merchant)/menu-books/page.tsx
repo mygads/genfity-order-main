@@ -10,6 +10,7 @@ import { TableActionButton } from "@/components/common/TableActionButton";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuBook {
     id: string;
@@ -62,9 +63,7 @@ export default function MenuBooksPage() {
                 return;
             }
 
-            const response = await fetch("/api/merchant/menu-books", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await fetchMerchantApi("/api/merchant/menu-books", { token });
 
             const data = await response.json();
             if (data.success) {
@@ -89,9 +88,9 @@ export default function MenuBooksPage() {
             setDeleting(true);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/menu-books/${id}`, {
+            const response = await fetchMerchantApi(`/api/merchant/menu-books/${id}`, {
                 method: "DELETE",
-                headers: { Authorization: `Bearer ${token}` },
+                token,
             });
 
             const data = await response.json();
@@ -113,13 +112,13 @@ export default function MenuBooksPage() {
         try {
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/menu-books/${id}`, {
+            const response = await fetchMerchantApi(`/api/merchant/menu-books/${id}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({ isActive: !currentStatus }),
+                token,
             });
 
             const data = await response.json();

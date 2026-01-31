@@ -23,7 +23,12 @@ export const PUT = withMerchant(async (req: NextRequest, authContext: AuthContex
     // Validate PIN format
     if (!pin || !/^\d{4}$/.test(pin)) {
       return NextResponse.json(
-        { success: false, message: 'PIN must be exactly 4 digits' },
+        {
+          success: false,
+          error: 'VALIDATION_ERROR',
+          message: 'PIN must be exactly 4 digits',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -44,7 +49,7 @@ export const PUT = withMerchant(async (req: NextRequest, authContext: AuthContex
   } catch (error) {
     console.error('[DELETE PIN] Error setting PIN:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to set PIN' },
+      { success: false, error: 'INTERNAL_ERROR', message: 'Failed to set PIN', statusCode: 500 },
       { status: 500 }
     );
   }
@@ -71,7 +76,7 @@ export const DELETE = withMerchant(async (_req: NextRequest, authContext: AuthCo
   } catch (error) {
     console.error('[DELETE PIN] Error removing PIN:', error);
     return NextResponse.json(
-      { success: false, message: 'Failed to remove PIN' },
+      { success: false, error: 'INTERNAL_ERROR', message: 'Failed to remove PIN', statusCode: 500 },
       { status: 500 }
     );
   }

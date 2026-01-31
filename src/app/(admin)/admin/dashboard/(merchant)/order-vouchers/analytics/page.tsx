@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { formatCurrency } from "@/lib/utils/format";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 import { FaArrowLeft, FaSyncAlt } from "react-icons/fa";
 
 type ApiResponse<T> = { success: boolean; data?: T; message?: string };
@@ -52,8 +53,8 @@ export default function OrderVoucherAnalyticsPage() {
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<VoucherAnalytics | null>(null);
 
-  const buildUrl = useCallback(() => {
-    const url = new URL("/api/merchant/order-vouchers/analytics", window.location.origin);
+  const buildPath = useCallback(() => {
+    const url = new URL("/api/merchant/order-vouchers/analytics", "http://localhost");
     url.searchParams.set("period", period);
 
     if (period === "custom") {
@@ -61,7 +62,7 @@ export default function OrderVoucherAnalyticsPage() {
       if (endDate) url.searchParams.set("endDate", toIsoEndOfDay(endDate));
     }
 
-    return url.toString();
+    return `${url.pathname}${url.search}`;
   }, [endDate, period, startDate]);
 
   const fetchAll = useCallback(async () => {
@@ -76,11 +77,11 @@ export default function OrderVoucherAnalyticsPage() {
       }
 
       const [analyticsRes, profileRes] = await Promise.all([
-        fetch(buildUrl(), {
-          headers: { Authorization: `Bearer ${token}` },
+        fetchMerchantApi(buildPath(), {
+          token,
         }),
-        fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
+        fetchMerchantApi("/api/merchant/profile", {
+          token,
         }),
       ]);
 
@@ -101,7 +102,7 @@ export default function OrderVoucherAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [buildUrl, router]);
+  }, [buildPath, router]);
 
   useEffect(() => {
     fetchAll();

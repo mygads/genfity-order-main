@@ -22,6 +22,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR, { SWRConfiguration, KeyedMutator } from 'swr';
 import { clearAdminAuth, refreshAdminSession } from '@/lib/utils/adminAuth';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 import { tOr, useTranslation } from '@/lib/i18n/useTranslation';
 import type { ApiErrorResponse } from '@/lib/types/api';
 
@@ -51,9 +52,11 @@ const clearSessionAndRedirect = (loginPath: string) => {
  * Create auth fetcher with redirect callback for 401 errors
  */
 const createAuthFetcher = (loginRedirect: string) => async (url: string) => {
+  const shouldRouteToGo = url.startsWith('/api/public') || url.startsWith('/api/merchant');
+  const requestUrl = shouldRouteToGo ? buildOrderApiUrl(url) : url;
   const token = localStorage.getItem('accessToken');
 
-  const res = await fetch(url, {
+  const res = await fetch(requestUrl, {
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -67,7 +70,7 @@ const createAuthFetcher = (loginRedirect: string) => async (url: string) => {
     if (res.status === 401) {
       const refreshed = await refreshAdminSession();
       if (refreshed?.accessToken) {
-        const retryRes = await fetch(url, {
+        const retryRes = await fetch(requestUrl, {
           headers: {
             Authorization: `Bearer ${refreshed.accessToken}`,
             'Content-Type': 'application/json',

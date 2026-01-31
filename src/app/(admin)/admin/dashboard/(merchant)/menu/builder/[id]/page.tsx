@@ -6,6 +6,7 @@ import MenuBuilderTabs from '@/components/menu/MenuBuilderTabs';
 import { MenuBuilderSkeleton } from '@/components/common/SkeletonLoaders';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useToast } from '@/context/ToastContext';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 /**
  * Menu Builder Page
@@ -134,19 +135,15 @@ export default function MenuBuilderPage() {
         return;
       }
 
-      const headers = {
-        Authorization: `Bearer ${token}`,
-      };
-
       // Fetch categories
-      const categoriesRes = await fetch('/api/merchant/categories', { headers });
+      const categoriesRes = await fetchMerchantApi('/api/merchant/categories', { token });
       if (categoriesRes.ok) {
         const categoriesData = await categoriesRes.json();
         setCategories(categoriesData.data || []);
       }
 
       // Fetch addon categories
-      const addonCategoriesRes = await fetch('/api/merchant/addon-categories', { headers });
+      const addonCategoriesRes = await fetchMerchantApi('/api/merchant/addon-categories', { token });
       if (addonCategoriesRes.ok) {
         const addonCategoriesData = await addonCategoriesRes.json();
         setAddonCategories(addonCategoriesData.data || []);
@@ -154,7 +151,7 @@ export default function MenuBuilderPage() {
 
       // Fetch menu data if editing
       if (menuId) {
-        const menuRes = await fetch(`/api/merchant/menu/${menuId}`, { headers });
+        const menuRes = await fetchMerchantApi(`/api/merchant/menu/${menuId}`, { token });
         if (menuRes.ok) {
           const menuData = await menuRes.json();
           
@@ -225,13 +222,13 @@ export default function MenuBuilderPage() {
       
       const payload = menuId ? { ...cleanedData, id: menuId } : cleanedData;
 
-      const response = await fetch(endpoint, {
+      const response = await fetchMerchantApi(endpoint, {
         method,
         headers: { 
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const responseData = await response.json();

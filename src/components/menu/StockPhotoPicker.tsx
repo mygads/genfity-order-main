@@ -5,6 +5,7 @@ import Image from "next/image";
 import { FaSearch, FaTimes, FaImages, FaUpload, FaExchangeAlt, FaCheck } from "react-icons/fa";
 import { useSWRWithAuth } from "@/hooks/useSWRWithAuth";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface StockPhoto {
   id: string;
@@ -66,7 +67,7 @@ export default function StockPhotoPicker({
     if (searchQuery) params.append("search", searchQuery);
     params.append("page", currentPage.toString());
     params.append("limit", limit.toString());
-    return `/api/merchant/stock-photos?${params.toString()}`;
+    return buildOrderApiUrl(`/api/merchant/stock-photos?${params.toString()}`);
   }, [selectedCategory, searchQuery, currentPage]);
 
   // Fetch stock photos
@@ -102,7 +103,7 @@ export default function StockPhotoPicker({
     // Track usage
     try {
       const token = localStorage.getItem("accessToken");
-      await fetch(`/api/merchant/stock-photos/${selectedPhoto.id}/use`, {
+      await fetch(buildOrderApiUrl(`/api/merchant/stock-photos/${selectedPhoto.id}/use`), {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

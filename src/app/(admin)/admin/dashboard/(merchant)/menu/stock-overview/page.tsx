@@ -7,6 +7,7 @@ import BulkStockActions from '@/components/menu/BulkStockActions';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
 import AlertDialog from '@/components/modals/AlertDialog';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 interface StockItem {
   id: number | string;
@@ -115,9 +116,7 @@ export default function StockOverviewPage() {
         return;
       }
 
-      const response = await fetch('/api/merchant/menu/stock/overview', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi('/api/merchant/menu/stock/overview', { token });
 
       if (!response.ok) throw new Error('Failed to fetch stock data');
 
@@ -168,15 +167,15 @@ export default function StockOverviewPage() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, stockQty: newQty }],
       }),
+      token,
     }).catch((error) => {
       console.error('Background stock update failed:', error);
       // Optionally revert on failure - for now just log
@@ -199,15 +198,15 @@ export default function StockOverviewPage() {
     const token = localStorage.getItem('accessToken');
     if (!token) return;
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({
         updates: [{ type, id: typeof id === 'string' ? parseInt(id) : id, resetToTemplate: true }],
       }),
+      token,
     }).catch((error) => {
       console.error('Background reset failed:', error);
     });
@@ -249,13 +248,13 @@ export default function StockOverviewPage() {
       resetToTemplate: true,
     }));
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ updates }),
+      token,
     }).catch((error) => {
       console.error('Background reset selected failed:', error);
     });
@@ -285,13 +284,13 @@ export default function StockOverviewPage() {
       stockQty: quantity,
     }));
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ updates }),
+      token,
     }).catch((error) => {
       console.error('Background update all failed:', error);
     });
@@ -342,13 +341,13 @@ export default function StockOverviewPage() {
       stockQty: (item.stockQty ?? 0) + amount,
     }));
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ updates }),
+      token,
     }).catch((error) => {
       console.error('Background bulk add failed:', error);
     });
@@ -389,13 +388,13 @@ export default function StockOverviewPage() {
       resetToTemplate: true,
     }));
 
-    fetch('/api/merchant/menu/stock/bulk-update', {
+    fetchMerchantApi('/api/merchant/menu/stock/bulk-update', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ updates }),
+      token,
     }).catch((error) => {
       console.error('Background reset all failed:', error);
     });

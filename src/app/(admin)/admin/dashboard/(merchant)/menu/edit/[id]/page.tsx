@@ -18,6 +18,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import {
   uploadMenuImageViaApi,
 } from "@/lib/utils/menuImage";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -185,15 +186,9 @@ export default function EditMenuPage() {
         }
 
         const [menuResponse, merchantResponse, categoriesResponse] = await Promise.all([
-          fetch(`/api/merchant/menu/${menuId}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/merchant/profile", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-          fetch("/api/merchant/categories", {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+          fetchMerchantApi(`/api/merchant/menu/${menuId}`, { token }),
+          fetchMerchantApi("/api/merchant/profile", { token }),
+          fetchMerchantApi("/api/merchant/categories", { token }),
         ]);
 
         if (!menuResponse.ok) {
@@ -271,9 +266,7 @@ export default function EditMenuPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/menu/${menuId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi(`/api/merchant/menu/${menuId}`, { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -399,13 +392,13 @@ export default function EditMenuPage() {
         autoResetStock: formData.autoResetStock,
       };
 
-      const response = await fetch(`/api/merchant/menu/${menuId}`, {
+      const response = await fetchMerchantApi(`/api/merchant/menu/${menuId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const data = await response.json();
@@ -417,13 +410,13 @@ export default function EditMenuPage() {
       // Update categories if changed
       const categoriesChanged = JSON.stringify(selectedCategoryIds.sort()) !== JSON.stringify(originalCategoryIds.sort());
       if (categoriesChanged) {
-        await fetch(`/api/merchant/menu/${menuId}/categories`, {
+        await fetchMerchantApi(`/api/merchant/menu/${menuId}/categories`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ categoryIds: selectedCategoryIds }),
+          token,
         });
       }
 

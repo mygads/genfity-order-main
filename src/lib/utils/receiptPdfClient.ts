@@ -4,6 +4,8 @@
  * These functions are intended for client components only.
  */
 
+import { buildPublicApiUrl, fetchMerchantApi } from '@/lib/utils/orderApiClient';
+
 export type ReceiptPrintFailureReason = 'popup_blocked' | 'fetch_failed';
 
 export type ReceiptPrintResult =
@@ -115,13 +117,9 @@ export async function openMerchantOrderReceiptPdfAndPrint(orderId: string | numb
     const token = localStorage.getItem('accessToken');
     if (!token) return { ok: false, reason: 'fetch_failed' };
 
-    // Use same-origin API route.
-    // This avoids cross-origin/popup-blocker issues when the app is configured to proxy order APIs
-    // to a separate backend (e.g. Go services).
-    const res = await fetch(`/api/merchant/orders/${encodeURIComponent(String(orderId))}/receipt`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+    // Route via the order API base to respect proxy configuration.
+    const res = await fetchMerchantApi(`/api/merchant/orders/${encodeURIComponent(String(orderId))}/receipt`, {
+      token,
     });
 
     if (!res.ok) return { ok: false, reason: 'fetch_failed' };
@@ -149,7 +147,9 @@ export function triggerPublicOrderReceiptDownload(args: {
   const token = String(args.token || '').trim();
   if (!orderNumber || !token) return;
 
-  const url = `/api/public/orders/${encodeURIComponent(orderNumber)}/receipt?token=${encodeURIComponent(token)}&download=1`;
+  const url = buildPublicApiUrl(
+    `/api/public/orders/${encodeURIComponent(orderNumber)}/receipt?token=${encodeURIComponent(token)}&download=1`,
+  );
 
   const a = document.createElement('a');
   a.href = url;

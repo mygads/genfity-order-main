@@ -31,6 +31,7 @@ import {
 } from 'react-icons/fa';
 import { useTranslation } from '@/lib/i18n/useTranslation';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 import { formatCurrency as formatCurrencyUtil } from '@/lib/utils/format';
 import { useMerchant } from '@/context/MerchantContext';
 import { useToast } from '@/context/ToastContext';
@@ -393,9 +394,7 @@ function POSPageContent() {
       if (!token) return;
 
       try {
-        const response = await fetch('/api/merchant/customer-display/state', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const response = await fetchMerchantApi('/api/merchant/customer-display/state', { token });
 
         if (!response.ok) return;
         const json = await response.json();
@@ -689,9 +688,7 @@ function POSPageContent() {
         if (!token) return;
 
         // Use analytics endpoint to get top selling items
-        const response = await fetch('/api/merchant/analytics/menu-performance?limit=10', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await fetchMerchantApi('/api/merchant/analytics/menu-performance?limit=10', { token });
 
         if (response.ok) {
           const data = await response.json();
@@ -712,11 +709,8 @@ function POSPageContent() {
   // DATA FETCHING
   // ========================================
 
-  const fetcher = async (url: string) => {
-    const token = localStorage.getItem('accessToken');
-    const res = await fetch(url, {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
+  const fetcher = async (path: string) => {
+    const res = await fetchMerchantApi(path);
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     return data.data;
@@ -764,11 +758,7 @@ function POSPageContent() {
     const loadEditOrder = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/pos/${editOrderId}`), {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const response = await fetchMerchantApi(`/api/merchant/orders/pos/${editOrderId}`, { token });
 
         const data = await response.json();
         if (!response.ok || !data?.success) {
@@ -1124,12 +1114,12 @@ function POSPageContent() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      await fetch('/api/merchant/customer-display/state', {
+      await fetchMerchantApi('/api/merchant/customer-display/state', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           mode,
           payload,
@@ -1277,12 +1267,12 @@ function POSPageContent() {
         }),
       };
 
-      const response = await fetch(buildOrderApiUrl(`/api/merchant/orders/pos/${editOrderId}`), {
+      const response = await fetchMerchantApi(`/api/merchant/orders/pos/${editOrderId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify(requestBody),
       });
 
@@ -1528,12 +1518,12 @@ function POSPageContent() {
         }),
       };
 
-      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos'), {
+      const response = await fetchMerchantApi('/api/merchant/orders/pos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify(requestBody),
       });
 
@@ -1838,12 +1828,12 @@ function POSPageContent() {
     try {
       const token = localStorage.getItem('accessToken');
 
-      const response = await fetch(buildOrderApiUrl('/api/merchant/orders/pos/payment'), {
+      const response = await fetchMerchantApi('/api/merchant/orders/pos/payment', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           orderId: pendingOrderId,
           paymentMethod: paymentData.method === 'SPLIT' ? 'SPLIT' : paymentData.method,
@@ -1875,7 +1865,7 @@ function POSPageContent() {
 
         // Refresh POS history + active orders so payment status updates everywhere
         mutate(buildOrderApiUrl('/api/merchant/orders/pos/history?today=true'));
-        mutate('/api/merchant/orders/active');
+        mutate(buildOrderApiUrl('/api/merchant/orders/active'));
 
         // Clear payment state
         setPendingOrderId('');

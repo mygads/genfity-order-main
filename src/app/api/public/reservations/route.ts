@@ -42,12 +42,17 @@ function getCurrentDateInTimezone(timezone: string): string {
 }
 
 function getCurrentTimeInTimezoneString(timezone: string): string {
-  return new Intl.DateTimeFormat('en-US', {
+  const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).format(new Date());
+  }).formatToParts(new Date());
+
+  const hh = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const mm = parts.find((p) => p.type === 'minute')?.value ?? '00';
+
+  return `${hh}:${mm}`;
 }
 
 interface PreorderAddonInput {

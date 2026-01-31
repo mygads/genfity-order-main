@@ -32,14 +32,24 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     // Validate request
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'INVALID_IDS', message: 'Please provide an array of menu IDs' },
+        {
+          success: false,
+          error: 'INVALID_IDS',
+          message: 'Please provide an array of menu IDs',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
 
     if (ids.length > 100) {
       return NextResponse.json(
-        { success: false, error: 'TOO_MANY_ITEMS', message: 'Cannot delete more than 100 items at once' },
+        {
+          success: false,
+          error: 'TOO_MANY_ITEMS',
+          message: 'Cannot delete more than 100 items at once',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -56,6 +66,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
             itemCount: ids.length,
             confirmationToken: expectedToken,
           },
+          statusCode: 400,
         },
         { status: 400 }
       );
@@ -82,6 +93,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
         success: false,
         error: 'BULK_DELETE_FAILED',
         message: error instanceof Error ? error.message : 'Failed to bulk delete menus',
+        statusCode: 500,
       },
       { status: 500 }
     );
@@ -96,7 +108,12 @@ export const GET = withMerchant(async (req: NextRequest) => {
 
     if (!idsParam) {
       return NextResponse.json(
-        { success: false, error: 'MISSING_IDS', message: 'Please provide ids as query parameter' },
+        {
+          success: false,
+          error: 'MISSING_IDS',
+          message: 'Please provide ids as query parameter',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -105,7 +122,12 @@ export const GET = withMerchant(async (req: NextRequest) => {
 
     if (ids.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'INVALID_IDS', message: 'No valid IDs provided' },
+        {
+          success: false,
+          error: 'INVALID_IDS',
+          message: 'No valid IDs provided',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -128,6 +150,7 @@ export const GET = withMerchant(async (req: NextRequest) => {
         success: false,
         error: 'TOKEN_GENERATION_FAILED',
         message: error instanceof Error ? error.message : 'Failed to generate confirmation token',
+        statusCode: 500,
       },
       { status: 500 }
     );

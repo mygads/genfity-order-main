@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { CloseIcon } from "@/icons";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface PricingData {
     deposit: {
@@ -45,14 +46,14 @@ export default function UpgradePromptModal({
             if (!token) return;
 
             // Fetch merchant profile to get currency
-            const profileRes = await fetch("/api/merchant/profile", {
+            const profileRes = await fetch(buildOrderApiUrl("/api/merchant/profile"), {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const profileData = await profileRes.json();
             const currency = profileData.data?.merchant?.currency || "AUD";
 
             // Fetch subscription plans
-            const plansRes = await fetch("/api/merchant/subscription/plans", {
+            const plansRes = await fetch(buildOrderApiUrl("/api/merchant/subscription/plans"), {
                 headers: { Authorization: `Bearer ${token}` },
             });
             const plansData = await plansRes.json();

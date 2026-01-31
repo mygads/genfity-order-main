@@ -9,6 +9,13 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { FaArrowLeft } from 'react-icons/fa';
 import { customerLoginUrl, customerVerifyCodeUrl } from '@/lib/utils/customerRoutes';
 import { useCustomerBackTarget } from '@/hooks/useCustomerBackTarget';
+import { fetchPublicApiJson } from '@/lib/utils/orderApiClient';
+
+type ForgotPasswordResponse = {
+    data?: {
+        lastSentAt?: string | number | null;
+    };
+};
 
 /**
  * Forgot Password Page
@@ -47,17 +54,11 @@ function ForgotPasswordForm() {
             }
 
             // Call API to send verification code
-            const response = await fetch('/api/public/auth/forgot-password', {
+            const data = await fetchPublicApiJson('/api/public/auth/forgot-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim() }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to send verification code');
-            }
+            }) as ForgotPasswordResponse;
 
             // ✅ Save timestamp for countdown persistence
             const storageKey = `resend_cooldown_${email.trim().toLowerCase()}`;

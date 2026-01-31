@@ -9,6 +9,7 @@ import ToastContainer from "@/components/ui/ToastContainer";
 import { FaDownload } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MerchantData {
   code: string;
@@ -69,10 +70,8 @@ export default function QRTablesPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/profile", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi("/api/merchant/profile", {
+        token,
       });
 
       if (!response.ok) {
@@ -228,13 +227,13 @@ export default function QRTablesPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/profile", {
+      const response = await fetchMerchantApi("/api/merchant/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ totalTables: tableCount }),
+        token,
       });
 
       if (!response.ok) {

@@ -7,6 +7,7 @@ import { useToast } from "@/context/ToastContext";
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaDownload, FaTrash, FaEdit, FaCheck, FaTimes, FaArrowLeft, FaSave, FaFileExcel, FaExclamationTriangle, FaUpload } from "react-icons/fa";
 import * as XLSX from "xlsx";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddonUploadItem {
   rowIndex: number;
@@ -175,9 +176,7 @@ export default function AddonItemsBulkUploadPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/addon-categories", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/addon-categories", { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -198,9 +197,7 @@ export default function AddonItemsBulkUploadPage() {
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/addon-items?limit=1000", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/addon-items?limit=1000", { token });
 
       if (response.ok) {
         const data = await response.json();
@@ -246,9 +243,7 @@ export default function AddonItemsBulkUploadPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/addon-items?limit=1000", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetchMerchantApi("/api/merchant/addon-items?limit=1000", { token });
 
       if (!response.ok) {
         throw new Error("Failed to fetch addon items");
@@ -736,13 +731,13 @@ export default function AddonItemsBulkUploadPage() {
         };
       });
 
-      const response = await fetch("/api/merchant/addon-items/bulk-upload", {
+      const response = await fetchMerchantApi("/api/merchant/addon-items/bulk-upload", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ items: itemsWithCategoryIds, upsertByName: true }),
+        token,
       });
 
       const data = await response.json();

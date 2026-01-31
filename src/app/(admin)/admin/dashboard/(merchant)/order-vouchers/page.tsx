@@ -9,6 +9,7 @@ import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
 import { formatCurrency } from "@/lib/utils/format";
 import { OrderVoucherTemplateFormModal } from "@/components/order-vouchers/OrderVoucherTemplateFormModal";
 import { FaChartBar, FaEdit, FaListAlt, FaPlus, FaSyncAlt, FaToggleOff, FaToggleOn, FaTrash } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 type VoucherTemplate = {
   id: string;
@@ -106,14 +107,14 @@ export default function OrderVouchersPage() {
       }
 
       const [templatesRes, profileRes, settingsRes] = await Promise.all([
-        fetch("/api/merchant/order-vouchers/templates", {
-          headers: { Authorization: `Bearer ${token}` },
+        fetchMerchantApi("/api/merchant/order-vouchers/templates", {
+          token,
         }),
-        fetch("/api/merchant/profile", {
-          headers: { Authorization: `Bearer ${token}` },
+        fetchMerchantApi("/api/merchant/profile", {
+          token,
         }),
-        fetch("/api/merchant/order-vouchers/settings", {
-          headers: { Authorization: `Bearer ${token}` },
+        fetchMerchantApi("/api/merchant/order-vouchers/settings", {
+          token,
         }),
       ]);
 
@@ -222,13 +223,13 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(`/api/merchant/order-vouchers/templates/${tpl.id}`, {
+      const res = await fetchMerchantApi(`/api/merchant/order-vouchers/templates/${tpl.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ isActive: !tpl.isActive }),
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<VoucherTemplate>;
@@ -257,8 +258,8 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(`/api/merchant/order-vouchers/templates/${tpl.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetchMerchantApi(`/api/merchant/order-vouchers/templates/${tpl.id}`, {
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<any>;
@@ -287,8 +288,8 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(`/api/merchant/order-vouchers/templates/${tpl.id}/codes`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await fetchMerchantApi(`/api/merchant/order-vouchers/templates/${tpl.id}/codes`, {
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<VoucherCode[]>;
@@ -315,13 +316,13 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(`/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes`, {
+      const res = await fetchMerchantApi(`/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ count: generateCount, length: generateLength }),
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<VoucherCode[]>;
@@ -361,13 +362,13 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(`/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes`, {
+      const res = await fetchMerchantApi(`/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ manualCodes: uniq }),
+        token,
       });
 
       const json = (await res.json()) as ApiResponse<VoucherCode[]>;
@@ -402,15 +403,15 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(
+      const res = await fetchMerchantApi(
         `/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes/${code.id}`,
         {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ isActive: !code.isActive }),
+          token,
         }
       );
 
@@ -444,13 +445,11 @@ export default function OrderVouchersPage() {
         return;
       }
 
-      const res = await fetch(
+      const res = await fetchMerchantApi(
         `/api/merchant/order-vouchers/templates/${selectedTemplate.id}/codes/${deleteCodeConfirm.id}`,
         {
           method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          token,
         }
       );
 

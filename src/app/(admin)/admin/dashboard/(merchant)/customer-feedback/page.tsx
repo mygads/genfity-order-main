@@ -21,6 +21,7 @@ import { FaStar, FaClock, FaConciergeBell, FaUtensils, FaCommentAlt, FaFilter } 
 import { useMerchant } from '@/context/MerchantContext';
 import { formatFullOrderNumber } from '@/lib/utils/format';
 import { formatInTimeZone } from 'date-fns-tz';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiClient';
 
 // Dynamic import for ApexCharts (SSR safe)
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
@@ -121,7 +122,7 @@ export default function CustomerFeedbackPage() {
                 return;
             }
 
-            const response = await fetch(`/api/merchant/feedback/analytics?period=${period}`, {
+            const response = await fetch(buildOrderApiUrl(`/api/merchant/feedback/analytics?period=${period}`), {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -144,7 +145,7 @@ export default function CustomerFeedbackPage() {
 
             const params = buildFeedbackParams(listPage, 10);
 
-            const response = await fetch(`/api/merchant/feedback?${params}`, {
+            const response = await fetch(buildOrderApiUrl(`/api/merchant/feedback?${params}`), {
                 headers: { Authorization: `Bearer ${token}` },
             });
 
@@ -172,7 +173,7 @@ export default function CustomerFeedbackPage() {
 
             while (currentPage <= totalPagesLocal) {
                 const params = buildFeedbackParams(currentPage, limit);
-                const response = await fetch(`/api/merchant/feedback?${params}`, {
+                const response = await fetch(buildOrderApiUrl(`/api/merchant/feedback?${params}`), {
                     headers: { Authorization: `Bearer ${token}` },
                 });
 

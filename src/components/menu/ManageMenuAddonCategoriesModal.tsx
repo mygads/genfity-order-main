@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useMerchant } from "@/context/MerchantContext";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface AddonItem {
   id: string;
@@ -138,7 +139,7 @@ export default function ManageMenuAddonCategoriesModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/addon-categories", {
+      const response = await fetch(buildOrderApiUrl("/api/merchant/addon-categories"), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -236,7 +237,7 @@ export default function ManageMenuAddonCategoriesModal({
 
       // Remove all current addon categories first
       const deletePromises = currentAddonCategories.map((cat) =>
-        fetch(`/api/merchant/menu/${menuId}/addon-categories/${cat.addonCategoryId}`, {
+        fetch(buildOrderApiUrl(`/api/merchant/menu/${menuId}/addon-categories/${cat.addonCategoryId}`), {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -247,7 +248,7 @@ export default function ManageMenuAddonCategoriesModal({
       // Add selected categories
       if (selectedCategories.length > 0) {
         const addPromises = selectedCategories.map((cat) =>
-          fetch(`/api/merchant/menu/${menuId}/addon-categories`, {
+          fetch(buildOrderApiUrl(`/api/merchant/menu/${menuId}/addon-categories`), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

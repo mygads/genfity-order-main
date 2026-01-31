@@ -21,6 +21,7 @@ import MenuDetailModal from '@/components/menu/MenuDetailModal';
 import {
   uploadMenuImageViaApi,
 } from '@/lib/utils/menuImage';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 /**
  * Menu Builder Tabs Component
@@ -215,12 +216,12 @@ export default function MenuBuilderTabs({
       if (!token || !imageUrl) return;
 
       // Extract the file path from the URL for deletion
-      await fetch('/api/merchant/upload/delete-image', {
+      await fetchMerchantApi('/api/merchant/upload/delete-image', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
+        token,
         body: JSON.stringify({
           imageUrl,
           imageThumbUrl: imageThumbUrl || undefined,

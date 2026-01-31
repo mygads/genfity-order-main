@@ -8,6 +8,7 @@ import { tOr } from '@/lib/i18n/useTranslation';
 import type { TranslationKeys } from '@/lib/i18n';
 import type { MerchantPaymentAccount, MerchantPaymentSettings } from '@/lib/types/paymentSettings';
 import { getCroppedImageBlob, type PixelCropArea } from '@/lib/utils/imageCrop';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 export interface PaymentMethodsTabProps {
   t: (key: TranslationKeys | string, params?: Record<string, string | number>) => string;
@@ -162,11 +163,9 @@ export default function PaymentMethodsTab({
       const formData = new FormData();
       formData.append('file', croppedBlob, 'qris.jpg');
 
-      const response = await fetch('/api/merchant/upload/qris', {
+      const response = await fetchMerchantApi('/api/merchant/upload/qris', {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        token: authToken,
         body: formData,
       });
 

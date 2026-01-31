@@ -58,6 +58,18 @@ async function handleGet(
   } catch (error) {
     console.error('Error getting addon item:', error);
 
+    if (error instanceof Error && error.message === 'Addon item not found') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: error.message,
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -141,6 +153,18 @@ async function handlePut(
       );
     }
 
+    if (error instanceof Error && error.message === 'Addon item not found') {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: error.message,
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
     if (error instanceof NotFoundError) {
       return NextResponse.json(
         {
@@ -209,6 +233,18 @@ async function handleDelete(
     console.error('Error deleting addon item:', error);
 
     if (error instanceof NotFoundError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: error.message,
+          statusCode: 404,
+        },
+        { status: 404 }
+      );
+    }
+
+    if (error instanceof Error && error.message === 'Addon item not found') {
       return NextResponse.json(
         {
           success: false,

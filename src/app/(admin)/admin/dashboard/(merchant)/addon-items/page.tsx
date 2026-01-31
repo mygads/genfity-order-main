@@ -16,6 +16,7 @@ import { getCurrencySymbol } from "@/lib/utils/format";
 import ArchiveModal from "@/components/common/ArchiveModal";
 import { exportAddonItemsForBulkUpload } from "@/lib/utils/excelExport";
 import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } from "@/lib/tutorial";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddonCategory {
   id: string;
@@ -130,12 +131,8 @@ function AddonItemsPageContent() {
       setAuthToken(token);
 
       const [itemsResponse, categoriesResponse] = await Promise.all([
-        fetch("/api/merchant/addon-items", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch("/api/merchant/addon-categories", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetchMerchantApi("/api/merchant/addon-items", { token }),
+        fetchMerchantApi("/api/merchant/addon-categories", { token }),
       ]);
 
       if (!itemsResponse.ok || !categoriesResponse.ok) {
@@ -230,13 +227,13 @@ function AddonItemsPageContent() {
         autoResetStock: formData.trackStock ? formData.autoResetStock : false,
       };
 
-      const response = await fetch(url, {
+      const response = await fetchMerchantApi(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const data = await response.json();
@@ -324,11 +321,9 @@ function AddonItemsPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/addon-items/${id}/toggle-active`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${id}/toggle-active`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -357,11 +352,9 @@ function AddonItemsPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/addon-items/${deleteTarget.id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${deleteTarget.id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {

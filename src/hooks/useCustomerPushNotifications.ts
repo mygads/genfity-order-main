@@ -20,6 +20,22 @@ import {
     getRecentOrders,
     getCustomerAuth,
 } from '@/lib/utils/localStorage';
+import { fetchPublicApi, fetchPublicApiJson } from '@/lib/utils/orderApiClient';
+
+interface PushConfigResponse {
+    success: boolean;
+    data?: {
+        vapidPublicKey?: string;
+    };
+    error?: string;
+    message?: string;
+}
+
+interface PushMutationResponse {
+    success: boolean;
+    error?: string;
+    message?: string;
+}
 
 interface UseCustomerPushNotificationsReturn {
     /** Whether push notifications are supported in this browser */
@@ -111,8 +127,7 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
      */
     const getVapidKey = useCallback(async (): Promise<string | null> => {
         try {
-            const response = await fetch('/api/public/push/subscribe');
-            const data = await response.json();
+            const data = await fetchPublicApiJson<PushConfigResponse>('/api/public/push/subscribe');
 
             if (data.success && data.data?.vapidPublicKey) {
                 return data.data.vapidPublicKey;
@@ -220,7 +235,7 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
             }
 
             // Send to server
-            const response = await fetch('/api/public/push/subscribe', {
+            const data = await fetchPublicApiJson<PushMutationResponse>('/api/public/push/subscribe', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -236,8 +251,6 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
                     userAgent: navigator.userAgent,
                 }),
             });
-
-            const data = await response.json();
 
             if (!data.success) {
                 setError(data.error || 'Failed to save subscription');
@@ -267,7 +280,7 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
         }
 
         try {
-            const response = await fetch('/api/public/push/subscribe', {
+            const data = await fetchPublicApiJson<PushMutationResponse>('/api/public/push/subscribe', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -275,8 +288,6 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
                     orderNumber,
                 }),
             });
-
-            const data = await response.json();
             return data.success;
         } catch (err) {
             console.error('[CustomerPush] Add order failed:', err);
@@ -296,7 +307,7 @@ export function useCustomerPushNotifications(): UseCustomerPushNotificationsRetu
 
             if (saved) {
                 // Notify server
-                await fetch(`/api/public/push/subscribe?endpoint=${encodeURIComponent(saved.endpoint)}`, {
+                await fetchPublicApi(`/api/public/push/subscribe?endpoint=${encodeURIComponent(saved.endpoint)}`, {
                     method: 'DELETE',
                 });
             }

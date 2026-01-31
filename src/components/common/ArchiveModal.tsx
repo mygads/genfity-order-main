@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { FaTrashRestore, FaTimes, FaCalendarAlt, FaBox, FaTag, FaLayerGroup, FaPuzzlePiece, FaClock, FaInfoCircle, FaTrashAlt } from "react-icons/fa";
 import { useTranslation } from "@/lib/i18n/useTranslation";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 
 interface DeletedItem {
   id: string;
@@ -71,7 +72,7 @@ export default function ArchiveModal({
       }
 
       const typeParam = filterType !== 'all' ? `?type=${filterType}` : '';
-      const response = await fetch(`/api/merchant/deleted-items${typeParam}`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/deleted-items${typeParam}`), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -273,12 +274,12 @@ export default function ArchiveModal({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-[200] bg-black/50 backdrop-blur-sm"
+        className="fixed inset-0 z-200 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="fixed inset-0 z-[250] flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-250 flex items-center justify-center p-4">
         <div className="w-full max-w-3xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-xl dark:bg-gray-900">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-700">
@@ -473,8 +474,8 @@ export default function ArchiveModal({
       {/* Permanent Delete Confirmation Modal */}
       {confirmDelete.show && confirmDelete.item && confirmDelete.type && (
         <>
-          <div className="fixed inset-0 z-[300] bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDelete({ show: false, item: null, type: null })} />
-          <div className="fixed inset-0 z-[350] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-300 bg-black/50 backdrop-blur-sm" onClick={() => setConfirmDelete({ show: false, item: null, type: null })} />
+          <div className="fixed inset-0 z-350 flex items-center justify-center p-4">
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl dark:bg-gray-800">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-error-100 dark:bg-error-900/30">
                 <FaTrashAlt className="h-6 w-6 text-error-600 dark:text-error-400" />

@@ -480,8 +480,7 @@ function OrderSummaryCashPageContent() {
       const body = new FormData();
       body.append('file', file);
 
-      const response = await fetch(
-        `/api/public/orders/${orderNumber}/upload-proof?token=${encodeURIComponent(trackingToken)}`,
+      const response = await fetch(buildOrderApiUrl(`/api/public/orders/${orderNumber}/upload-proof?token=${encodeURIComponent(trackingToken)}`),
         {
           method: 'POST',
           body,

@@ -1,3 +1,5 @@
+import { buildMerchantApiUrl, fetchMerchantApi } from '@/lib/utils/orderApiClient';
+
 export const MENU_THUMB_SIZE = 300;
 export const MENU_THUMB_2X_SIZE = 600;
 
@@ -64,12 +66,12 @@ export const requestPresignedUpload = async (
   },
   messages: MenuImageMessages = DEFAULT_MENU_IMAGE_MESSAGES
 ): Promise<PresignResponse> => {
-  const response = await fetch('/api/merchant/upload/presign', {
+  const response = await fetchMerchantApi('/api/merchant/upload/presign', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
     },
+    token,
     body: JSON.stringify(body),
   });
 
@@ -142,7 +144,7 @@ export const uploadMenuImageViaApi = (
     body.append('file', params.file);
     if (params.menuId) body.append('menuId', params.menuId);
 
-    xhr.open('POST', '/api/merchant/upload/menu-image');
+    xhr.open('POST', buildMerchantApiUrl('/api/merchant/upload/menu-image'));
     xhr.setRequestHeader('Authorization', `Bearer ${params.token}`);
     xhr.send(body);
   });

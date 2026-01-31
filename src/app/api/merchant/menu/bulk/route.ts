@@ -56,7 +56,7 @@ async function handler(
     // Validate menuIds
     if (!menuIds || menuIds.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'INVALID_INPUT', message: 'No menu items selected' },
+        { success: false, error: 'INVALID_INPUT', message: 'No menu items selected', statusCode: 400 },
         { status: 400 }
       );
     }
@@ -75,7 +75,12 @@ async function handler(
 
     if (menuCount !== menuIds.length) {
       return NextResponse.json(
-        { success: false, error: 'INVALID_MENUS', message: 'Some menus do not exist or do not belong to your merchant' },
+        {
+          success: false,
+          error: 'INVALID_MENUS',
+          message: 'Some menus do not exist or do not belong to your merchant',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -86,7 +91,12 @@ async function handler(
       case 'UPDATE_PRICE':
         if (!priceChange) {
           return NextResponse.json(
-            { success: false, error: 'INVALID_INPUT', message: 'Price change parameters required' },
+            {
+              success: false,
+              error: 'INVALID_INPUT',
+              message: 'Price change parameters required',
+              statusCode: 400,
+            },
             { status: 400 }
           );
         }
@@ -96,7 +106,12 @@ async function handler(
       case 'UPDATE_STOCK':
         if (!stockChange) {
           return NextResponse.json(
-            { success: false, error: 'INVALID_INPUT', message: 'Stock change parameters required' },
+            {
+              success: false,
+              error: 'INVALID_INPUT',
+              message: 'Stock change parameters required',
+              statusCode: 400,
+            },
             { status: 400 }
           );
         }
@@ -106,7 +121,12 @@ async function handler(
       case 'TOGGLE_STATUS':
         if (!statusChange) {
           return NextResponse.json(
-            { success: false, error: 'INVALID_INPUT', message: 'Status change parameters required' },
+            {
+              success: false,
+              error: 'INVALID_INPUT',
+              message: 'Status change parameters required',
+              statusCode: 400,
+            },
             { status: 400 }
           );
         }
@@ -120,7 +140,12 @@ async function handler(
       case 'UPDATE_SCHEDULE':
         if (!scheduleChange) {
           return NextResponse.json(
-            { success: false, error: 'INVALID_INPUT', message: 'Schedule change parameters required' },
+            {
+              success: false,
+              error: 'INVALID_INPUT',
+              message: 'Schedule change parameters required',
+              statusCode: 400,
+            },
             { status: 400 }
           );
         }
@@ -129,7 +154,12 @@ async function handler(
 
       default:
         return NextResponse.json(
-          { success: false, error: 'INVALID_OPERATION', message: 'Unknown operation type' },
+          {
+            success: false,
+            error: 'INVALID_OPERATION',
+            message: 'Unknown operation type',
+            statusCode: 400,
+          },
           { status: 400 }
         );
     }
@@ -146,7 +176,12 @@ async function handler(
   } catch (error) {
     console.error('Bulk operation error:', error);
     return NextResponse.json(
-      { success: false, error: 'SERVER_ERROR', message: 'Failed to perform bulk operation' },
+      {
+        success: false,
+        error: 'SERVER_ERROR',
+        message: 'Failed to perform bulk operation',
+        statusCode: 500,
+      },
       { status: 500 }
     );
   }

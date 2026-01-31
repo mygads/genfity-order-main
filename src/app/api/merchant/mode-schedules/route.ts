@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { isValidTimeHHMM } from '@/lib/utils/validators';
 
 /**
  * GET /api/merchant/mode-schedules
@@ -96,6 +97,12 @@ export const POST = withMerchant(async (
       if (!schedule.startTime || !schedule.endTime) {
         return NextResponse.json(
           { success: false, error: 'VALIDATION_ERROR', message: 'Start and end time required' },
+          { status: 400 }
+        );
+      }
+      if (!isValidTimeHHMM(schedule.startTime) || !isValidTimeHHMM(schedule.endTime)) {
+        return NextResponse.json(
+          { success: false, error: 'VALIDATION_ERROR', message: 'Invalid time format. Expected HH:MM' },
           { status: 400 }
         );
       }

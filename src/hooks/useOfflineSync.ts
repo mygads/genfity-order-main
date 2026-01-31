@@ -491,7 +491,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}): UseOfflineSync
     const addonMap = new Map<string, { name: string; price: number; isActive: boolean }>();
 
     try {
-      const menuRes = await fetch('/api/merchant/pos/menu', {
+      const menuRes = await fetch(buildOrderApiUrl('/api/merchant/pos/menu'), {
         headers: {
           Authorization: `Bearer ${token}`,
         },

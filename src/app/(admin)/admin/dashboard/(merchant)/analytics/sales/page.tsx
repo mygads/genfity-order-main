@@ -22,6 +22,7 @@ import dynamic from 'next/dynamic';
 import { ApexOptions } from 'apexcharts';
 import { formatCurrency } from '@/lib/utils/format';
 import { getAdminAuth } from '@/lib/utils/adminAuth';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 // Dynamic import for ApexCharts (SSR safe)
 const ReactApexChart = dynamic(() => import('react-apexcharts'), {
@@ -143,8 +144,8 @@ export default function SalesAnalyticsPage() {
       }
 
       // Fetch merchant info for currency
-      const merchantRes = await fetch('/api/merchant/profile', {
-        headers: { Authorization: `Bearer ${token}` },
+      const merchantRes = await fetchMerchantApi('/api/merchant/profile', {
+        token,
       });
       if (merchantRes.ok) {
         const merchantData = await merchantRes.json();
@@ -164,8 +165,8 @@ export default function SalesAnalyticsPage() {
       if (paymentMethod) params.append('paymentMethod', paymentMethod);
       if (scheduledOnly) params.append('scheduledOnly', 'true');
 
-      const response = await fetch(`/api/merchant/analytics/sales?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetchMerchantApi(`/api/merchant/analytics/sales?${params.toString()}`, {
+        token,
       });
 
       if (response.ok) {

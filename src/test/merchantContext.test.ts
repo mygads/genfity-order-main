@@ -1,6 +1,6 @@
 import { describe, expect, it, afterEach, vi } from 'vitest';
 
-import { getLastMerchantCodeClient } from './merchantContext';
+import { getLastMerchantCodeClient } from '../lib/utils/merchantContext';
 
 type LocalStorageLike = {
   getItem: (key: string) => string | null;

@@ -16,6 +16,7 @@ import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } fr
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaCogs, FaEdit, FaTrash } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface Category {
   id: string;
@@ -272,13 +273,13 @@ export default function MerchantCategoriesPage() {
 
       const method = editingId ? "PUT" : "POST";
 
-      const response = await fetch(url, {
+      const response = await fetchMerchantApi(url, {
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(formData),
+        token,
       });
 
       const data = await response.json();
@@ -317,11 +318,9 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/categories/${id}/toggle-active`, {
+      const response = await fetchMerchantApi(`/api/merchant/categories/${id}/toggle-active`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -349,9 +348,7 @@ export default function MerchantCategoriesPage() {
       setDeleteConfirm({ show: true, id, name, menuItemsCount: 0, menuList: "", loading: true });
 
       // Fetch delete preview
-      const previewResponse = await fetch(`/api/merchant/categories/${id}/delete-preview`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const previewResponse = await fetchMerchantApi(`/api/merchant/categories/${id}/delete-preview`, { token });
 
       if (previewResponse.ok) {
         const previewData = await previewResponse.json();
@@ -394,11 +391,9 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/categories/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/categories/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -437,11 +432,10 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/categories/reorder", {
+      const response = await fetchMerchantApi("/api/merchant/categories/reorder", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           categories: pendingReorder.map((cat, idx) => ({
@@ -449,6 +443,7 @@ export default function MerchantCategoriesPage() {
             sortOrder: idx,
           })),
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -500,15 +495,15 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch("/api/merchant/categories/bulk-delete", {
+      const response = await fetchMerchantApi("/api/merchant/categories/bulk-delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ids: selectedCategories,
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -534,15 +529,15 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/categories/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/categories/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           [field]: value || undefined,
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -573,12 +568,8 @@ export default function MerchantCategoriesPage() {
 
       // Fetch all menus and category menus
       const [allMenusRes, categoryMenusRes] = await Promise.all([
-        fetch("/api/merchant/menu", {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`/api/merchant/categories/${category.id}/menus`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
+        fetchMerchantApi("/api/merchant/menu", { token }),
+        fetchMerchantApi(`/api/merchant/categories/${category.id}/menus`, { token }),
       ]);
 
       if (allMenusRes.ok) {
@@ -615,13 +606,13 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/categories/${selectedCategory.id}/menus`, {
+      const response = await fetchMerchantApi(`/api/merchant/categories/${selectedCategory.id}/menus`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ menuId }),
+        token,
       });
 
       if (!response.ok) {
@@ -655,11 +646,9 @@ export default function MerchantCategoriesPage() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/categories/${selectedCategory.id}/menus/${menuId}`, {
+      const response = await fetchMerchantApi(`/api/merchant/categories/${selectedCategory.id}/menus/${menuId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {

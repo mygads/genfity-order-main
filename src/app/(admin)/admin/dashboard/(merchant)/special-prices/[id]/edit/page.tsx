@@ -9,6 +9,7 @@ import { useMerchant } from "@/context/MerchantContext";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaArrowLeft, FaMagic } from "react-icons/fa";
 import { getCurrencyConfig } from "@/lib/constants/location";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuBook {
     id: string;
@@ -169,11 +170,11 @@ export default function EditSpecialPricePage() {
             }
 
             const [priceRes, booksRes] = await Promise.all([
-                fetch(`/api/merchant/special-prices/${priceId}`, {
-                    headers: { Authorization: `Bearer ${token}` },
+                fetchMerchantApi(`/api/merchant/special-prices/${priceId}`, {
+                    token,
                 }),
-                fetch("/api/merchant/menu-books", {
-                    headers: { Authorization: `Bearer ${token}` },
+                fetchMerchantApi("/api/merchant/menu-books", {
+                    token,
                 }),
             ]);
 
@@ -276,11 +277,10 @@ export default function EditSpecialPricePage() {
             setError(null);
             const token = localStorage.getItem("accessToken");
 
-            const response = await fetch(`/api/merchant/special-prices/${priceId}`, {
+            const response = await fetchMerchantApi(`/api/merchant/special-prices/${priceId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
                 },
                 body: JSON.stringify({
                     name: name.trim(),
@@ -297,6 +297,7 @@ export default function EditSpecialPricePage() {
                         promoPrice: item.promoPrice,
                     })),
                 }),
+                token,
             });
 
             const data = await response.json();

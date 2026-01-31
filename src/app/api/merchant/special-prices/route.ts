@@ -9,6 +9,7 @@ import prisma from '@/lib/db/client';
 import { withMerchant } from '@/lib/middleware/auth';
 import type { AuthContext } from '@/lib/types/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
+import { validateTimeRangeInput } from '@/lib/utils/validators';
 
 /**
  * GET /api/merchant/special-prices
@@ -18,7 +19,12 @@ async function handleGet(req: NextRequest, context: AuthContext) {
         const merchantId = context.merchantId;
         if (!merchantId) {
             return NextResponse.json(
-                { success: false, message: 'Merchant ID is required' },
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -30,7 +36,12 @@ async function handleGet(req: NextRequest, context: AuthContext) {
 
         if (!merchant) {
             return NextResponse.json(
-                { success: false, message: 'Merchant not found' },
+                {
+                    success: false,
+                    error: 'MERCHANT_NOT_FOUND',
+                    message: 'Merchant not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -53,7 +64,12 @@ async function handleGet(req: NextRequest, context: AuthContext) {
     } catch (error) {
         console.error('Error getting special prices:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to retrieve special prices' },
+            {
+                success: false,
+                error: 'INTERNAL_ERROR',
+                message: 'Failed to retrieve special prices',
+                statusCode: 500,
+            },
             { status: 500 }
         );
     }
@@ -67,7 +83,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
         const merchantId = context.merchantId;
         if (!merchantId) {
             return NextResponse.json(
-                { success: false, message: 'Merchant ID is required' },
+                {
+                    success: false,
+                    error: 'MERCHANT_ID_REQUIRED',
+                    message: 'Merchant ID is required',
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -79,7 +100,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
         if (!merchant) {
             return NextResponse.json(
-                { success: false, message: 'Merchant not found' },
+                {
+                    success: false,
+                    error: 'MERCHANT_NOT_FOUND',
+                    message: 'Merchant not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -92,7 +118,25 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
         if (!name || !menuBookId || !startDate || !endDate) {
             return NextResponse.json(
-                { success: false, message: 'Missing required fields' },
+                {
+                    success: false,
+                    error: 'VALIDATION_ERROR',
+                    message: 'Missing required fields',
+                    statusCode: 400,
+                },
+                { status: 400 }
+            );
+        }
+
+        const timeValidationError = validateTimeRangeInput({ isAllDay, startTime, endTime });
+        if (timeValidationError) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    error: 'VALIDATION_ERROR',
+                    message: timeValidationError,
+                    statusCode: 400,
+                },
                 { status: 400 }
             );
         }
@@ -107,7 +151,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
 
         if (!menuBook) {
             return NextResponse.json(
-                { success: false, message: 'Menu book not found' },
+                {
+                    success: false,
+                    error: 'NOT_FOUND',
+                    message: 'Menu book not found',
+                    statusCode: 404,
+                },
                 { status: 404 }
             );
         }
@@ -147,7 +196,12 @@ async function handlePost(req: NextRequest, context: AuthContext) {
     } catch (error) {
         console.error('Error creating special price:', error);
         return NextResponse.json(
-            { success: false, message: 'Failed to create special price' },
+            {
+                success: false,
+                error: 'INTERNAL_ERROR',
+                message: 'Failed to create special price',
+                statusCode: 500,
+            },
             { status: 500 }
         );
     }

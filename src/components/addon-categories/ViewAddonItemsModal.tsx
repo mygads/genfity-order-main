@@ -7,6 +7,7 @@ import ConfirmDialog from "@/components/modals/ConfirmDialog";
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { FaTrash } from "react-icons/fa";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddonItem {
   id: string;
@@ -164,15 +165,15 @@ export default function ViewAddonItemsModal({
         displayOrder: index,
       }));
 
-      const response = await fetch(
+      const response = await fetchMerchantApi(
         `/api/merchant/addon-categories/${categoryId}/reorder-items`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({ itemOrders }),
+          token,
         }
       );
 
@@ -204,9 +205,9 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-items/${id}/toggle-active`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${id}/toggle-active`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}` },
+        token,
       });
 
       if (response.ok) {
@@ -228,15 +229,15 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-items/${stockModal.itemId}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${stockModal.itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           stockQty: parseInt(stockModal.newStock) || 0,
         }),
+        token,
       });
 
       if (response.ok) {
@@ -254,13 +255,13 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-items/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ stockQty: 0 }),
+        token,
       });
 
       if (response.ok) {
@@ -282,9 +283,9 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-items/${itemId}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${itemId}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
+        token,
       });
 
       if (response.ok) {
@@ -328,16 +329,16 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch(`/api/merchant/addon-items/${itemId}`, {
+      const response = await fetchMerchantApi(`/api/merchant/addon-items/${itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           name: oldEditData.name,
           price: parseFloat(oldEditData.price),
         }),
+        token,
       });
 
       if (response.ok) {
@@ -359,8 +360,8 @@ export default function ViewAddonItemsModal({
       const token = localStorage.getItem("accessToken");
       if (!token) return;
 
-      const response = await fetch("/api/merchant/addon-items", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetchMerchantApi("/api/merchant/addon-items", {
+        token,
       });
 
       if (response.ok) {
@@ -384,11 +385,10 @@ export default function ViewAddonItemsModal({
 
       if (shouldDuplicate) {
         // Create duplicate of the item
-        const createResponse = await fetch("/api/merchant/addon-items", {
+        const createResponse = await fetchMerchantApi("/api/merchant/addon-items", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             addonCategoryId: categoryId,
@@ -400,6 +400,7 @@ export default function ViewAddonItemsModal({
             stockQty: item.trackStock ? 0 : null,
             displayOrder: sortedItems.length,
           }),
+          token,
         });
 
         if (!createResponse.ok) {
@@ -407,16 +408,16 @@ export default function ViewAddonItemsModal({
         }
       } else {
         // Update existing item to link to this category
-        const updateResponse = await fetch(`/api/merchant/addon-items/${item.id}`, {
+        const updateResponse = await fetchMerchantApi(`/api/merchant/addon-items/${item.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             addonCategoryId: categoryId,
             displayOrder: sortedItems.length,
           }),
+          token,
         });
 
         if (!updateResponse.ok) {

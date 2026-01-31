@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { useTranslation } from '@/lib/i18n/useTranslation';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 interface StoreToggleButtonProps {
   initialIsOpen: boolean;
@@ -57,10 +58,8 @@ export default function StoreToggleButton({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/merchant/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi('/api/merchant/profile', {
+        token,
       });
 
       if (response.ok) {
@@ -95,16 +94,16 @@ export default function StoreToggleButton({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/merchant/toggle-open', {
+      const response = await fetchMerchantApi('/api/merchant/toggle-open', {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           isOpen: true,
           isManualOverride: true,
         }),
+        token,
       });
 
       if (response.ok) {
@@ -131,16 +130,16 @@ export default function StoreToggleButton({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/merchant/toggle-open', {
+      const response = await fetchMerchantApi('/api/merchant/toggle-open', {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           isOpen: false,
           isManualOverride: true,
         }),
+        token,
       });
 
       if (response.ok) {
@@ -167,15 +166,15 @@ export default function StoreToggleButton({
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch('/api/merchant/toggle-open', {
+      const response = await fetchMerchantApi('/api/merchant/toggle-open', {
         method: 'PUT',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           isManualOverride: false,
         }),
+        token,
       });
 
       if (response.ok) {

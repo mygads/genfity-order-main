@@ -21,7 +21,7 @@ export function useOptimisticMenuToggle(menuId: string) {
     key,
     async (url) => {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(url, {
+      const res = await fetch(buildOrderApiUrl(url), {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -116,7 +116,7 @@ export function useOptimisticStockUpdate() {
     '/api/merchant/menu/stock',
     async (url, { arg }: { arg: { menuId: string; stockQty: number } }) => {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/menu/${arg.menuId}/stock`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/menu/${arg.menuId}/stock`), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -154,7 +154,7 @@ export function useOptimisticInlineEdit() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     async (url, { arg }: { arg: { id: string; field: string; value: any } }) => {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`/api/merchant/menu/${arg.id}`, {
+      const res = await fetch(buildOrderApiUrl(`/api/merchant/menu/${arg.id}`), {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -222,7 +222,7 @@ export async function prefetchData(url: string) {
 
   await mutate(
     url,
-    fetch(url, {
+    fetch(buildOrderApiUrl(url), {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     }).then(res => res.json()),
     { revalidate: false }

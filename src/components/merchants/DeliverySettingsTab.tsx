@@ -10,6 +10,7 @@ import Button from '@/components/ui/Button';
 import { getCurrencyConfig } from '@/lib/constants/location';
 import { formatCurrency } from '@/lib/utils/format';
 import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 import type { TranslationKeys } from '@/lib/i18n';
 
@@ -203,10 +204,8 @@ export default function DeliverySettingsTab({
 
     setZonesLoading(true);
     try {
-      const res = await fetch('/api/merchant/delivery/zones', {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+      const res = await fetchMerchantApi('/api/merchant/delivery/zones', {
+        token: authToken,
       });
       const json = await res.json();
       if (!res.ok || !json?.success) {
@@ -414,16 +413,16 @@ export default function DeliverySettingsTab({
     setBulkImportError('');
     setBulkImporting(true);
     try {
-      const res = await fetch('/api/merchant/delivery/zones/bulk-import', {
+      const res = await fetchMerchantApi('/api/merchant/delivery/zones/bulk-import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           geojson: undoGeoJson,
           replaceExisting: true,
         }),
+        token: authToken,
       });
       const apiJson = await res.json();
       if (!res.ok || !apiJson?.success) {
@@ -495,11 +494,10 @@ export default function DeliverySettingsTab({
 
     setSavingZone(true);
     try {
-      const res = await fetch('/api/merchant/delivery/zones', {
+      const res = await fetchMerchantApi('/api/merchant/delivery/zones', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           id: editingZone?.id,
@@ -509,6 +507,7 @@ export default function DeliverySettingsTab({
           radiusKm: zoneType === 'RADIUS' ? zoneRadiusKm : null,
           polygon: zoneType === 'POLYGON' ? zonePolygon : null,
         }),
+        token: authToken,
       });
 
       const json = await res.json();
@@ -532,11 +531,9 @@ export default function DeliverySettingsTab({
 
   const performDeleteZone = async (zone: DeliveryZone) => {
     try {
-      const res = await fetch(`/api/merchant/delivery/zones?id=${encodeURIComponent(zone.id)}`, {
+      const res = await fetchMerchantApi(`/api/merchant/delivery/zones?id=${encodeURIComponent(zone.id)}`, {
         method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+        token: authToken,
       });
       const json = await res.json();
       if (!res.ok || !json?.success) {
@@ -601,16 +598,16 @@ export default function DeliverySettingsTab({
             setUndoGeoJson(backup);
             setUndoAvailable(false);
 
-            const res = await fetch('/api/merchant/delivery/zones/bulk-import', {
+            const res = await fetchMerchantApi('/api/merchant/delivery/zones/bulk-import', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                Authorization: `Bearer ${authToken}`,
               },
               body: JSON.stringify({
                 geojson,
                 replaceExisting,
               }),
+              token: authToken,
             });
 
             const apiJson = await res.json();

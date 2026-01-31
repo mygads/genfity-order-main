@@ -10,6 +10,7 @@ import { FaArrowLeft, FaCheckCircle, FaEye, FaEyeSlash } from 'react-icons/fa';
 import { customerForgotPasswordUrl, customerLoginUrl } from '@/lib/utils/customerRoutes';
 import { useCustomerBackTarget } from '@/hooks/useCustomerBackTarget';
 import InvalidLinkCard from '@/components/auth/InvalidLinkCard';
+import { fetchPublicApiJson } from '@/lib/utils/orderApiClient';
 
 /**
  * Reset Password Page
@@ -89,7 +90,7 @@ function ResetPasswordForm() {
         setIsLoading(true);
 
         try {
-            const response = await fetch('/api/public/auth/reset-password', {
+            await fetchPublicApiJson('/api/public/auth/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -98,12 +99,6 @@ function ResetPasswordForm() {
                     password,
                 }),
             });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'Failed to reset password');
-            }
 
             setSuccess(true);
 

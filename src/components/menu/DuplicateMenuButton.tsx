@@ -3,6 +3,7 @@
 import React from 'react';
 import { FaCopy } from 'react-icons/fa';
 import ConfirmDialog from '@/components/modals/ConfirmDialog';
+import { buildOrderApiUrl } from '@/lib/utils/orderApiBase';
 
 interface DuplicateMenuButtonProps {
   menuId: string;
@@ -39,7 +40,7 @@ export default function DuplicateMenuButton({
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/merchant/menu/${menuId}/duplicate`, {
+      const response = await fetch(buildOrderApiUrl(`/api/merchant/menu/${menuId}/duplicate`), {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

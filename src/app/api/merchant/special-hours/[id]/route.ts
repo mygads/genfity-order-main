@@ -10,6 +10,14 @@ import prisma from '@/lib/db/client';
 import { withMerchant, AuthContext } from '@/lib/middleware/auth';
 import { serializeBigInt } from '@/lib/utils/serializer';
 import { requireBigIntRouteParam, type RouteContext } from '@/lib/utils/routeContext';
+import { isValidTimeHHMM } from '@/lib/utils/validators';
+
+const isValidOptionalTime = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return true;
+  }
+  return typeof value === 'string' && isValidTimeHHMM(value);
+};
 
 /**
  * GET /api/merchant/special-hours/[id]
@@ -72,6 +80,22 @@ export const PUT = withMerchant(async (
     }
     const specialHourId = specialHourIdResult.value;
     const body = await request.json();
+
+    if (
+      !isValidOptionalTime(body.openTime) ||
+      !isValidOptionalTime(body.closeTime) ||
+      !isValidOptionalTime(body.dineInStartTime) ||
+      !isValidOptionalTime(body.dineInEndTime) ||
+      !isValidOptionalTime(body.takeawayStartTime) ||
+      !isValidOptionalTime(body.takeawayEndTime) ||
+      !isValidOptionalTime(body.deliveryStartTime) ||
+      !isValidOptionalTime(body.deliveryEndTime)
+    ) {
+      return NextResponse.json(
+        { success: false, error: 'VALIDATION_ERROR', message: 'Invalid time format. Expected HH:MM' },
+        { status: 400 }
+      );
+    }
 
     // Check ownership
     const existing = await prisma.merchantSpecialHour.findFirst({

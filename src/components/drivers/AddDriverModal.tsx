@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { STAFF_PERMISSIONS } from "@/lib/constants/permissions";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface AddDriverModalProps {
   show: boolean;
@@ -48,10 +49,8 @@ export default function AddDriverModal({ show, onClose, onSuccess }: AddDriverMo
           return;
         }
 
-        const res = await fetch("/api/merchant/staff", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const res = await fetchMerchantApi("/api/merchant/staff", {
+          token,
         });
 
         const json = await res.json().catch(() => null);
@@ -101,15 +100,15 @@ export default function AddDriverModal({ show, onClose, onSuccess }: AddDriverMo
         return;
       }
 
-      const response = await fetch("/api/merchant/drivers", {
+      const response = await fetchMerchantApi("/api/merchant/drivers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           userId: selectedUserId,
         }),
+        token,
       });
 
       const data = await response.json();

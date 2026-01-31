@@ -7,6 +7,7 @@ import { useTranslation } from "@/lib/i18n/useTranslation";
 import { getAdminToken } from "@/lib/utils/adminAuth";
 import { getAdminUser } from "@/lib/utils/adminAuth";
 import { formatCurrency } from "@/lib/utils/format";
+import { buildOrderApiUrl } from "@/lib/utils/orderApiClient";
 import { 
     FaHistory, 
     FaArrowLeft, 
@@ -141,7 +142,7 @@ export default function SubscriptionHistoryPage() {
         
         try {
             const token = getAdminToken();
-            const res = await fetch(`/api/merchant/subscription/history?limit=20&offset=${offset}`, {
+            const res = await fetch(buildOrderApiUrl(`/api/merchant/subscription/history?limit=20&offset=${offset}`), {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             const data = await res.json();
@@ -177,7 +178,7 @@ export default function SubscriptionHistoryPage() {
         setPendingRequestLoading(true);
         try {
             const token = getAdminToken();
-            const res = await fetch(`/api/merchant/payment-request/active`, {
+            const res = await fetch(buildOrderApiUrl(`/api/merchant/payment-request/active`), {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             const data = await res.json();
@@ -208,7 +209,7 @@ export default function SubscriptionHistoryPage() {
         setPendingRequestLoading(true);
         try {
             const token = getAdminToken();
-            const res = await fetch(`/api/merchant/payment-request/${pendingRequest.id}/cancel`, {
+            const res = await fetch(buildOrderApiUrl(`/api/merchant/payment-request/${pendingRequest.id}/cancel`), {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
             });

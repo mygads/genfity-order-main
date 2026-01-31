@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { FaTimes, FaSearch, FaCopy } from "react-icons/fa";
 import Image from "next/image";
 import { useModalImplicitClose } from "@/hooks/useModalImplicitClose";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuItem {
   id: string;
@@ -73,8 +74,8 @@ export default function DuplicateMenuModal({
   const fetchMenus = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/merchant/menu", {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await fetchMerchantApi("/api/merchant/menu", {
+        token,
       });
 
       if (response.ok) {

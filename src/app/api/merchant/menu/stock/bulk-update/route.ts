@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth/serverAuth';
+import { withMerchant } from '@/lib/middleware/auth';
+import type { AuthContext } from '@/lib/middleware/auth';
 import prisma from '@/lib/db/client';
 import { z } from 'zod';
 
@@ -35,24 +36,10 @@ interface UpdateResult {
   error?: string;
 }
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest, authContext: AuthContext) {
   try {
-    // Authentication check
-    const authUser = await getAuthUser();
-    if (!authUser) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'UNAUTHORIZED',
-          message: 'Anda harus login terlebih dahulu',
-          statusCode: 401,
-        },
-        { status: 401 }
-      );
-    }
-
-    const userId = authUser.id;
-    const merchantId = authUser.merchantId;
+    const userId = authContext.userId;
+    const merchantId = authContext.merchantId;
 
     if (!merchantId) {
       return NextResponse.json(
@@ -293,3 +280,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withMerchant(handlePost);

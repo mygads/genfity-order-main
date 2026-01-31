@@ -1,14 +1,18 @@
+import { buildOrderApiUrl } from '@/lib/utils/orderApiClient';
+
 export type JsonValue = Record<string, unknown> | null;
 
 export const CONTRACT_NEXT_BASE = (process.env.CONTRACT_NEXT_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 export const CONTRACT_GO_BASE = (process.env.CONTRACT_GO_BASE_URL || 'http://localhost:8086').replace(/\/$/, '');
 
-export const CONTRACT_MERCHANT_CODE = process.env.CONTRACT_MERCHANT_CODE;
-export const CONTRACT_MENU_ID = process.env.CONTRACT_MENU_ID;
+export const CONTRACT_MERCHANT_CODE = process.env.CONTRACT_MERCHANT_CODE || 'WELLARD01';
+export const CONTRACT_MENU_ID = process.env.CONTRACT_MENU_ID
+  ? Number(process.env.CONTRACT_MENU_ID)
+  : 279;
 export const CONTRACT_MERCHANT_ACCESS_TOKEN = process.env.CONTRACT_MERCHANT_ACCESS_TOKEN;
-export const CONTRACT_MERCHANT_EMAIL = process.env.CONTRACT_MERCHANT_EMAIL;
-export const CONTRACT_MERCHANT_PASSWORD = process.env.CONTRACT_MERCHANT_PASSWORD;
-export const CONTRACT_MERCHANT_ID = process.env.CONTRACT_MERCHANT_ID;
+export const CONTRACT_MERCHANT_EMAIL = process.env.CONTRACT_MERCHANT_EMAIL || 'wellardkebab@gmail.com';
+export const CONTRACT_MERCHANT_PASSWORD = process.env.CONTRACT_MERCHANT_PASSWORD || '1234abcd';
+export const CONTRACT_MERCHANT_ID = process.env.CONTRACT_MERCHANT_ID || '10';
 export const CONTRACT_TURNSTILE_TOKEN = process.env.CONTRACT_TURNSTILE_TOKEN;
 export const CONTRACT_ORDER_TYPE = process.env.CONTRACT_ORDER_TYPE || 'TAKEAWAY';
 export const CONTRACT_CUSTOMER_NAME = process.env.CONTRACT_CUSTOMER_NAME || 'Contract Test';
@@ -22,6 +26,8 @@ export const CONTRACT_DELIVERY_LAT = process.env.CONTRACT_DELIVERY_LAT ? Number(
 export const CONTRACT_DELIVERY_LNG = process.env.CONTRACT_DELIVERY_LNG ? Number(process.env.CONTRACT_DELIVERY_LNG) : undefined;
 
 export const CONTRACT_VOUCHER_CODE = process.env.CONTRACT_VOUCHER_CODE;
+export const CONTRACT_VOUCHER_CODE_NEXT = process.env.CONTRACT_VOUCHER_CODE_NEXT;
+export const CONTRACT_VOUCHER_CODE_GO = process.env.CONTRACT_VOUCHER_CODE_GO;
 export const CONTRACT_VOUCHER_ITEM_SUBTOTAL = process.env.CONTRACT_VOUCHER_ITEM_SUBTOTAL
   ? Number(process.env.CONTRACT_VOUCHER_ITEM_SUBTOTAL)
   : undefined;
@@ -106,7 +112,47 @@ export async function getMerchantAccessToken(baseUrl: string): Promise<string | 
   if (!res.json?.success) return null;
 
   const data = (res.json?.data ?? {}) as Record<string, unknown>;
-  return typeof data.accessToken === 'string' ? data.accessToken : null;
+  const accessToken = typeof data.accessToken === 'string' ? data.accessToken : null;
+  if (!accessToken) return null;
+
+  if (CONTRACT_MERCHANT_ID) {
+    const switchRes = await fetch(`${baseUrl}/api/auth/switch-merchant`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ merchantId: CONTRACT_MERCHANT_ID }),
+    });
+
+    const switchText = await switchRes.text();
+    const switchJson = switchText ? (JSON.parse(switchText) as JsonValue) : null;
+    const switchData = (switchJson?.data ?? {}) as Record<string, unknown>;
+    const switchedToken = typeof switchData.accessToken === 'string' ? switchData.accessToken : null;
+
+    if (switchJson?.success && switchedToken) {
+      await ensureMerchantOpen(baseUrl, switchedToken);
+      return switchedToken;
+    }
+  }
+
+  await ensureMerchantOpen(baseUrl, accessToken);
+  return accessToken;
+}
+
+async function ensureMerchantOpen(baseUrl: string, token: string) {
+  try {
+    await fetch(buildOrderApiUrl(`${baseUrl}/api/merchant/toggle-open`), {
+      method: 'PUT',
+      headers: {
+        'content-type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ isManualOverride: true, isOpen: true }),
+    });
+  } catch {
+    // Ignore toggle-open failures in contract setup
+  }
 }
 
 export async function getJsonWithAuth(
@@ -164,6 +210,25 @@ export async function putJsonWithAuth(
   return { status: res.status, json };
 }
 
+export async function patchJsonWithAuth(
+  url: string,
+  body: unknown,
+  token: string,
+): Promise<{ status: number; json: JsonValue }> {
+  const res = await fetch(url, {
+    method: 'PATCH',
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  const json = text ? (JSON.parse(text) as JsonValue) : null;
+  return { status: res.status, json };
+}
+
 export async function deleteJsonWithAuth(
   url: string,
   body: unknown,
@@ -181,4 +246,37 @@ export async function deleteJsonWithAuth(
   const text = await res.text();
   const json = text ? (JSON.parse(text) as JsonValue) : null;
   return { status: res.status, json };
+}
+
+export async function getTextWithAuth(
+  url: string,
+  token: string,
+): Promise<{ status: number; text: string; contentType: string | null }> {
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const text = await res.text();
+  return { status: res.status, text, contentType: res.headers.get('content-type') };
+}
+
+export async function postTextWithAuth(
+  url: string,
+  body: unknown,
+  token: string,
+): Promise<{ status: number; text: string; contentType: string | null }> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const text = await res.text();
+  return { status: res.status, text, contentType: res.headers.get('content-type') };
 }

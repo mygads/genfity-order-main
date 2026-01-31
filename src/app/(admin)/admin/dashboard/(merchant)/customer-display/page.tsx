@@ -12,6 +12,7 @@ import { FaClock, FaReceipt, FaExpand, FaCircle, FaSync } from 'react-icons/fa';
 import { useTranslation, tOr } from '@/lib/i18n/useTranslation';
 import { formatCurrency, formatFullOrderNumber } from '@/lib/utils/format';
 import { getOrderWsBaseUrl } from '@/lib/utils/orderApiBase';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 import type {
   CustomerDisplayState,
   CustomerDisplayCartPayload,
@@ -80,9 +81,7 @@ export default function CustomerDisplayPage() {
       return;
     }
 
-    const response = await fetch('/api/merchant/profile', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetchMerchantApi('/api/merchant/profile', { token });
 
     if (!response.ok) return;
 
@@ -107,9 +106,7 @@ export default function CustomerDisplayPage() {
       return;
     }
 
-    const response = await fetch('/api/merchant/customer-display/state', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetchMerchantApi('/api/merchant/customer-display/state', { token });
 
     if (!response.ok) return;
 
@@ -127,9 +124,7 @@ export default function CustomerDisplayPage() {
       return;
     }
 
-    const response = await fetch('/api/merchant/customer-display/sessions', {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const response = await fetchMerchantApi('/api/merchant/customer-display/sessions', { token });
 
     if (!response.ok) {
       setIsRefreshingSessions(false);

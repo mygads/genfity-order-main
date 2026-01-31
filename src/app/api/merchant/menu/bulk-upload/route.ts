@@ -37,7 +37,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
 
     if (!merchantId) {
       return NextResponse.json(
-        { success: false, message: 'Merchant not found' },
+        { success: false, error: 'MERCHANT_NOT_FOUND', message: 'Merchant not found', statusCode: 400 },
         { status: 400 }
       );
     }
@@ -50,7 +50,7 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
 
     if (!items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'No items provided' },
+        { success: false, error: 'INVALID_INPUT', message: 'No items provided', statusCode: 400 },
         { status: 400 }
       );
     }
@@ -58,7 +58,12 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     // Validate max items
     if (items.length > 100) {
       return NextResponse.json(
-        { success: false, message: 'Maximum 100 items allowed per upload' },
+        {
+          success: false,
+          error: 'TOO_MANY_ITEMS',
+          message: 'Maximum 100 items allowed per upload',
+          statusCode: 400,
+        },
         { status: 400 }
       );
     }
@@ -208,7 +213,9 @@ export const POST = withMerchant(async (req: NextRequest, authContext) => {
     return NextResponse.json(
       {
         success: false,
+        error: 'INTERNAL_ERROR',
         message: error instanceof Error ? error.message : 'Failed to process menu items',
+        statusCode: 500,
       },
       { status: 500 }
     );

@@ -6,6 +6,7 @@ import { useTranslation } from '@/lib/i18n/useTranslation';
 import { useRouter } from 'next/navigation';
 import { clearAdminAuth } from '@/lib/utils/adminAuth';
 import { clearDriverAuth } from '@/lib/utils/driverAuth';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 import { useState } from 'react';
 import { ConfirmationModal } from '@/components/common/ConfirmationModal';
 import { useToast } from '@/hooks/useToast';
@@ -77,13 +78,13 @@ export default function MerchantStaffDashboard({
         return;
       }
 
-      const response = await fetch('/api/merchant/staff/leave', {
+      const response = await fetchMerchantApi('/api/merchant/staff/leave', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ merchantId: merchant.id.toString() }),
+        token,
       });
 
       if (!response.ok) {

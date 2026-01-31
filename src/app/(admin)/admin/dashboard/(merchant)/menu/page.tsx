@@ -22,6 +22,7 @@ import { useContextualHint, CONTEXTUAL_HINTS, useClickHereHint, CLICK_HINTS } fr
 import { TableActionButton } from "@/components/common/TableActionButton";
 import { StatusToggle } from "@/components/common/StatusToggle";
 import { FaEllipsisV } from "react-icons/fa";
+import { fetchMerchantApi } from "@/lib/utils/orderApiClient";
 
 interface MenuAddonCategory {
   addonCategoryId: string;
@@ -338,11 +339,9 @@ function MerchantMenuPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/menu/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/menu/${id}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -367,11 +366,9 @@ function MerchantMenuPageContent() {
         return;
       }
 
-      const response = await fetch(`/api/merchant/menu/${id}/toggle-active`, {
+      const response = await fetchMerchantApi(`/api/merchant/menu/${id}/toggle-active`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        token,
       });
 
       if (!response.ok) {
@@ -404,13 +401,13 @@ function MerchantMenuPageContent() {
         updateData = { [field]: String(value) };
       }
 
-      const response = await fetch(`/api/merchant/menu/${id}`, {
+      const response = await fetchMerchantApi(`/api/merchant/menu/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(updateData),
+        token,
       });
 
       if (!response.ok) {
@@ -470,16 +467,16 @@ function MerchantMenuPageContent() {
         return;
       }
 
-      const response = await fetch("/api/merchant/menu/bulk-update-status", {
+      const response = await fetchMerchantApi("/api/merchant/menu/bulk-update-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ids: selectedItems,
           isActive: true,
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -507,16 +504,16 @@ function MerchantMenuPageContent() {
         return;
       }
 
-      const response = await fetch("/api/merchant/menu/bulk-update-status", {
+      const response = await fetchMerchantApi("/api/merchant/menu/bulk-update-status", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ids: selectedItems,
           isActive: false,
         }),
+        token,
       });
 
       if (!response.ok) {
@@ -544,15 +541,15 @@ function MerchantMenuPageContent() {
         return;
       }
 
-      const response = await fetch("/api/merchant/menu/bulk-delete", {
+      const response = await fetchMerchantApi("/api/merchant/menu/bulk-delete", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           ids: selectedItems,
         }),
+        token,
       });
 
       if (!response.ok) {

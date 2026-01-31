@@ -15,6 +15,7 @@ import {
   getTimezonesForCountry,
 } from '@/lib/constants/location';
 import { getAdminAuth } from '@/lib/utils/adminAuth';
+import { fetchMerchantApi } from '@/lib/utils/orderApiClient';
 
 export interface BranchesTabProps {
   t: (key: TranslationKeys | string, params?: Record<string, string | number>) => string;
@@ -116,10 +117,8 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         return;
       }
 
-      const response = await fetch('/api/merchant/branches', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const response = await fetchMerchantApi('/api/merchant/branches', {
+        token,
       });
 
       const result = await response.json();
@@ -284,13 +283,13 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         copyFromMerchantId: copyFromMerchantId || undefined,
       };
 
-      const response = await fetch('/api/merchant/main', {
+      const response = await fetchMerchantApi('/api/merchant/main', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const result = await response.json();
@@ -359,16 +358,16 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         return;
       }
 
-      const response = await fetch('/api/merchant/branches/move', {
+      const response = await fetchMerchantApi('/api/merchant/branches/move', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           merchantId: convertMerchant.id,
           targetMainMerchantId: convertTargetMainId,
         }),
+        token,
       });
 
       const result = await response.json();
@@ -422,13 +421,13 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         isOpen: formData.isOpen,
       };
 
-      const response = await fetch('/api/merchant/branches', {
+      const response = await fetchMerchantApi('/api/merchant/branches', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
+        token,
       });
 
       const result = await response.json();
@@ -473,13 +472,13 @@ export default function BranchesTab({ t, showSuccess, showError }: BranchesTabPr
         return;
       }
 
-      const response = await fetch('/api/merchant/branches/set-main', {
+      const response = await fetchMerchantApi('/api/merchant/branches/set-main', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ merchantId }),
+        token,
       });
 
       const result = await response.json();

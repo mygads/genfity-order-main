@@ -19,7 +19,7 @@ export const POST = withMerchant(async (req: NextRequest, { userId, merchantId }
 
     if (!Array.isArray(categories) || categories.length === 0) {
       return NextResponse.json(
-        { success: false, message: 'Categories array is required' },
+        { success: false, error: 'INVALID_INPUT', message: 'Categories array is required', statusCode: 400 },
         { status: 400 }
       );
     }
@@ -37,7 +37,12 @@ export const POST = withMerchant(async (req: NextRequest, { userId, merchantId }
 
     if (existingCategories.length !== categories.length) {
       return NextResponse.json(
-        { success: false, message: 'Some categories not found or do not belong to your merchant' },
+        {
+          success: false,
+          error: 'NOT_FOUND',
+          message: 'Some categories not found or do not belong to your merchant',
+          statusCode: 404,
+        },
         { status: 404 }
       );
     }
@@ -91,7 +96,9 @@ export const POST = withMerchant(async (req: NextRequest, { userId, merchantId }
     return NextResponse.json(
       {
         success: false,
+        error: 'INTERNAL_ERROR',
         message: error instanceof Error ? error.message : 'Failed to reorder categories',
+        statusCode: 500,
       },
       { status: 500 }
     );
