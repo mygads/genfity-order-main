@@ -313,7 +313,7 @@ export default function ViewMerchantPage() {
 
   const getMerchantUrl = () => {
     if (typeof window !== 'undefined' && merchant) {
-      return `${window.location.origin}/${merchant.code}`;
+      return `${window.location.origin}/merchant/${merchant.code}`;
     }
     return '';
   };
