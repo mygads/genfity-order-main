@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ThemeToggleButton } from '@/components/common/ThemeToggleButton';
 import { EyeIcon, EyeCloseIcon } from '@/icons';
 import { saveAdminAuth } from '@/lib/utils/adminAuth';
 import { useTranslation } from '@/lib/i18n/useTranslation';
@@ -575,6 +576,9 @@ function AdminLoginForm() {
 
                 {/* Header */}
                 <div className="text-center mb-8">
+                  <div className="flex justify-center mb-4">
+                     <ThemeToggleButton />
+                  </div>
                   <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                     {t('admin.login.welcomeBack')}
                   </h1>
