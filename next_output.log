@@ -1,0 +1,422 @@
+
+> genfity-order@2.1.1 dev:next /app
+> next dev
+
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+[order-api] Next.js API (local)
+[order-ws] Next.js (no WS override)
+✓ Ready in 2.2s
+○ Compiling /admin/login ...
+ GET /admin/login 200 in 10.4s (compile: 9.1s, proxy.ts: 193ms, render: 1110ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/auth/login'
+}
+ POST /api/auth/login 500 in 4.5s (compile: 4.2s, proxy.ts: 18ms, render: 263ms)
+ GET /admin/login 200 in 376ms (compile: 93ms, proxy.ts: 7ms, render: 277ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+ POST /api/public/orders 500 in 3.3s (compile: 3.3s, proxy.ts: 14ms, render: 45ms)
+ POST /api/public/orders 500 in 3.4s (compile: 3.3s, proxy.ts: 26ms, render: 12ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+ POST /api/public/orders 500 in 115ms (compile: 80ms, proxy.ts: 10ms, render: 25ms)
+ POST /api/public/orders 500 in 111ms (compile: 90ms, proxy.ts: 10ms, render: 12ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+ POST /api/public/orders 500 in 98ms (compile: 66ms, proxy.ts: 22ms, render: 11ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/orders'
+}
+ POST /api/public/orders 500 in 59ms (compile: 43ms, proxy.ts: 5ms, render: 11ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+⨯ unhandledRejection: Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+⨯ unhandledRejection:  Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/group-order'
+}
+ GET /api/public/merchants/WELLARD01 500 in 594ms (compile: 545ms, proxy.ts: 25ms, render: 25ms)
+ POST /api/public/group-order 500 in 412ms (compile: 393ms, proxy.ts: 5ms, render: 14ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+ GET /api/public/merchants/WELLARD01 500 in 75ms (compile: 59ms, proxy.ts: 4ms, render: 13ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01/available-times'
+}
+ GET /api/public/merchants/WELLARD01/available-times?mode=TAKEAWAY&intervalMinutes=15 500 in 231ms (compile: 213ms, proxy.ts: 5ms, render: 13ms)
+⨯ Error: Failed to load external module @prisma/client-83df23397df98989: Error: Cannot find module '.prisma/client/default'
+Require stack:
+- /app/node_modules/.pnpm/@prisma+client@6.19.1_prisma@6.19.1_typescript@5.9.3__typescript@5.9.3/node_modules/@prisma/client/default.js
+- /app/.next/dev/server/chunks/[root-of-the-server]__6e937e59._.js
+- /app/.next/dev/server/chunks/[turbopack]_runtime.js
+- /app/.next/dev/server/instrumentation.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/router-utils/instrumentation-globals.external.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/dev/next-dev-server.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/next.js
+- /app/node_modules/.pnpm/next@16.1.1_@babel+core@7.28.5_react-dom@19.2.3_react@19.2.3__react@19.2.3/node_modules/next/dist/server/lib/start-server.js
+    at module evaluation (src/lib/db/client.ts:6:1)
+    at module evaluation (src/lib/repositories/UserRepository.ts:6:1)
+    at module evaluation (src/lib/services/AuthService.ts:6:1)
+    at <unknown> (src/app/api/auth/login/route.ts:32:1)
+    at module evaluation (.next/dev/server/chunks/[root-of-the-server]__06c8d000._.js:2532:30)
+    at Object.<anonymous> (.next/dev/server/app/api/auth/login/route.js:6:3)
+  4 |  */
+  5 |
+> 6 | import { PrismaClient, Prisma } from '@prisma/client';
+    | ^
+  7 |
+  8 | const globalForPrisma = global as unknown as { prisma: PrismaClient };
+  9 | {
+  page: '/api/public/merchants/WELLARD01'
+}
+ GET /api/public/merchants/WELLARD01 500 in 124ms (compile: 106ms, proxy.ts: 5ms, render: 12ms)

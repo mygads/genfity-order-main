@@ -1,0 +1,131 @@
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +991
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.28.0 → 10.28.2.   │
+   │   Changelog: https://pnpm.io/v/10.28.2   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Progress: resolved 991, reused 0, downloaded 12, added 0
+Progress: resolved 991, reused 0, downloaded 110, added 84
+Progress: resolved 991, reused 0, downloaded 141, added 96
+Progress: resolved 991, reused 0, downloaded 156, added 103
+Progress: resolved 991, reused 0, downloaded 217, added 127
+Progress: resolved 991, reused 0, downloaded 247, added 139
+Progress: resolved 991, reused 0, downloaded 287, added 155
+Progress: resolved 991, reused 0, downloaded 332, added 203
+Progress: resolved 991, reused 0, downloaded 343, added 207
+Progress: resolved 991, reused 0, downloaded 344, added 207
+Progress: resolved 991, reused 0, downloaded 389, added 225
+Progress: resolved 991, reused 0, downloaded 555, added 384
+Progress: resolved 991, reused 0, downloaded 822, added 821
+Progress: resolved 991, reused 0, downloaded 989, added 988
+Progress: resolved 991, reused 0, downloaded 991, added 991, done
+
+dependencies:
++ @aws-sdk/client-s3 3.971.0
++ @aws-sdk/s3-request-presigner 3.971.0
++ @dnd-kit/core 6.3.1
++ @dnd-kit/sortable 10.0.0
++ @dnd-kit/utilities 3.2.2
++ @fullcalendar/core 6.1.20
++ @fullcalendar/daygrid 6.1.20
++ @fullcalendar/interaction 6.1.20
++ @fullcalendar/list 6.1.20
++ @fullcalendar/react 6.1.20
++ @fullcalendar/timegrid 6.1.20
++ @hookform/resolvers 5.2.2
++ @prisma/client 6.19.1
++ @prisma/extension-accelerate 2.0.2
++ @react-jvectormap/core 1.0.4
++ @react-jvectormap/world 1.1.2
++ @tailwindcss/forms 0.5.11
++ @tailwindcss/postcss 4.1.18
++ @tanstack/react-query 5.90.16
++ @types/leaflet 1.9.21
++ @types/pg 8.16.0
++ amqplib 0.10.9
++ apexcharts 4.7.0
++ autoprefixer 10.4.23
++ bcryptjs 3.0.3
++ clsx 2.1.1
++ date-fns 4.1.0
++ date-fns-tz 3.2.0
++ decimal.js 10.6.0
++ dotenv 17.2.3
++ flatpickr 4.6.13
++ framer-motion 12.24.0
++ jose 6.1.3
++ jsonwebtoken 9.0.3
++ jspdf 4.0.0
++ jsqr 1.4.0
++ leaflet 1.9.4
++ lucide-react 0.554.0
++ next 16.1.1
++ nodemailer 7.0.12
++ pg 8.16.3
++ prisma 6.19.1
++ qrcode 1.5.4
++ qrcode.react 4.2.0
++ react 19.2.3
++ react-apexcharts 1.9.0
++ react-dnd 16.0.1
++ react-dnd-html5-backend 16.0.1
++ react-dom 19.2.3
++ react-dropzone 14.3.8
++ react-easy-crop 5.5.6
++ react-hook-form 7.70.0
++ react-icons 5.5.0
++ react-leaflet 5.0.0
++ recharts 3.6.0
++ sharp 0.34.5
++ swiper 11.2.10
++ swr 2.3.8
++ tailwind-merge 2.6.0
++ ua-parser-js 2.0.7
++ web-push 3.6.7
++ xlsx 0.18.5
++ zod 4.3.5
+
+devDependencies:
++ @eslint/eslintrc 3.3.3
++ @svgr/webpack 8.1.0
++ @testing-library/jest-dom 6.9.1
++ @testing-library/react 16.3.1
++ @testing-library/user-event 14.6.1
++ @types/amqplib 0.10.8
++ @types/bcryptjs 2.4.6
++ @types/jsonwebtoken 9.0.10
++ @types/node 20.19.27
++ @types/nodemailer 7.0.4
++ @types/qrcode 1.5.6
++ @types/react 19.2.7
++ @types/react-dom 19.2.3
++ @types/react-transition-group 4.4.12
++ @types/sharp 0.32.0
++ @types/ua-parser-js 0.7.39
++ baseline-browser-mapping 2.9.14
++ eslint 9.39.2
++ eslint-config-next 16.1.1
++ jsdom 27.4.0
++ postcss 8.5.6
++ tailwindcss 4.1.18
++ tsx 4.21.0
++ typescript 5.9.3
++ vitest 4.0.16
+
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: @prisma/client@6.19.1, @prisma/engines@6.19.1,      │
+│   core-js@3.47.0, esbuild@0.27.2, prisma@6.19.1, sharp@0.34.5,               │
+│   unrs-resolver@1.11.1.                                                      │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 17.3s using pnpm v10.28.0
