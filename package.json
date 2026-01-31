@@ -12,8 +12,6 @@
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "checklist:merchant-ui": "node scripts/generate-merchant-ui-fetch-checklist.mjs",
-    "ci:merchant-ui-raw-fetch": "node scripts/check-merchant-ui-raw-fetch.mjs",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
