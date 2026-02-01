@@ -33,6 +33,14 @@ const Toast: React.FC<ToastProps> = ({
     }
   }, [duration, onClose]);
 
+  // Accessibility mapping
+  const a11yProps = {
+    success: { role: 'status', ariaLive: 'polite' as const },
+    error: { role: 'alert', ariaLive: 'assertive' as const },
+    warning: { role: 'alert', ariaLive: 'assertive' as const },
+    info: { role: 'status', ariaLive: 'polite' as const },
+  };
+
   // Variant styling
   const variantClasses = {
     success: {
@@ -61,6 +69,7 @@ const Toast: React.FC<ToastProps> = ({
   const icons = {
     success: (
       <svg
+        aria-hidden="true"
         className="fill-current"
         width="20"
         height="20"
@@ -76,6 +85,7 @@ const Toast: React.FC<ToastProps> = ({
     ),
     error: (
       <svg
+        aria-hidden="true"
         className="fill-current"
         width="20"
         height="20"
@@ -91,6 +101,7 @@ const Toast: React.FC<ToastProps> = ({
     ),
     warning: (
       <svg
+        aria-hidden="true"
         className="fill-current"
         width="20"
         height="20"
@@ -106,6 +117,7 @@ const Toast: React.FC<ToastProps> = ({
     ),
     info: (
       <svg
+        aria-hidden="true"
         className="fill-current"
         width="20"
         height="20"
@@ -123,6 +135,9 @@ const Toast: React.FC<ToastProps> = ({
 
   return (
     <div
+      role={a11yProps[variant].role}
+      aria-live={a11yProps[variant].ariaLive}
+      aria-atomic="true"
       className={`
         w-full max-w-sm rounded-lg border p-3 shadow-lg
         animate-in slide-in-from-top-4 fade-in
