@@ -5,7 +5,7 @@
 
 "use client";
 
-import React from "react";
+import React, { useEffect, useId } from "react";
 import { createPortal } from "react-dom";
 
 interface ConfirmDialogProps {
@@ -31,6 +31,26 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
 }) => {
+  const titleId = useId();
+  const descriptionId = useId();
+
+  // Handle Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isOpen, onCancel]);
+
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
@@ -41,25 +61,38 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-9999 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-9999 flex items-center justify-center"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
+    >
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onCancel}
+        aria-hidden="true"
       />
 
       {/* Dialog */}
       <div className="relative z-10 w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white">
+          <h3
+            id={titleId}
+            className="text-lg font-semibold text-gray-800 dark:text-white"
+          >
             {title}
           </h3>
         </div>
 
         {/* Message */}
         <div className="mb-6">
-          <p className="whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
+          <p
+            id={descriptionId}
+            className="whitespace-pre-line text-sm text-gray-600 dark:text-gray-400"
+          >
             {message}
           </p>
         </div>
