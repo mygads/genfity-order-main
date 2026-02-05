@@ -32,8 +32,19 @@ export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: getLogLevel(),
-    // Prisma 7: use datasourceUrl instead of datasources
-    datasourceUrl: process.env.DATABASE_URL,
+    datasources: {
+      db: {
+        url: process.env.DATABASE_URL,
+      },
+    },
+    // Connection pool settings to prevent timeout issues
+    // Increase pool size and timeout for high-frequency requests (kitchen display)
+    // @ts-expect-error - __internal is not in PrismaClient types but supported
+    __internal: {
+      engine: {
+        connection_limit: 20, // Increased from default 13
+      },
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') {

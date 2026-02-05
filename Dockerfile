@@ -60,7 +60,6 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 
 # Copy entire node_modules from builder (includes pnpm structure with prisma)
 COPY --from=builder /app/node_modules ./node_modules

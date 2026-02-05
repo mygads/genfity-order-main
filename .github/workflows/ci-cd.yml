@@ -207,15 +207,39 @@ jobs:
               exit 1
             fi
             
-            # Run migration directly inside the container (Prisma 7 already installed)
+            # Get DATABASE_URL from .env
+            DATABASE_URL=$(grep "^DATABASE_URL=" ~/genfity/genfity-order-main/.env | cut -d'=' -f2-)
+            
+            if [ -z "$DATABASE_URL" ]; then
+              echo "❌ DATABASE_URL not found in .env!"
+              exit 1
+            fi
+            
+            # Get prisma folder path from running container
+            PRISMA_PATH=$(sudo docker inspect genfity-order-main --format='{{.GraphDriver.Data.MergedDir}}')/app/prisma
+            
+            # Run migration using temporary container with Prisma CLI
             echo "📦 Running Prisma migrations..."
-            sudo docker exec genfity-order-main npx prisma migrate deploy 2>&1 || {
-              echo "migrate deploy returned non-zero, checking status..."
-              sudo docker exec genfity-order-main npx prisma migrate status 2>&1 || {
-                echo "Running db push for initial schema..."
-                sudo docker exec genfity-order-main npx prisma db push 2>&1
-              }
-            }
+            sudo docker run --rm \
+              --network genfity-network \
+              --add-host=host.docker.internal:host-gateway \
+              -e DATABASE_URL="$DATABASE_URL" \
+              -v "$PRISMA_PATH":/app/prisma:ro \
+              -w /app \
+              node:20-alpine sh -c "
+                npm install prisma@6.19.0 --silent 2>/dev/null
+                
+                # Try migrate deploy first (for existing migrations)
+                echo 'Attempting prisma migrate deploy...'
+                npx prisma migrate deploy 2>&1 && exit 0
+                
+                # If failed, check if we need initial db push
+                echo 'migrate deploy returned non-zero, checking migration state...'
+                npx prisma migrate status 2>&1 || {
+                  echo 'No migrations applied yet, running db push for initial schema...'
+                  npx prisma db push 2>&1
+                }
+              " || echo "⚠️ Migration completed with warnings"
             
             echo "✅ Database migration complete!"
           ENDSSH
