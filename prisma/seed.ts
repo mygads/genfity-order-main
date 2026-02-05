@@ -5,7 +5,11 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { seedWellardKebabHouse } from './seeds/wellard-kebab-house';
-const prisma = new PrismaClient();
+
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.DATABASE_URL,
+});
+
 async function main() {
   console.log('🌱 Seeding database...\n');
   // ============================================

@@ -20,9 +20,7 @@ import authService from '@/lib/services/AuthService';
 import { hashPassword } from '@/lib/utils/passwordHasher';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
 import { ConflictError, ERROR_CODES, ValidationError } from '@/lib/constants/errors';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '@/lib/db/client';
 
 /**
  * GET handler - Get all staff for merchant with search

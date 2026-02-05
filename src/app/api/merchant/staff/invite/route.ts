@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/db/client';
 import emailService from '@/lib/services/EmailService';
 import { withMerchantOwner } from '@/lib/middleware/auth';
 import { AuthContext } from '@/lib/types/auth';
@@ -7,8 +7,6 @@ import { successResponse } from '@/lib/middleware/errorHandler';
 import { validateEmail, validateRequired } from '@/lib/utils/validators';
 import { ConflictError, ValidationError, ERROR_CODES } from '@/lib/constants/errors';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
 
 /**
  * POST /api/merchant/staff/invite
