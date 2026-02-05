@@ -7,12 +7,12 @@ export default function LandingBodyBackground({ className }: { className?: strin
   return (
     <div
       aria-hidden
-      className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-white', className)}
+      className={cn('pointer-events-none absolute inset-0 overflow-hidden bg-slate-50', className)}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_30%_10%,rgba(23,60,130,0.18),transparent_58%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_70%_70%,rgba(16,185,129,0.16),transparent_58%)]" />
-      <div className="absolute inset-0 opacity-[0.22] bg-[linear-gradient(to_right,rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.06)_1px,transparent_1px)] bg-[size:64px_64px]" />
-      <div className="absolute inset-0 opacity-[0.26]">
+      <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_20%_0%,rgba(56,189,248,0.18),transparent_55%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(900px_circle_at_80%_70%,rgba(99,102,241,0.16),transparent_55%)]" />
+      <div className="absolute inset-0 opacity-[0.18] bg-[linear-gradient(to_right,rgba(15,23,42,0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgba(15,23,42,0.06)_1px,transparent_1px)] bg-size-[64px_64px]" />
+      <div className="absolute inset-0 opacity-[0.22]">
         <Meteors number={90} />
       </div>
     </div>

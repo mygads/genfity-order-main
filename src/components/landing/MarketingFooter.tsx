@@ -18,24 +18,25 @@ export default function MarketingFooter() {
 
   const footerLinks = {
     product: [
-      { name: 'QR Ordering', href: '/products/qr-ordering' },
-      { name: 'POS Kasir', href: '/products/pos' },
-      { name: 'Kitchen Display', href: '/products/kds' },
-      { name: 'Mobile POS', href: '/products/mobile-pos' },
+      { name: 'POS Core', href: '/products/pos-core' },
+      { name: 'POS Mobile', href: '/products/pos-mobile' },
+      { name: 'Consumer (QR Ordering)', href: '/products/consumer' },
+      { name: 'Genfity Pay', href: '/products/pay' },
+      { name: 'Sales AI', href: '/products/sales-ai' },
       { name: 'Pricing', href: '/pricing' },
     ],
     company: [
-      { name: 'Tentang Kami', href: '/about' },
-      { name: 'Karir', href: 'https://genfity.com/careers' }, // External
-      { name: 'Blog', href: 'https://genfity.com/blog' }, // External
-      { name: 'Program Partner', href: '/influencer-program' },
-      { name: 'Kontak', href: '/help' },
+      { name: 'About Us', href: '/about' },
+      { name: 'Careers', href: 'https://genfity.com/careers' },
+      { name: 'Blog', href: 'https://genfity.com/blog' },
+      { name: 'Partner Program', href: '/influencer-program' },
+      { name: 'Contact', href: '/help' },
     ],
     support: [
-      { name: 'Pusat Bantuan', href: '/help' },
-      { name: 'Status Sistem', href: 'https://status.genfity.com' },
-      { name: 'Syarat & Ketentuan', href: '/terms-of-service' },
-      { name: 'Kebijakan Privasi', href: '/privacy-policy' },
+      { name: 'Help Center', href: '/help' },
+      { name: 'System Status', href: 'https://status.genfity.com' },
+      { name: 'Terms of Service', href: '/terms-of-service' },
+      { name: 'Privacy Policy', href: '/privacy-policy' },
     ]
   };
 
@@ -55,8 +56,8 @@ export default function MarketingFooter() {
               />
             </div>
             <p className="text-gray-500 text-sm leading-relaxed mb-6 max-w-sm">
-              Sistem manajemen restoran & pemesanan online terlengkap untuk bisnis F&B modern.
-              Tingkatkan omzet, efisiensi operasional, dan loyalitas pelanggan dalam satu platform.
+              Modular ERP, ordering, payments, loyalty and AI sales platform for F&B, retail and service businesses.
+              Scale your operations, boost revenue, and build customer loyalty — all on one intelligent commerce platform.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="p-2 bg-gray-50 rounded-full text-gray-500 hover:bg-brand-50 hover:text-brand-600 transition-colors">
@@ -73,7 +74,7 @@ export default function MarketingFooter() {
 
           {/* Links Columns */}
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Produk</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">Products</h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link) => (
                 <li key={link.name}>
@@ -86,7 +87,7 @@ export default function MarketingFooter() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Perusahaan</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">Company</h4>
             <ul className="space-y-3">
               {footerLinks.company.map((link) => (
                 <li key={link.name}>
@@ -99,7 +100,7 @@ export default function MarketingFooter() {
           </div>
 
           <div>
-            <h4 className="font-semibold text-gray-900 mb-4">Hubungi Kami</h4>
+            <h4 className="font-semibold text-gray-900 mb-4">Contact Us</h4>
             <ul className="space-y-4">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />

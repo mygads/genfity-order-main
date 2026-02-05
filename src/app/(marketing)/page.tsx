@@ -1,6 +1,13 @@
-import HeroSection from '@/components/landing/HeroSection';
-import LandingBodyBackground from '@/components/landing/LandingBodyBackground';
-import TrustedBySection from '@/components/landing/TrustedBySection';
+import CekatLightHeroSection from '@/components/landing/CekatLightHeroSection';
+import CekatInnovasiSection from '@/components/landing/CekatInnovasiSection';
+import CekatTrustedBySection from '@/components/landing/CekatTrustedBySection';
+import CekatComparisonSection from '@/components/landing/CekatComparisonSection';
+import CekatAIAgentSection from '@/components/landing/CekatAIAgentSection';
+import CekatDashboardSection from '@/components/landing/CekatDashboardSection';
+import CekatSuperHubSection from '@/components/landing/CekatSuperHubSection';
+import CekatPricingSection from '@/components/landing/CekatPricingSection';
+import CekatEfisiensiSection from '@/components/landing/CekatEfisiensiSection';
+import CekatAIChatSection from '@/components/landing/CekatAIChatSection';
 import StatsSection from '@/components/landing/StatsSection';
 import OnlineOrderingSection from '@/components/landing/OnlineOrderingSection';
 import FeatureHighlightSection from '@/components/landing/FeatureHighlightSection';
@@ -19,27 +26,29 @@ import MacbookScrollSection from '@/components/landing/MacbookScrollSection';
 export default function MarketingHomePage() {
   return (
     <>
-      <div className="relative">
-        <LandingBodyBackground />
-        <div className="relative z-10">
-          <HeroSection />
-          <TrustedBySection />
-          <StatsSection />
-          <DashboardMarqueeSection />
-          <MacbookScrollSection />
-          <FeatureHighlightSection />
-          <OnlineOrderingSection />
-          <BusinessTypeSection />
-          <BentoGridSection />
-          <FeaturesSection />
-          <HowItWorksSection />
-          <PricingSection />
-          <ReferralSection />
-          <TestimonialsSection />
-          <FAQSection />
-          <CTASection />
-        </div>
+      {/* Hero Section with Cekat.ai Light Theme inspired design */}
+      <CekatLightHeroSection />
+
+      {/* Innovasi & Trusted By are conceptually connected */}
+      <CekatInnovasiSection />
+      <CekatTrustedBySection />
+
+      {/* Rest of the sections with light background */}
+      <div className="bg-slate-50 text-slate-900">
+        <CekatComparisonSection />
+        <CekatAIAgentSection />
+        <CekatDashboardSection />
+        <CekatSuperHubSection />
+        <CekatPricingSection />
+        <CekatEfisiensiSection />
+        <CekatAIChatSection />
+        {/* <OnlineOrderingSection /> */}
+        {/* <BusinessTypeSection /> */}
+        {/* <ReferralSection /> */}
+        {/* <FAQSection /> */}
+        <CTASection />
       </div>
     </>
   );
 }
+

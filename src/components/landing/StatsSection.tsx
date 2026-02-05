@@ -15,7 +15,7 @@ export default function StatsSection() {
     ];
 
     return (
-        <section className={cn(LANDING_SECTION, 'border-b border-gray-100')}>
+        <section className={cn(LANDING_SECTION, 'border-b border-slate-200/60')}>
             <div className={cn(LANDING_CONTAINER, 'max-w-5xl')}>
                 <div className="mx-auto max-w-3xl text-center space-y-3 mb-10">
                     <h2 className={LANDING_H2}>{t('landing.stats.title')}</h2>
@@ -26,22 +26,22 @@ export default function StatsSection() {
                     {stats.map((stat, index) => (
                         <div
                             key={index}
-                            className="space-y-1 rounded-2xl border border-gray-200 bg-white/70 backdrop-blur p-5 shadow-sm"
+                            className="space-y-1 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur p-5 shadow-sm"
                         >
                             <div className="flex items-baseline justify-center">
                                 <NumberTicker
                                     value={stat.value}
                                     decimalPlaces={stat.decimals || 0}
-                                    className="text-3xl sm:text-4xl font-extrabold text-[#173C82]"
+                                    className="text-3xl sm:text-4xl font-extrabold text-slate-900"
                                 />
-                                <span className="text-xl sm:text-2xl font-bold text-[#173C82] ml-0.5">
+                                <span className="text-xl sm:text-2xl font-bold text-slate-900 ml-0.5">
                                     {stat.suffix}
                                 </span>
                             </div>
-                            <p className="text-xs sm:text-sm font-semibold text-gray-900">
+                            <p className="text-xs sm:text-sm font-semibold text-slate-900">
                                 {stat.label}
                             </p>
-                            <p className="text-[10px] sm:text-xs text-gray-500">
+                            <p className="text-[10px] sm:text-xs text-slate-500">
                                 {stat.sublabel}
                             </p>
                         </div>

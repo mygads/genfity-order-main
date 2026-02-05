@@ -77,7 +77,7 @@ export default function FAQSection() {
     };
 
     return (
-        <section id="faq" className={cn(LANDING_SECTION, 'border-b border-gray-100')}>
+        <section id="faq" className={'border-b border-gray-100 bg-white py-16'}>
             <div className={cn(LANDING_CONTAINER, 'max-w-4xl')}>
                 {/* Header */}
                 <div className="mx-auto max-w-3xl text-center space-y-3 mb-12">

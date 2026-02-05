@@ -1,11 +1,10 @@
-import LandingNavbar from '@/components/landing/LandingNavbar';
+
 import FooterSection from '@/components/landing/FooterSection';
 import { FaEnvelope, FaPhone, FaBuilding, FaShieldAlt, FaUserLock, FaGlobe, FaFileAlt } from 'react-icons/fa';
 
 export default function PrivacyPage() {
     return (
         <div className="min-h-screen flex flex-col font-sans bg-white dark:bg-gray-900 text-gray-900 dark:text-white">
-            <LandingNavbar />
             <main className="flex-grow pt-32 pb-16 px-4 max-w-4xl mx-auto w-full">
                 {/* Hero Section */}
                 <div className="text-center mb-12">

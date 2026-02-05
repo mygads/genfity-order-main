@@ -25,8 +25,8 @@ const en = {
   "common.close": "Close",
   "common.edit": "Edit",
   "common.delete": "Delete",
-    "common.keepEditing": "Keep Editing",
-    "common.discardChanges": "Discard Changes",
+  "common.keepEditing": "Keep Editing",
+  "common.discardChanges": "Discard Changes",
   "common.confirm": "Confirm",
   "common.back": "Back",
   "common.next": "Next",
@@ -2847,7 +2847,7 @@ const en = {
   "admin.orderVouchers.noMenus": "No menus",
   "admin.orderVouchers.noCategories": "No categories",
   "admin.orderVouchers.hints.timezone": "Times follow merchant timezone: {timezone}",
-  
+
 
   "admin.orderVouchers.presets.title": "Quick presets",
   "admin.orderVouchers.presets.allDays": "All days",
@@ -3351,7 +3351,7 @@ const en = {
   "landing.nav.about": "About Genfity",
   "landing.nav.referral": "Join Referral",
   "landing.nav.login": "Login",
-  "landing.nav.register": "Register Merchant",
+  "landing.nav.register": "Register",
   "landing.nav.scanQr": "Scan QR",
 
   // Hero
@@ -3416,8 +3416,8 @@ const en = {
   "landing.stats.uptime_desc": "Reliable cloud infrastructure",
 
   // Trusted by
-  "landing.trustedBy.title": "Built for growing F&B businesses",
-  "landing.trustedBy.subtitle": "Designed for restaurants, cafes, and multi-outlet operations.",
+  "landing.trustedBy.title": "Trusted by 3000+ largest businesses and brands in Indonesia",
+  "landing.trustedBy.subtitle": "Join thousands of successful businesses using our platform",
   "landing.trustedBy.chips.restaurant": "Restaurant",
   "landing.trustedBy.chips.cafe": "Cafe",
   "landing.trustedBy.chips.foodCourt": "Food Court",
@@ -4969,7 +4969,7 @@ const en = {
   "pos.frequentlyBought": "Frequently Bought",
   "pos.bestSellers": "Best Sellers",
   "pos.justNow": "Just Now",
-  "pos.makePayment" : "Make Payment",
+  "pos.makePayment": "Make Payment",
 
   // ============================================================================
   // CUSTOMER - Schedule Order Mode

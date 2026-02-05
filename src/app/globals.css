@@ -13,6 +13,33 @@
   z-index: 0;
 }
 
+/* Progress bar animation for Dashboard section */
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+/* Brush highlight animation for text - Landing page */
+.highlight-brush-path {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  transition: stroke-dashoffset 2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Trigger on scroll - when visible class is added */
+.highlight-text-wrapper.is-visible .highlight-brush-path {
+  stroke-dashoffset: 0;
+}
+
+/* Second highlight has delay */
+.highlight-text-wrapper.is-visible.delay-1 .highlight-brush-path {
+  transition-delay: 5s;
+}
 
 
 @theme {
@@ -884,7 +911,11 @@ span.flatpickr-weekday,
 .flatpickr-day.startRange.nextMonthDay,
 .flatpickr-day.endRange.nextMonthDay {
   background: #465fff;
-  @apply !border-brand-500 !bg-brand-500 hover:!border-brand-50 hover:!bg-brand-500;
+  @apply !border-brand-500 !bg-brand-500;
+
+  &:hover {
+    @apply !border-brand-50 !bg-brand-500;
+  }
 }
 
 .flatpickr-day.selected.startRange+.endRange:not(:nth-child(7n + 1)),
@@ -897,7 +928,9 @@ span.flatpickr-weekday,
 .flatpickr-months .flatpickr-next-month svg,
 .flatpickr-months .flatpickr-prev-month,
 .flatpickr-months .flatpickr-next-month {
-  @apply hover:!fill-none;
+  &:hover {
+    @apply !fill-none;
+  }
 }
 
 .flatpickr-months .flatpickr-prev-month:hover svg,
@@ -935,10 +968,26 @@ span.flatpickr-weekday,
 }
 
 .fc-button-group .fc-button {
-  @apply flex h-10 w-10 items-center justify-center !rounded-lg border border-gray-200 bg-transparent hover:border-gray-200 hover:bg-gray-50 focus:shadow-none active:!border-gray-200 active:!bg-transparent active:!shadow-none;
+  @apply flex h-10 w-10 items-center justify-center !rounded-lg border border-gray-200 bg-transparent focus:shadow-none;
+
+  &:hover {
+    @apply border-gray-200 bg-gray-50;
+  }
+
+  &:active {
+    @apply !border-gray-200 !bg-transparent !shadow-none;
+  }
 
   &:where(.dark, .dark *) {
-    @apply border-gray-800 hover:border-gray-800 hover:bg-gray-900 active:!border-gray-800;
+    @apply border-gray-800;
+
+    &:hover {
+      @apply border-gray-800 bg-gray-900;
+    }
+
+    &:active {
+      @apply !border-gray-800;
+    }
   }
 }
 
@@ -965,7 +1014,15 @@ span.flatpickr-weekday,
 }
 
 .fc-addEventButton-button {
-  @apply !rounded-lg !border-0 !bg-brand-500 !px-4 !py-2.5 !text-sm !font-medium hover:!bg-brand-600 focus:!shadow-none;
+  @apply !rounded-lg !border-0 !bg-brand-500 !px-4 !py-2.5 !text-sm !font-medium;
+
+  &:hover {
+    @apply !bg-brand-600;
+  }
+
+  &:focus {
+    @apply !shadow-none;
+  }
 }
 
 .fc-toolbar-title {
@@ -985,7 +1042,15 @@ span.flatpickr-weekday,
 }
 
 .fc-header-toolbar.fc-toolbar .fc-toolbar-chunk:last-child .fc-button {
-  @apply !h-auto !w-auto rounded-md !border-0 bg-transparent !px-5 !py-2 text-sm font-medium text-gray-500 hover:text-gray-700 focus:!shadow-none;
+  @apply !h-auto !w-auto rounded-md !border-0 bg-transparent !px-5 !py-2 text-sm font-medium text-gray-500;
+
+  &:hover {
+    @apply text-gray-700;
+  }
+
+  &:focus {
+    @apply !shadow-none;
+  }
 
   &:where(.dark, .dark *) {
     @apply text-gray-400;
@@ -1155,7 +1220,11 @@ span.flatpickr-weekday,
   @apply !static mt-0 h-8 w-9 rounded-full border border-gray-200 !text-gray-700 transition hover:bg-gray-100;
 
   &:where(.dark, .dark *) {
-    @apply hover:bg-white/5 border-white/3 bg-gray-800 !text-gray-400 hover:!text-white/90;
+    @apply border-white/3 bg-gray-800 !text-gray-400;
+
+    &:hover {
+      @apply bg-white/5 !text-white/90;
+    }
   }
 }
 
@@ -1201,17 +1270,29 @@ span.flatpickr-weekday,
 
 .carouselTwo .swiper-button-prev,
 .carouselFour .swiper-button-prev {
-  @apply !left-3 sm:!left-4;
+  @apply !left-3;
+
+  @media (min-width: 640px) {
+    @apply !left-4;
+  }
 }
 
 .carouselTwo .swiper-button-next,
 .carouselFour .swiper-button-next {
-  @apply !right-3 sm:!right-4;
+  @apply !right-3;
+
+  @media (min-width: 640px) {
+    @apply !right-4;
+  }
 }
 
 .carouselThree .swiper-pagination,
 .carouselFour .swiper-pagination {
-  @apply !bottom-3 !left-1/2 inline-flex !w-auto -translate-x-1/2 items-center gap-1.5 rounded-[40px] border-[0.5px] border-white/10 bg-white/60 px-2 py-1.5 shadow-slider-navigation backdrop-blur-[10px] sm:!bottom-5;
+  @apply !bottom-3 !left-1/2 inline-flex !w-auto -translate-x-1/2 items-center gap-1.5 rounded-[40px] border-[0.5px] border-white/10 bg-white/60 px-2 py-1.5 shadow-slider-navigation backdrop-blur-[10px];
+
+  @media (min-width: 640px) {
+    @apply !bottom-5;
+  }
 }
 
 .carouselThree .swiper-pagination-bullet,
@@ -1233,10 +1314,18 @@ span.flatpickr-weekday,
 }
 
 .jvectormap-region.jvectormap-element {
-  @apply !fill-gray-300 hover:!fill-brand-500;
+  @apply !fill-gray-300;
+
+  &:hover {
+    @apply !fill-brand-500;
+  }
 
   &:where(.dark, .dark *) {
-    @apply !fill-gray-700 hover:!fill-brand-500;
+    @apply !fill-gray-700;
+
+    &:hover {
+      @apply !fill-brand-500;
+    }
   }
 }
 
@@ -1431,4 +1520,381 @@ body.clean-mode main {
 
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
+}
+
+/* =============================================================================
+   CEKAT.AI INSPIRED STYLES
+   Modern dark gradient theme with glassmorphism and animations
+   ============================================================================= */
+
+/* Cekat.ai Color Palette */
+:root {
+  --cekat-primary: #6C5CE7;
+  --cekat-primary-light: #A29BFE;
+  --cekat-secondary: #0984E3;
+  --cekat-accent: #00CEC9;
+  --cekat-dark: #0A0A1B;
+  --cekat-dark-secondary: #12122B;
+  --cekat-dark-tertiary: #1A1A3E;
+  --cekat-gradient-start: #6C5CE7;
+  --cekat-gradient-mid: #A29BFE;
+  --cekat-gradient-end: #00CEC9;
+  --cekat-text-primary: #FFFFFF;
+  --cekat-text-secondary: rgba(255, 255, 255, 0.7);
+  --cekat-text-muted: rgba(255, 255, 255, 0.5);
+  --cekat-border: rgba(255, 255, 255, 0.1);
+  --cekat-glass-bg: rgba(255, 255, 255, 0.05);
+  --cekat-glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Dark Gradient Background */
+.cekat-bg-gradient {
+  background: linear-gradient(135deg,
+      var(--cekat-dark) 0%,
+      var(--cekat-dark-secondary) 50%,
+      var(--cekat-dark-tertiary) 100%);
+}
+
+.cekat-bg-hero {
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(108, 92, 231, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(0, 206, 201, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 30% at 20% 80%, rgba(9, 132, 227, 0.15) 0%, transparent 50%),
+    linear-gradient(180deg, var(--cekat-dark) 0%, var(--cekat-dark-secondary) 100%);
+}
+
+/* Glassmorphism Card */
+.cekat-glass {
+  background: var(--cekat-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--cekat-glass-border);
+}
+
+.cekat-glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* Gradient Text */
+.cekat-text-gradient {
+  background: linear-gradient(135deg,
+      var(--cekat-gradient-start) 0%,
+      var(--cekat-gradient-mid) 50%,
+      var(--cekat-gradient-end) 100%);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* Gradient Button */
+.cekat-btn-gradient {
+  background: linear-gradient(135deg,
+      var(--cekat-primary) 0%,
+      var(--cekat-secondary) 100%);
+  color: white;
+  border: none;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.cekat-btn-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg,
+      var(--cekat-primary-light) 0%,
+      var(--cekat-accent) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cekat-btn-gradient:hover::before {
+  opacity: 1;
+}
+
+.cekat-btn-gradient span {
+  position: relative;
+  z-index: 1;
+}
+
+/* Outline Button for Cekat Theme */
+.cekat-btn-outline {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.cekat-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Stars/Particles Background */
+.cekat-stars {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cekat-star {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+@keyframes twinkle {
+
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes gradient-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Floating Animation */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.cekat-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Glow Effect */
+.cekat-glow {
+  box-shadow:
+    0 0 20px rgba(108, 92, 231, 0.3),
+    0 0 40px rgba(108, 92, 231, 0.2),
+    0 0 60px rgba(108, 92, 231, 0.1);
+}
+
+.cekat-glow-accent {
+  box-shadow:
+    0 0 20px rgba(0, 206, 201, 0.3),
+    0 0 40px rgba(0, 206, 201, 0.2),
+    0 0 60px rgba(0, 206, 201, 0.1);
+}
+
+/* Card Styles for Comparison */
+.cekat-card-old {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.cekat-card-new {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+/* Badge Styles */
+.cekat-badge {
+  background: var(--cekat-glass-bg);
+  border: 1px solid var(--cekat-glass-border);
+  color: var(--cekat-text-secondary);
+}
+
+.cekat-badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34D399;
+}
+
+.cekat-badge-primary {
+  background: rgba(108, 92, 231, 0.15);
+  border: 1px solid rgba(108, 92, 231, 0.3);
+  color: #A29BFE;
+}
+
+/* Navbar Cekat Style */
+.cekat-navbar {
+  background: rgba(10, 10, 27, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.cekat-navbar-scrolled {
+  background: rgba(10, 10, 27, 0.95);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* Animated Border */
+.cekat-border-animated {
+  position: relative;
+}
+
+.cekat-border-animated::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+      var(--cekat-primary),
+      var(--cekat-accent),
+      var(--cekat-primary));
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+}
+
+/* Trust Badge Marquee */
+.cekat-marquee {
+  display: flex;
+  gap: 3rem;
+  animation: marquee-cekat 30s linear infinite;
+}
+
+@keyframes marquee-cekat {
+  0% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Comparison Card Item */
+.cekat-comparison-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  transition: all 0.3s ease;
+}
+
+.cekat-comparison-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Metrics Display */
+.cekat-metric {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cekat-metric-old {
+  color: #EF4444;
+}
+
+.cekat-metric-new {
+  color: #10B981;
+}
+
+/* Pill/Tag Styles */
+.cekat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.cekat-pill-old {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
+}
+
+.cekat-pill-new {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34D399;
+}
+
+/* =============================================================================
+   CEKAT.AI ANIMATION KEYFRAMES (Required for Inline Styles)
+   ============================================================================= */
+
+/* Draw Animation for Highlight */
+.path-draw {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw 1.5s ease-out forwards;
+  animation-delay: 1.2s;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Slide Up Animation */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scale Up Animation */
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+/* Meteor Effect Animation */
+@keyframes meteor {
+  0% { transform: rotate(0deg) translateX(0); opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(0deg) translateX(-1500px); opacity: 0; }
+}
+
+.animate-meteor-effect {
+  animation: meteor 5s linear infinite;
 }
