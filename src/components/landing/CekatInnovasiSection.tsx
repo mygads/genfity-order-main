@@ -1,65 +1,65 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useRef } from 'react';
-import { FaCashRegister, FaMobileAlt, FaQrcode, FaCreditCard, FaGift, FaRobot } from 'react-icons/fa';
-import { HiSparkles } from 'react-icons/hi';
+import { useEffect, useRef, useCallback } from 'react';
 
-// Orbiting features on different rings - Genfity ecosystem
-const ring1Features = [
-    { id: 'pos-mobile', label: 'Genfity POS Mobile', sublabel: 'Mobile companion', icon: FaMobileAlt, angle: 0 },
-    { id: 'consumer', label: 'Genfity Consumer', sublabel: 'Customer ordering', icon: FaQrcode, angle: 180 },
+// All 6 products distributed across 3 rings
+const orbitItems = [
+    // Ring 1 - Inner (2 items)
+    { id: 'consumer', label: 'Genfity Consumer', image: '/images/landing/product/consumer-logo.png', ring: 1, startAngle: 60 },
+    { id: 'pos-mobile', label: 'Genfity POS Mobile', image: '/images/landing/product/pos-mobile-logo.png', ring: 1, startAngle: 240 },
+    // Ring 2 - Middle (2 items)
+    { id: 'pay', label: 'Genfity Pay', image: '/images/landing/product/pay-logo.png', ring: 2, startAngle: 150 },
+    { id: 'pos-core', label: 'Genfity POS Core', image: '/images/landing/product/pos-core-logo.png', ring: 2, startAngle: 330 },
+    // Ring 3 - Outer (2 items)
+    { id: 'loyalty', label: 'Genfity Loyalty', image: '/images/landing/product/loyalty-logo.png', ring: 3, startAngle: 100 },
+    { id: 'sales-ai', label: 'Genfity Sales AI', image: '/images/landing/product/sales-ai-logo.png', ring: 3, startAngle: 280 },
 ];
 
-const ring2Features = [
-    { id: 'pay', label: 'Genfity Pay', sublabel: 'Payments & QRIS', icon: FaCreditCard, angle: 45 },
-    { id: 'loyalty', label: 'Genfity Loyalty', sublabel: 'Membership & rewards', icon: FaGift, angle: 135, comingSoon: true },
-    { id: 'sales-ai', label: 'Genfity Sales AI', sublabel: 'AI Sales & CS', icon: FaRobot, angle: 270, highlight: true },
-];
-
-// Helper to get initial position on ring
-const getInitialPos = (angle: number, radius: number) => {
-    const rad = (angle * Math.PI) / 180;
-    return {
-        x: Math.cos(rad) * radius,
-        y: Math.sin(rad) * radius,
-    };
+// Ring config: radius (px) and rotation speed (deg per frame, negative = reverse)
+const ringConfig: Record<number, { radius: number; speed: number }> = {
+    1: { radius: 120, speed: 0.15 },
+    2: { radius: 210, speed: -0.10 },
+    3: { radius: 300, speed: 0.06 },
 };
 
 export default function CekatInnovasiSection() {
     const containerRef = useRef<HTMLDivElement>(null);
     const headlineRef = useRef<HTMLHeadingElement>(null);
+    const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const rotationRef = useRef(0);
+    const scrollVelRef = useRef(0);
+    const lastScrollYRef = useRef(0);
 
+    const setItemRef = useCallback((el: HTMLDivElement | null, idx: number) => {
+        itemRefs.current[idx] = el;
+    }, []);
+
+    // Orbit animation: calculate x/y per item, rotate logo so bottom faces center
     useEffect(() => {
-        if (!containerRef.current) return;
-
-        let rotation = 0;
-        let lastScrollY = window.scrollY;
-        let scrollVelocity = 0;
+        lastScrollYRef.current = window.scrollY;
         let animationId: number;
 
-        const ring1 = containerRef.current.querySelector('[data-ring="1"]') as HTMLElement;
-        const ring2 = containerRef.current.querySelector('[data-ring="2"]') as HTMLElement;
-        const labels1 = containerRef.current.querySelectorAll('[data-label="1"]') as NodeListOf<HTMLElement>;
-        const labels2 = containerRef.current.querySelectorAll('[data-label="2"]') as NodeListOf<HTMLElement>;
-
         const animate = () => {
-            // Apply base rotation + scroll velocity
-            rotation += 0.080 + scrollVelocity; // Base rotation speed
+            rotationRef.current += 1 + scrollVelRef.current;
+            scrollVelRef.current *= 0.95;
 
-            // Decay scroll velocity smoothly
-            scrollVelocity *= 0.92;
+            orbitItems.forEach((item, idx) => {
+                const el = itemRefs.current[idx];
+                if (!el) return;
 
-            // Update ring transforms
-            if (ring1) ring1.style.transform = `translate(-50%, -50%) rotate(${rotation * 0.8}deg)`;
-            if (ring2) ring2.style.transform = `translate(-50%, -50%) rotate(${-rotation * 0.5}deg)`;
+                const cfg = ringConfig[item.ring];
+                const angleDeg = item.startAngle + rotationRef.current * cfg.speed;
+                const angleRad = (angleDeg * Math.PI) / 180;
 
-            // Counter-rotate labels to keep text readable
-            labels1.forEach(label => {
-                label.style.transform = `translate(-50%, -50%) rotate(${-rotation * 0.8}deg)`;
-            });
-            labels2.forEach(label => {
-                label.style.transform = `translate(-50%, -50%) rotate(${rotation * 0.5}deg)`;
+                const x = Math.cos(angleRad) * cfg.radius;
+                const y = Math.sin(angleRad) * cfg.radius;
+
+                // Rotate logo so its bottom always points toward center
+                // angleDeg is the position angle; +90 makes the bottom face inward
+                const logoRotation = angleDeg + 90;
+
+                el.style.transform = `translate(-50%, -50%) translate(${x}px, ${y}px) rotate(${logoRotation}deg)`;
             });
 
             animationId = requestAnimationFrame(animate);
@@ -67,14 +67,11 @@ export default function CekatInnovasiSection() {
 
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
-            const delta = currentScrollY - lastScrollY;
-            lastScrollY = currentScrollY;
-
-            // Scroll sensitivity
-            scrollVelocity += delta * 0.030;
-
-            // Smaller clamp
-            scrollVelocity = Math.max(-0.5, Math.min(0.5, scrollVelocity));
+            const delta = currentScrollY - lastScrollYRef.current;
+            lastScrollYRef.current = currentScrollY;
+            // Strong scroll impulse for noticeable acceleration
+            scrollVelRef.current += delta * 0.15;
+            scrollVelRef.current = Math.max(-4, Math.min(4, scrollVelRef.current));
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });
@@ -96,14 +93,12 @@ export default function CekatInnovasiSection() {
             (entries) => {
                 entries.forEach((entry) => {
                     if (entry.isIntersecting) {
-                        // Add visible class to trigger animation
-                        // Initial delay: 2s, then 1s between each
                         highlights.forEach((el, index) => {
                             setTimeout(() => {
                                 el.classList.add('is-visible');
-                            }, 1000 + (index * 1000)); // 1s initial + 1s stagger
+                            }, 1000 + (index * 1000));
                         });
-                        observer.disconnect(); // Only trigger once
+                        observer.disconnect();
                     }
                 });
             },
@@ -111,7 +106,6 @@ export default function CekatInnovasiSection() {
         );
 
         observer.observe(headlineRef.current);
-
         return () => observer.disconnect();
     }, []);
 
@@ -180,102 +174,58 @@ export default function CekatInnovasiSection() {
                 </p> */}
             </div>
 
-            {/* Concentric Circles Animation */}
-            <div ref={containerRef} className="relative w-full max-w-[700px] mx-auto" style={{ height: '500px' }}>
+            {/* Concentric Circles Animation - 3 Rings */}
+            <div ref={containerRef} className="relative w-full max-w-[750px] mx-auto" style={{ height: '650px' }}>
 
-                {/* Ring 2 - Outer (220px radius) */}
-                <div
-                    data-ring="2"
-                    className="absolute top-1/2 left-1/2 w-[440px] h-[440px] rounded-full border-2 border-blue-200/60"
-                    style={{ transform: 'translate(-50%, -50%)', willChange: 'transform' }}
-                >
-                    {ring2Features.map((feature) => {
-                        const pos = getInitialPos(feature.angle, 220);
-                        return (
-                            <div
-                                key={feature.id}
-                                data-label="2"
-                                className={`absolute flex flex-col items-center gap-1 px-4 py-2 rounded-xl shadow-md border text-xs font-medium whitespace-nowrap ${
-                                    feature.highlight
-                                        ? 'bg-blue-600 text-white border-blue-500'
-                                        : feature.comingSoon
-                                        ? 'bg-gray-100 text-gray-500 border-gray-200'
-                                        : 'bg-white text-gray-700 border-blue-100'
-                                }`}
-                                style={{
-                                    left: `calc(50% + ${pos.x}px)`,
-                                    top: `calc(50% + ${pos.y}px)`,
-                                    transform: 'translate(-50%, -50%)',
-                                    willChange: 'transform'
-                                }}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <feature.icon className={`w-4 h-4 ${feature.highlight ? 'text-white' : 'text-blue-500'}`} />
-                                    <span className="font-semibold">{feature.label}</span>
-                                    {feature.comingSoon && <span className="text-[8px] bg-gray-200 text-gray-500 px-1 rounded">Soon</span>}
-                                </div>
-                                <span className={`text-[10px] ${feature.highlight ? 'text-blue-100' : 'text-gray-500'}`}>{feature.sublabel}</span>
-                            </div>
-                        );
-                    })}
-                </div>
+                {/* SVG Ring Borders - Cekat AI segmented style */}
+                <svg className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[650px] h-[650px] pointer-events-none" viewBox="0 0 650 650">
+                    {/* Ring 3 outer */}
+                    <circle cx="325" cy="325" r="300" fill="none" stroke="#93c5fd" strokeWidth="10" strokeDasharray="70 50" strokeLinecap="round" opacity="0.12" />
+                    <circle cx="325" cy="325" r="300" fill="none" stroke="#bfdbfe" strokeWidth="2.5" strokeDasharray="45 25" strokeLinecap="round" opacity="0.6" />
+                    {/* Ring 2 middle */}
+                    <circle cx="325" cy="325" r="210" fill="none" stroke="#93c5fd" strokeWidth="8" strokeDasharray="50 40" strokeLinecap="round" opacity="0.12" />
+                    <circle cx="325" cy="325" r="210" fill="none" stroke="#bfdbfe" strokeWidth="2" strokeDasharray="30 18" strokeLinecap="round" opacity="0.7" />
+                    {/* Ring 1 inner */}
+                    <circle cx="325" cy="325" r="120" fill="none" stroke="#93c5fd" strokeWidth="6" strokeDasharray="35 30" strokeLinecap="round" opacity="0.12" />
+                    <circle cx="325" cy="325" r="120" fill="none" stroke="#bfdbfe" strokeWidth="1.5" strokeDasharray="20 14" strokeLinecap="round" opacity="0.8" />
+                </svg>
 
-                {/* Ring 1 - Inner (130px radius) */}
-                <div
-                    data-ring="1"
-                    className="absolute top-1/2 left-1/2 w-[260px] h-[260px] rounded-full border-2 border-blue-200/80"
-                    style={{ transform: 'translate(-50%, -50%)', willChange: 'transform' }}
-                >
-                    {ring1Features.map((feature) => {
-                        const pos = getInitialPos(feature.angle, 130);
-                        return (
-                            <div
-                                key={feature.id}
-                                data-label="1"
-                                className="absolute flex flex-col items-center gap-1 px-4 py-2 rounded-xl bg-white shadow-md border border-blue-100 text-xs font-medium text-gray-700 whitespace-nowrap"
-                                style={{
-                                    left: `calc(50% + ${pos.x}px)`,
-                                    top: `calc(50% + ${pos.y}px)`,
-                                    transform: 'translate(-50%, -50%)',
-                                    willChange: 'transform'
-                                }}
-                            >
-                                <div className="flex items-center gap-2">
-                                    <feature.icon className="w-4 h-4 text-indigo-500" />
-                                    <span className="font-semibold">{feature.label}</span>
-                                </div>
-                                <span className="text-[10px] text-gray-500">{feature.sublabel}</span>
-                            </div>
-                        );
-                    })}
-                </div>
+                {/* All orbit items — positioned from center, no rotation */}
+                {orbitItems.map((item, idx) => (
+                    <div
+                        key={item.id}
+                        ref={(el) => setItemRef(el, idx)}
+                        className="absolute top-1/2 left-1/2 z-10"
+                        style={{
+                            transform: 'translate(-50%, -50%)',
+                            willChange: 'transform',
+                        }}
+                    >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={item.image}
+                            alt={item.label}
+                            className="w-[100px] h-[45px] md:w-[140px] md:h-[60px] object-contain drop-shadow-lg"
+                            draggable={false}
+                        />
+                    </div>
+                ))}
 
-                {/* Central Logo - POS Core */}
+                {/* Central Logo - Genfity */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
                     <Image
                         src="/images/logo/icon.png"
-                        alt="Genfity POS Core"
+                        alt="Genfity"
                         width={120}
                         height={120}
-                        className="w-32 h-32 md:w-36 md:h-36 drop-shadow-2xl"
+                        className="w-20 h-20 md:w-28 md:h-28 drop-shadow-2xl"
                     />
-
-                    {/* <div className="w-32 h-32 md:w-36 md:h-36 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full shadow-2xl flex flex-col items-center justify-center text-white">
-                        <FaCashRegister className="w-10 h-10 md:w-12 md:h-12 mb-1" />
-                        <span className="text-xs font-bold">Genfity POS Core</span>
-                        <span className="text-[10px] opacity-80">The Operational Backbone</span>
-                    </div> */}
                 </div>
 
                 {/* Background Glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-400/10 blur-[80px] rounded-full -z-10"></div>
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[450px] h-[450px] bg-blue-400/10 blur-[100px] rounded-full -z-10"></div>
 
             </div>
-
-            {/* Caption under diagram */}
-            {/* <p className="text-center text-gray-500 text-sm mt-8">
-                No data silos. No manual sync. Everything works in real time.
-            </p> */}
         </section>
     );
 }
